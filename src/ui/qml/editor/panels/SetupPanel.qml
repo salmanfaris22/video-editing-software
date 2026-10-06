@@ -65,7 +65,7 @@ ScrollView {
                                                     && root.project.backgroundColor2.toLowerCase() === modelData[1].toLowerCase()
                     width: 44
                     height: 26
-                    radius: 6
+                    radius: Theme.radiusS
                     border.width: current ? 2 : 1
                     border.color: current ? Theme.accent : Theme.strokeStrong
                     gradient: Gradient {

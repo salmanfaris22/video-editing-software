@@ -4,6 +4,7 @@
 #include "ui/ProjectController.h"
 
 #include <cmath>
+#include <set>
 
 namespace lectern::ui {
 
@@ -56,6 +57,16 @@ QVariantMap ProjectController::clipTransformAt(const QString& clipId, double tim
     out.insert(QStringLiteral("cropR"), crop.z);
     out.insert(QStringLiteral("cropB"), crop.w);
     out.insert(QStringLiteral("onClip"), local.has_value());
+    return out;
+}
+
+QVariantList ProjectController::clipAllKeyframeTimes(const QString& clipId) const {
+    std::set<double> unique;
+    for (const char* prop : {"opacity", "position", "scale", "rotation", "crop", "anchor"}) {
+        for (const QVariant& v : clipKeyframeTimes(clipId, QString::fromLatin1(prop))) unique.insert(v.toDouble());
+    }
+    QVariantList out;
+    for (const double t : unique) out.append(t);
     return out;
 }
 

@@ -98,4 +98,39 @@ Result<std::filesystem::path> ProjectStore::createProjectFolder(const std::files
     return dir;
 }
 
+Result<ProjectStore::CollectResult> ProjectStore::collect(const std::filesystem::path& projectDir,
+                                                          const Project& project,
+                                                          const std::filesystem::path& destinationParent,
+                                                          const std::string& folderName) {
+    const std::string base = folderName.empty() ? fs::sanitizeFileName(project.title) + kFolderExtension : folderName;
+    const std::filesystem::path dest = fs::uniquePath(destinationParent / base);
+    LEC_TRY(fs::ensureDirectory(dest));
+    CollectResult result{.folder = dest};
+    auto copyRelative = [&](const std::filesystem::path& rel) -> Status {
+        if (rel.empty()) return ok();
+        const std::filesystem::path src = projectDir / rel;
+        if (!std::filesystem::exists(src)) return ok();
+        const std::filesystem::path dst = dest / rel;
+        LEC_TRY(fs::ensureDirectory(dst.parent_path()));
+        std::error_code ec;
+        std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing, ec);
+        if (ec) return fail(ErrorCode::IoError, "copy " + src.string() + ": " + ec.message());
+        ++result.filesCopied;
+        result.bytesCopied += std::filesystem::file_size(dst, ec);
+        return ok();
+    };
+    LEC_TRY(fs::writeFileAtomic(dest / kProjectFile, json::dump(toJson(project)), {.fsync = true, .keepBackup = false}));
+    for (const MediaSource& m : project.media) {
+        if (m.path.empty()) continue;
+        const std::filesystem::path rel = m.path;
+        if (rel.is_absolute()) continue;
+        LEC_TRY(copyRelative(rel));
+    }
+    for (const RecordingEntry& r : project.recordings) {
+        LEC_TRY(copyRelative(r.manifest));
+        LEC_TRY(copyRelative(r.inputEvents));
+    }
+    return result;
+}
+
 }  // namespace lectern::project

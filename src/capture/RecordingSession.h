@@ -5,6 +5,7 @@
 #include "capture/LiveSources.h"
 #include "capture/RecordingStats.h"
 #include "capture/SessionClock.h"
+#include "capture/InputEventRecorder.h"
 #include "capture/SessionManifest.h"
 #include "capture/TrackWriters.h"
 #include "core/Clock.h"
@@ -142,6 +143,7 @@ private:
     std::mutex manifestWriteMutex_;
     std::jthread monitor_;
     std::jthread finalizer_;
+    std::unique_ptr<InputEventRecorder> inputRecorder_;
 };
 
 }  // namespace lectern::capture

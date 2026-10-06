@@ -33,8 +33,8 @@ Project sampleProject() {
     c.range = {Time::zero(), Time::fromSeconds(60)};
     t.clips.push_back(c);
     p.timeline.tracks.push_back(t);
-    p.recordings.push_back({"session", "recordings/session/session.json", "2026-10-04T12:00:00Z",
-                            Time::fromSeconds(60), "completed"});
+    p.recordings.push_back({"session", "recordings/session/session.json", "",
+                            "2026-10-04T12:00:00Z", Time::fromSeconds(60), "completed"});
     p.exportSettings.frameRate = FrameRate(60, 1);
     return p;
 }

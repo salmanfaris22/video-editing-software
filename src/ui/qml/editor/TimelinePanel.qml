@@ -98,44 +98,44 @@ Rectangle {
                 if (clip.id === id) return { clip: clip, track: track }
         return null
     }
-    Menu {
+    LecternMenu {
         id: clipMenu
         objectName: "clipMenu"
-        MenuItem {
+        LecternMenuItem {
             text: "Split at playhead\tS"
             enabled: root.menuClip.start !== undefined && root.playhead > root.menuClip.start && root.playhead < root.menuClip.start + root.menuClip.duration
             onTriggered: root.project.splitAt(root.playhead)
         }
-        MenuItem { text: "Delete (leave gap)\t⌫"; onTriggered: { root.project.linkedEditMode = "track"; root.project.deleteSelected() } }
-        MenuItem {
+        LecternMenuItem { text: "Delete (leave gap)\t⌫"; onTriggered: { root.project.linkedEditMode = "track"; root.project.deleteSelected() } }
+        LecternMenuItem {
             text: "Unlink from Recording (move on its own)"
             enabled: root.menuClip.linked === true
             onTriggered: root.project.unlinkClip(root.menuClip.id)
         }
-        MenuItem {
+        LecternMenuItem {
             text: "Ripple delete (close gap)\t⇧⌫"
             onTriggered: root.project.removeRange(root.menuClip.start, root.menuClip.start + root.menuClip.duration)
         }
-        MenuSeparator {}
-        MenuItem {
+        LecternMenuSeparator {}
+        LecternMenuItem {
             text: root.menuClip.enabled === false ? "Enable clip\tD" : "Disable clip\tD"
             onTriggered: root.project.setClipEnabled(root.menuClip.id, root.menuClip.enabled === false)
         }
-        MenuItem {
+        LecternMenuItem {
             text: root.menuClip.muted ? "Unmute audio" : "Mute audio"
             visible: (root.menuClip.audioPath || "").length > 0
             height: visible ? implicitHeight : 0
             onTriggered: root.project.setClipAudio(root.menuClip.id, "muted", !root.menuClip.muted)
         }
-        MenuItem {
+        LecternMenuItem {
             text: "Select all on this layer"
             onTriggered: {
                 const found = root.clipAt(root.menuClip.id)
                 if (found) root.project.selectClips(found.track.clips.map(c => c.id))
             }
         }
-        MenuSeparator {}
-        MenuItem {
+        LecternMenuSeparator {}
+        LecternMenuItem {
             text: "Grade this clip\t⇧6"
             visible: root.menuTrackKind !== "audio" && root.menuClip.role !== "text" && root.menuClip.role !== "subtitle"
             height: visible ? implicitHeight : 0
@@ -144,7 +144,7 @@ Rectangle {
                 if (root.editor) root.editor.page = "color"
             }
         }
-        MenuItem {
+        LecternMenuItem {
             text: "Properties…"
             onTriggered: {
                 if (!root.editor) return
@@ -154,35 +154,36 @@ Rectangle {
             }
         }
     }
-    Menu {
+    LecternMenu {
         id: laneMenu
         objectName: "laneMenu"
-        MenuItem { text: "Add marker here\tM"; onTriggered: root.project.addMarker(root.menuTime, "") }
-        MenuItem { text: "Add text here"; onTriggered: { root.project.addText("Your text", root.menuTime, 4.0, "title"); if (root.editor) root.editor.tool = "style" } }
-        MenuItem { text: "Split all tracks here"; onTriggered: { root.project.clearSelection(); root.project.splitAt(root.menuTime) } }
-        MenuSeparator {}
-        MenuItem { text: "Add layer…"; onTriggered: addLayerMenu.popup() }
-        MenuItem { text: "Select all clips\t⌘A"; onTriggered: root.project.selectAllClips() }
+        LecternMenuItem { text: "Add marker here\tM"; onTriggered: root.project.addMarker(root.menuTime, "") }
+        LecternMenuItem { text: "Add text here"; onTriggered: { root.project.addText("Your text", root.menuTime, 4.0, "title"); if (root.editor) root.editor.tool = "style" } }
+        LecternMenuItem { text: "Split all tracks here"; onTriggered: { root.project.clearSelection(); root.project.splitAt(root.menuTime) } }
+        LecternMenuSeparator {}
+        LecternMenuItem { text: "Add layer…"; onTriggered: addLayerMenu.popup() }
+        LecternMenuItem { text: "Select all clips\t⌘A"; onTriggered: root.project.selectAllClips() }
     }
-    Menu {
+    LecternMenu {
         id: rulerMenu
         objectName: "rulerMenu"
-        MenuItem { text: "Add marker\tM"; onTriggered: root.project.addMarker(root.menuTime, "") }
-        MenuItem { text: "Set in point here\tI"; enabled: !!root.editor; onTriggered: { root.editor.markIn = root.menuTime; if (root.editor.markOut <= root.menuTime) root.editor.markOut = -1 } }
-        MenuItem { text: "Set out point here\tO"; enabled: !!root.editor; onTriggered: { root.editor.markOut = root.menuTime; if (root.editor.markIn < 0 || root.editor.markIn >= root.menuTime) root.editor.markIn = 0 } }
-        MenuItem { text: "Fit timeline to window"; onTriggered: root.fitToWidth() }
+        LecternMenuItem { text: "Add marker\tM"; onTriggered: root.project.addMarker(root.menuTime, "") }
+        LecternMenuItem { text: "Set in point here\tI"; enabled: !!root.editor; onTriggered: { root.editor.markIn = root.menuTime; if (root.editor.markOut <= root.menuTime) root.editor.markOut = -1 } }
+        LecternMenuItem { text: "Set out point here\tO"; enabled: !!root.editor; onTriggered: { root.editor.markOut = root.menuTime; if (root.editor.markIn < 0 || root.editor.markIn >= root.menuTime) root.editor.markIn = 0 } }
+        LecternMenuItem { text: "Fit timeline to window"; onTriggered: root.fitToWidth() }
     }
 
-    Menu {
+    LecternMenu {
         id: addLayerMenu
         objectName: "addLayerMenu"
-        MenuItem { text: "Text"; onTriggered: root.addLayer("text") }
-        MenuItem { text: "Image or video…"; enabled: !root.project.busy; onTriggered: root.addLayer("media") }
-        MenuItem { text: "Music or sound…"; enabled: !root.project.busy; onTriggered: root.addLayer("audio") }
-        MenuItem { text: "Caption"; onTriggered: root.addLayer("caption") }
-        MenuSeparator {}
-        MenuItem { text: "Empty layer"; onTriggered: root.addLayer("empty") }
-        MenuItem { text: "Empty audio layer"; onTriggered: root.addLayer("empty-audio") }
+        compact: true
+        LecternMenuItem { iconOnly: true; iconName: "text"; text: "Text"; onTriggered: root.addLayer("text") }
+        LecternMenuItem { iconOnly: true; iconName: "image"; text: "Image or video…"; enabled: !root.project.busy; onTriggered: root.addLayer("media") }
+        LecternMenuItem { iconOnly: true; iconName: "music"; text: "Music or sound…"; enabled: !root.project.busy; onTriggered: root.addLayer("audio") }
+        LecternMenuItem { iconOnly: true; iconName: "subtitles"; text: "Caption"; onTriggered: root.addLayer("caption") }
+        LecternMenuSeparator {}
+        LecternMenuItem { iconOnly: true; iconName: "plus"; text: "Empty layer"; onTriggered: root.addLayer("empty") }
+        LecternMenuItem { iconOnly: true; iconName: "audio"; text: "Empty audio layer"; onTriggered: root.addLayer("empty-audio") }
     }
 
     function clipIdsInRect(x0, y0, x1, y1) {
@@ -507,83 +508,47 @@ Rectangle {
             onClicked: root.snapping = !root.snapping
         }
         Rectangle { width: 1; height: 18; color: Theme.stroke }
-        ColumnLayout {
-            spacing: 0
+        Segmented {
             Layout.alignment: Qt.AlignVCenter
-            Label {
-                text: "Select"
-                color: Theme.textFaint
-                font.pixelSize: 9
-            }
-            Segmented {
-                implicitHeight: 26
-                Layout.minimumWidth: implicitWidth
-                options: [
-                    { label: "Drag", value: "drag" },
-                    { label: "⇧", value: "shift" },
-                    { label: "Scrub", value: "scrub" }
-                ]
-                value: root.dragSelectMode
-                onSelected: v => { if (root.editor) root.editor.dragSelectMode = v }
-            }
+            iconMode: true
+            options: [
+                { label: "Drag to move clips", value: "drag", icon: "pointer" },
+                { label: "⇧-drag to select", value: "shift", icon: "select-box" },
+                { label: "Click to scrub only", value: "scrub", icon: "step-forward" }
+            ]
+            value: root.dragSelectMode
+            onSelected: v => { if (root.editor) root.editor.dragSelectMode = v }
         }
-        ColumnLayout {
-            spacing: 0
+        Segmented {
             Layout.alignment: Qt.AlignVCenter
-            Label {
-                text: "Box"
-                color: Theme.textFaint
-                font.pixelSize: 9
-            }
-            Segmented {
-                implicitHeight: 26
-                Layout.minimumWidth: implicitWidth
-                options: [
-                    { label: "Touch", value: "touch" },
-                    { label: "Inside", value: "inside" }
-                ]
-                value: root.marqueeMatch
-                onSelected: v => { if (root.editor) root.editor.marqueeMatch = v }
-            }
+            iconMode: true
+            options: [
+                { label: "Box touches clip", value: "touch", icon: "select-box" },
+                { label: "Clip fully inside box", value: "inside", icon: "aspect" }
+            ]
+            value: root.marqueeMatch
+            onSelected: v => { if (root.editor) root.editor.marqueeMatch = v }
         }
-        ColumnLayout {
-            spacing: 0
+        Segmented {
             Layout.alignment: Qt.AlignVCenter
-            Label {
-                text: "Cut"
-                color: Theme.textFaint
-                font.pixelSize: 9
-            }
-            Segmented {
-                implicitHeight: 26
-                Layout.minimumWidth: implicitWidth
-                options: [
-                    { label: "Track", value: "track" },
-                    { label: "All", value: "allTracks" }
-                ]
-                value: root.linkedEditMode
-                onSelected: v => { if (root.editor) root.editor.linkedEditMode = v }
-            }
+            iconMode: true
+            options: [
+                { label: "Delete this track only", value: "track", icon: "cut" },
+                { label: "Delete all linked tracks", value: "allTracks", icon: "layout" }
+            ]
+            value: root.linkedEditMode
+            onSelected: v => { if (root.editor) root.editor.linkedEditMode = v }
         }
-        ColumnLayout {
-            spacing: 0
+        Segmented {
+            objectName: "moveMode"
             Layout.alignment: Qt.AlignVCenter
-            Label {
-                text: "Move"
-                color: Theme.textFaint
-                font.pixelSize: 9
-            }
-            Segmented {
-                objectName: "moveMode"
-                implicitHeight: 26
-                Layout.minimumWidth: implicitWidth
-                options: [
-                    { label: "Linked", value: "linked" },
-                    { label: "One", value: "one" }
-                ]
-                value: root.moveMode
-                onSelected: v => { if (root.editor) root.editor.timelineMoveMode = v }
-            }
+            iconMode: true
+            options: [
+                { label: "Move linked recording", value: "linked", icon: "layout" },
+                { label: "Move one clip only", value: "one", icon: "pointer" }
+            ]
+            value: root.moveMode
+            onSelected: v => { if (root.editor) root.editor.timelineMoveMode = v }
         }
         IconButton {
             iconName: "layout"
@@ -850,7 +815,7 @@ Rectangle {
             id: addLayerButton
             objectName: "addLayerButton"
             height: parent.height
-            width: addLayerRow.implicitWidth + 14
+            width: height
             hoverEnabled: true
             focusPolicy: Qt.NoFocus
             enabled: root.project.loaded
@@ -859,21 +824,14 @@ Rectangle {
             ToolTip.text: "Add a layer at the playhead: text, image or video, sound, caption"
             ToolTip.delay: 450
             background: Rectangle {
-                radius: 3
+                radius: Theme.radiusS
                 color: addLayerButton.down ? Theme.pressed : addLayerButton.hovered ? Theme.hover : Theme.accentSoft
             }
-            contentItem: Row {
-                id: addLayerRow
-                spacing: 4
-                leftPadding: 7
-                Icon { name: "plus"; size: 12; color: Theme.accent; anchors.verticalCenter: parent.verticalCenter }
-                Label {
-                    text: "Layer"
-                    color: Theme.accent
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+            contentItem: Icon {
+                anchors.centerIn: parent
+                name: "plus"
+                size: 14
+                color: Theme.accent
             }
         }
         IconButton {

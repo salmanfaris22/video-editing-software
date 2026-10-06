@@ -475,17 +475,17 @@ Item {
         }
     }
 
-    Menu {
+    LecternMenu {
         id: clipMenu
-        MenuItem { text: "Copy Grade   ⌘C"; enabled: root.gradable; onTriggered: root.project.copyGrade(root.clipId) }
-        MenuItem { text: "Paste Grade   ⌘V"; enabled: root.project.hasCopiedGrade; onTriggered: root.project.pasteGrade([root.clipId]) }
-        MenuSeparator {}
-        MenuItem { text: "Apply Grade of Previous Clip   ="; enabled: root.gradable; onTriggered: root.project.applyPreviousGrade(root.clipId) }
-        MenuItem { text: "Apply Grade to Next Clip"; enabled: root.gradable; onTriggered: root.project.applyGradeToNext(root.clipId) }
-        MenuItem { text: "Apply Grade to All Clips"; enabled: root.gradable; onTriggered: root.project.applyGradeToAll(root.clipId) }
-        MenuSeparator {}
-        MenuItem { text: "Grab Still   ⌥⌘G"; enabled: root.gradable; onTriggered: root.project.grabStill(root.clipId, root.playback.position) }
-        MenuItem { text: "Reset Grade"; enabled: root.gradable; onTriggered: root.project.resetColor(root.clipId) }
+        LecternMenuItem { text: "Copy Grade   ⌘C"; enabled: root.gradable; onTriggered: root.project.copyGrade(root.clipId) }
+        LecternMenuItem { text: "Paste Grade   ⌘V"; enabled: root.project.hasCopiedGrade; onTriggered: root.project.pasteGrade([root.clipId]) }
+        LecternMenuSeparator {}
+        LecternMenuItem { text: "Apply Grade of Previous Clip   ="; enabled: root.gradable; onTriggered: root.project.applyPreviousGrade(root.clipId) }
+        LecternMenuItem { text: "Apply Grade to Next Clip"; enabled: root.gradable; onTriggered: root.project.applyGradeToNext(root.clipId) }
+        LecternMenuItem { text: "Apply Grade to All Clips"; enabled: root.gradable; onTriggered: root.project.applyGradeToAll(root.clipId) }
+        LecternMenuSeparator {}
+        LecternMenuItem { text: "Grab Still   ⌥⌘G"; enabled: root.gradable; onTriggered: root.project.grabStill(root.clipId, root.playback.position) }
+        LecternMenuItem { text: "Reset Grade"; enabled: root.gradable; onTriggered: root.project.resetColor(root.clipId) }
     }
 
     component PaletteTab: AbstractButton {

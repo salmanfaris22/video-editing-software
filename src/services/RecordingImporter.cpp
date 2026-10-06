@@ -187,9 +187,9 @@ Result<project::Project> buildProjectFromSession(const capture::SessionManifest&
     p.timeline.layout.push_back({timeline::LayoutRegionId::generate(), {Time::zero(), total}, preset});
 
     std::string state = manifest.recovered ? "recovered" : std::string(capture::toString(manifest.state));
-    p.recordings.push_back(project::RecordingEntry{manifest.sessionId,
-                                                   "recordings/" + manifest.sessionId + "/session.json",
-                                                   manifest.createdAtUtc, manifest.duration, state});
+    project::RecordingEntry rec{manifest.sessionId, "recordings/" + manifest.sessionId + "/session.json",
+                                manifest.inputEventsFile, manifest.createdAtUtc, manifest.duration, state};
+    p.recordings.push_back(std::move(rec));
     LEC_TRY(p.validate());
     return p;
 }

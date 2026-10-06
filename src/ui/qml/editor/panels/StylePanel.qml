@@ -10,7 +10,10 @@ ScrollView {
     property PlaybackController playback
 
     readonly property var sel: root.project.selection
+    property var editor
     readonly property bool isText: root.sel.role === "text"
+    readonly property var xf: (root.project.tracks, root.project.clipTransformAt(root.project.selectedClip, root.playback.position))
+    readonly property bool keyframeMode: root.editor ? root.editor.keyframeAtPlayhead : true
     readonly property var presets: [
         { id: "title", label: "Title", sample: "Big title" },
         { id: "lower-third", label: "Lower third", sample: "Name · Role" },
@@ -122,16 +125,26 @@ ScrollView {
             SliderRow {
                 label: "Horizontal position"
                 from: 0; to: 1; defaultValue: 0.5
-                value: root.sel.x === undefined ? 0.5 : root.sel.x
+                value: root.xf.x !== undefined ? root.xf.x : (root.sel.x === undefined ? 0.5 : root.sel.x)
                 format: v => Math.round(v * 100) + "%"
-                onMoved: v => root.project.setClipPosition(root.project.selectedClip, v, root.sel.y)
+                onMoved: v => {
+                    if (root.keyframeMode && root.xf.onClip)
+                        root.project.setClipKeyframe(root.project.selectedClip, "positionX", root.playback.position, v, true)
+                    else
+                        root.project.setClipPosition(root.project.selectedClip, v, root.xf.y !== undefined ? root.xf.y : root.sel.y)
+                }
             }
             SliderRow {
                 label: "Vertical position"
                 from: 0; to: 1; defaultValue: 0.5
-                value: root.sel.y === undefined ? 0.5 : root.sel.y
+                value: root.xf.y !== undefined ? root.xf.y : (root.sel.y === undefined ? 0.5 : root.sel.y)
                 format: v => Math.round(v * 100) + "%"
-                onMoved: v => root.project.setClipPosition(root.project.selectedClip, root.sel.x, v)
+                onMoved: v => {
+                    if (root.keyframeMode && root.xf.onClip)
+                        root.project.setClipKeyframe(root.project.selectedClip, "positionY", root.playback.position, v, true)
+                    else
+                        root.project.setClipPosition(root.project.selectedClip, root.xf.x !== undefined ? root.xf.x : root.sel.x, v)
+                }
             }
             TextAnimationSection {
                 Layout.fillWidth: true

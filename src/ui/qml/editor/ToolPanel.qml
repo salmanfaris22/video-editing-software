@@ -11,6 +11,7 @@ Rectangle {
     property ProjectController project
     property PlaybackController playback
     property var editor
+    property AppController app
 
     color: Theme.surface
 
@@ -29,6 +30,7 @@ Rectangle {
         anchors.topMargin: 14
         sourceComponent: {
             switch (root.tool) {
+            case "library": return libraryPanel
             case "setup": return setupPanel
             case "cut": return cutPanel
             case "effects": return effectsPanel
@@ -42,12 +44,13 @@ Rectangle {
         }
     }
 
+    Component { id: libraryPanel; FilesPanel { project: root.project; playback: root.playback; app: root.app } }
     Component { id: setupPanel; SetupPanel { project: root.project; playback: root.playback } }
     Component { id: layoutPanel; LayoutPanel { project: root.project; playback: root.playback } }
     Component { id: cutPanel; CutPanel { project: root.project; playback: root.playback; editor: root.editor } }
     Component { id: effectsPanel; EffectsPanel { project: root.project; playback: root.playback } }
-    Component { id: overlayPanel; OverlayPanel { project: root.project; playback: root.playback } }
-    Component { id: stylePanel; StylePanel { project: root.project; playback: root.playback } }
+    Component { id: overlayPanel; OverlayPanel { project: root.project; playback: root.playback; editor: root.editor } }
+    Component { id: stylePanel; StylePanel { project: root.project; playback: root.playback; editor: root.editor } }
     Component { id: subtitlesPanel; SubtitlesPanel { project: root.project; playback: root.playback } }
     Component { id: audioPanel; AudioPanel { project: root.project; playback: root.playback } }
     Component { id: adjustPanel; AdjustPanel { project: root.project; playback: root.playback } }

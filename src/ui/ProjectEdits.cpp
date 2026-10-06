@@ -5,6 +5,7 @@
 
 #include "core/Log.h"
 #include "editor/SilenceDetector.h"
+#include "project/ProjectStore.h"
 #include "timeline/EditOps.h"
 
 #include <algorithm>
@@ -186,6 +187,29 @@ void ProjectController::clearSilences() {
     if (silences_.empty()) return;
     silences_.clear();
     emit silencesChanged();
+}
+
+void ProjectController::collectProject(const QUrl& destination) {
+    if (!project_ || dir_.empty()) return;
+    const QString local = destination.toLocalFile();
+    if (local.isEmpty()) return;
+    setBusy(QStringLiteral("Collecting project…"));
+    auto doc = std::make_shared<const project::Project>(*project_);
+    const std::filesystem::path src = dir_;
+    const std::filesystem::path parent = std::filesystem::path(local.toStdString());
+    worker_->post([this, doc, src, parent] {
+        auto result = project::ProjectStore::collect(src, *doc, parent);
+        QMetaObject::invokeMethod(this, [this, result = std::move(result)]() mutable {
+            setBusy({});
+            if (!result) {
+                showMessage(QString::fromStdString(result.error().toString()));
+                return;
+            }
+            showMessage(QStringLiteral("Archive saved to %1 (%2 files)")
+                            .arg(QString::fromStdString(result->folder.string()))
+                            .arg(static_cast<qulonglong>(result->filesCopied)));
+        });
+    });
 }
 
 }  // namespace lectern::ui

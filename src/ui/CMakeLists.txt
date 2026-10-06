@@ -38,6 +38,9 @@ qt_add_qml_module(lectern_ui
         qml/components/SourcePicker.qml
         qml/components/ShareLinkPicker.qml
         qml/components/Segmented.qml
+        qml/components/LecternMenu.qml
+        qml/components/LecternMenuItem.qml
+        qml/components/LecternMenuSeparator.qml
         qml/components/ToggleRow.qml
         qml/components/LevelMeter.qml
         qml/components/StatusChip.qml
@@ -91,11 +94,12 @@ qt_add_qml_module(lectern_ui
         qml/editor/panels/AudioPanel.qml
         qml/editor/panels/AdjustPanel.qml
         qml/editor/panels/KeyframesSection.qml
+        qml/editor/panels/FilesPanel.qml
     SOURCES
         AppController.h AppController.cpp
         RecorderController.h RecorderController.cpp
         ProjectController.h ProjectController.cpp ProjectEdits.cpp ProjectLooks.cpp ProjectColor.cpp ProjectCanvas.cpp
-        ProjectClipKeyframes.cpp ProjectTracks.cpp ProjectGrades.cpp ProjectNodes.cpp
+        ProjectClipKeyframes.cpp ProjectLibrary.cpp ProjectTracks.cpp ProjectGrades.cpp ProjectNodes.cpp
         ProjectAssistant.cpp
         McpController.h McpController.cpp McpTools.cpp
         PlaybackController.h PlaybackController.cpp

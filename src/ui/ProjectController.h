@@ -56,6 +56,7 @@ class ProjectController : public QObject {
 
     // Views
     Q_PROPERTY(QVariantList tracks READ tracks NOTIFY projectChanged)
+    Q_PROPERTY(bool keyframeAtPlayhead READ keyframeAtPlayhead WRITE setKeyframeAtPlayhead NOTIFY keyframeAtPlayheadChanged)
     Q_PROPERTY(QVariantList markers READ markers NOTIFY projectChanged)
     Q_PROPERTY(QVariantList layoutRegions READ layoutRegions NOTIFY projectChanged)
     Q_PROPERTY(QVariantList layoutPresets READ layoutPresets NOTIFY projectChanged)
@@ -66,6 +67,8 @@ class ProjectController : public QObject {
     Q_PROPERTY(QVariantList textOverlays READ textOverlays NOTIFY projectChanged)
     Q_PROPERTY(QString screenMedia READ screenMedia NOTIFY projectChanged)
     Q_PROPERTY(QString cameraMedia READ cameraMedia NOTIFY projectChanged)
+    Q_PROPERTY(QVariantList mediaAssets READ mediaAssets NOTIFY projectChanged)
+    Q_PROPERTY(QVariantList editVariants READ editVariants NOTIFY projectChanged)
     Q_PROPERTY(QVariantList textAnimations READ textAnimations CONSTANT)
     Q_PROPERTY(QVariantList builtinLuts READ builtinLuts CONSTANT)
     Q_PROPERTY(QVariantList looks READ looks NOTIFY looksChanged)
@@ -196,6 +199,13 @@ public:
     Q_INVOKABLE void clearClipKeyframes(const QString& clipId, const QString& property = {});
     Q_INVOKABLE void setClipEnabled(const QString& clipId, bool enabled);
     Q_INVOKABLE void setClipTiming(const QString& clipId, double start, double duration);
+    /// Constant speed factor (>0). 1 = normal, 2 = double-time, 0.5 = half-speed.
+    Q_INVOKABLE void setClipSpeed(const QString& clipId, double speed);
+    Q_INVOKABLE void setClipReversed(const QString& clipId, bool reversed);
+    /// Sorted timeline times where the clip has any transform keyframe.
+    Q_INVOKABLE QVariantList clipAllKeyframeTimes(const QString& clipId) const;
+    /// Collect project + used media into `destination` (Resolve-style archive).
+    Q_INVOKABLE void collectProject(const QUrl& destination);
     /// type: "blur", "vignette", "zoom", "background-blur". Enabling adds the effect with defaults.
     Q_INVOKABLE void setEffectEnabled(const QString& clipId, const QString& type, bool enabled);
     Q_INVOKABLE void setEffectValue(const QString& clipId, const QString& type, const QString& param, double value);
@@ -353,6 +363,13 @@ public:
     /// Copies a file into the project and adds it: purpose "overlay" (image or
     /// video on an overlay track at `seconds`) or "music" (audio track).
     Q_INVOKABLE void importMedia(const QUrl& file, const QString& purpose, double seconds);
+    /// All clips on the timeline (flat list for the library panel).
+    Q_INVOKABLE QVariantList timelineClipsFlat() const;
+    /// Snapshot of the whole project under `<project>/edits/<name>/` (for separate podcast cuts).
+    Q_INVOKABLE void saveEditVariant(const QString& name);
+    Q_INVOKABLE void openEditVariant(const QString& dir);
+    /// Adds a timeline clip using media already in the project (from the library).
+    Q_INVOKABLE void placeMediaAt(const QString& mediaId, const QString& purpose, double seconds);
 
     // ---- Subtitles ----------------------------------------------------------
     Q_INVOKABLE void addSubtitle(const QString& text, double start, double duration = 3.0);
@@ -391,6 +408,8 @@ public:
     [[nodiscard]] QVariantList textOverlays() const { return textOverlays_; }
     [[nodiscard]] QString screenMedia() const { return screenMedia_; }
     [[nodiscard]] QString cameraMedia() const { return cameraMedia_; }
+    [[nodiscard]] QVariantList mediaAssets() const;
+    [[nodiscard]] QVariantList editVariants() const;
     [[nodiscard]] QVariantList textAnimations() const;
     [[nodiscard]] QVariantList builtinLuts() const;
     [[nodiscard]] bool segmentationAvailable() const;
@@ -399,6 +418,8 @@ public:
     [[nodiscard]] QString selectedTrack() const { return selectedTrack_; }
     [[nodiscard]] QString linkedEditMode() const { return linkedEditMode_; }
     void setLinkedEditMode(const QString& mode);
+    [[nodiscard]] bool keyframeAtPlayhead() const { return keyframeAtPlayhead_; }
+    void setKeyframeAtPlayhead(bool on);
     [[nodiscard]] QVariantMap selection() const { return selection_; }
     [[nodiscard]] bool busy() const { return !busyText_.isEmpty(); }
     [[nodiscard]] QString busyText() const { return busyText_; }
@@ -423,6 +444,7 @@ signals:
     void editStateChanged();
     void selectionChanged();
     void linkedEditModeChanged();
+    void keyframeAtPlayheadChanged();
     void messageChanged();
     void busyChanged();
     void silencesChanged();
@@ -479,6 +501,7 @@ private:
     QStringList selectedClips_;
     QString selectedTrack_;
     QString linkedEditMode_ = QStringLiteral("track");
+    bool keyframeAtPlayhead_ = true;
     QVariantMap selection_;
     QVariantList tracks_;
     QVariantList markers_;

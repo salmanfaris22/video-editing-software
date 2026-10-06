@@ -9,6 +9,7 @@ Rectangle {
     signal toolSelected(string tool)
 
     readonly property var tools: [
+        { id: "library", label: "Library", icon: "folder" },
         { id: "setup", label: "Setup", icon: "setup" },
         { id: "layout", label: "Layout", icon: "layout" },
         { id: "cut", label: "Cut", icon: "cut" },
@@ -20,7 +21,7 @@ Rectangle {
         { id: "adjust", label: "Adjust", icon: "adjust" }
     ]
 
-    implicitWidth: 76
+    implicitWidth: 52
     color: Theme.surface
 
     Rectangle {
@@ -49,30 +50,22 @@ Rectangle {
                 id: button
                 required property var modelData
                 readonly property bool current: root.tool === modelData.id
-                width: 64
-                height: 54
+                width: 44
+                height: 44
                 hoverEnabled: true
                 onClicked: root.toolSelected(modelData.id)
+                ToolTip.visible: hovered
+                ToolTip.text: button.modelData.label
+                ToolTip.delay: 400
                 background: Rectangle {
                     radius: Theme.radiusM
                     color: button.current ? Theme.accentSoft : button.hovered ? Theme.hover : "transparent"
                 }
-                contentItem: Column {
-                    spacing: 4
-                    topPadding: 8
-                    Icon {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        name: button.modelData.icon
-                        size: 19
-                        color: button.current ? Theme.accent : Theme.textMuted
-                    }
-                    Label {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: button.modelData.label
-                        color: button.current ? Theme.text : Theme.textMuted
-                        font.pixelSize: 10
-                        font.weight: button.current ? Font.DemiBold : Font.Normal
-                    }
+                contentItem: Icon {
+                    anchors.centerIn: parent
+                    name: button.modelData.icon
+                    size: 20
+                    color: button.current ? Theme.accent : Theme.textMuted
                 }
             }
         }

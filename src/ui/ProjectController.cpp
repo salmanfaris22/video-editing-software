@@ -347,6 +347,12 @@ void ProjectController::setLinkedEditMode(const QString& mode) {
     emit linkedEditModeChanged();
 }
 
+void ProjectController::setKeyframeAtPlayhead(bool on) {
+    if (keyframeAtPlayhead_ == on) return;
+    keyframeAtPlayhead_ = on;
+    emit keyframeAtPlayheadChanged();
+}
+
 void ProjectController::selectClip(const QString& clipId, bool additive) {
     if (!additive && !clipId.isEmpty() && linkedEditMode_ == QLatin1String("allTracks") && project_) {
         if (const auto id = clipIdFrom(clipId)) {
@@ -504,6 +510,8 @@ void ProjectController::rebuildSelection() {
         {"start", clip->range.start.toSecondsF()},
         {"duration", clip->range.duration.toSecondsF()},
         {"enabled", clip->enabled},
+        {"speed", clip->speed.toDouble()},
+        {"reversed", clip->reversed},
         {"linked", timeline::edit::isLinkedSegment(project_->timeline, clip->id)},
         {"visual", visual},
         {"hasAudio", media && editor::hasAudio(*media)},
@@ -660,7 +668,10 @@ void ProjectController::rebuildViews() {
                                      {"linked", c.linkGroup.has_value() && timeline::edit::isLinkedSegment(p.timeline, c.id)},
                                      {"linkGroup", c.linkGroup ? qs(c.linkGroup->toString()) : QString()},
                                      {"fadeIn", c.audio.fadeIn.toSecondsF()},
-                                     {"fadeOut", c.audio.fadeOut.toSecondsF()}});
+                                     {"fadeOut", c.audio.fadeOut.toSecondsF()},
+                                     {"speed", c.speed.toDouble()},
+                                     {"reversed", c.reversed},
+                                     {"keyframeTimes", clipAllKeyframeTimes(qs(c.id.toString()))}});
             if (c.kind == timeline::ClipKind::Text && c.text) {
                 textOverlays_.append(QVariantMap{{"text", qs(c.text->text)},
                                                  {"start", c.range.start.toSecondsF()},

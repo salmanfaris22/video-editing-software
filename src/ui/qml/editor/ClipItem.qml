@@ -156,6 +156,23 @@ Item {
             }
             onWidthChanged: requestPaint()
         }
+        Repeater {
+            model: root.clip.keyframeTimes || []
+            delegate: Rectangle {
+                required property var modelData
+                x: (modelData - root.clip.start) * root.pxPerSecond - 3 + body.contentShift
+                anchors.verticalCenter: parent.verticalCenter
+                width: 6
+                height: 6
+                rotation: 45
+                radius: 1
+                color: Theme.accent
+                border.width: 1
+                border.color: Theme.surface
+                z: 5
+            }
+        }
+
         Rectangle {
             visible: !root.video && !wave.visible
             anchors.left: parent.left

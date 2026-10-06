@@ -11,7 +11,10 @@ ScrollView {
     property PlaybackController playback
 
     readonly property var sel: root.project.selection
+    property var editor
     readonly property bool isOverlay: root.sel.role === "overlay"
+    readonly property var xf: (root.project.tracks, root.project.clipTransformAt(root.project.selectedClip, root.playback.position))
+    readonly property bool keyframeMode: root.editor ? root.editor.keyframeAtPlayhead : true
     readonly property var overlays: {
         const out = []
         for (const track of root.project.tracks)
@@ -69,30 +72,50 @@ ScrollView {
             SliderRow {
                 label: "Size"
                 from: 0.05; to: 1.2; defaultValue: 0.3
-                value: root.sel.scale || 0.3
+                value: root.xf.scale !== undefined ? root.xf.scale : (root.sel.scale || 0.3)
                 format: v => Math.round(v * 100) + "% width"
-                onMoved: v => root.project.setClipScale(root.project.selectedClip, v)
+                onMoved: v => {
+                    if (root.keyframeMode && root.xf.onClip)
+                        root.project.setClipKeyframe(root.project.selectedClip, "scale", root.playback.position, v, true)
+                    else
+                        root.project.setClipScale(root.project.selectedClip, v)
+                }
             }
             SliderRow {
                 label: "Horizontal position"
                 from: 0; to: 1; defaultValue: 0.5
-                value: root.sel.x === undefined ? 0.5 : root.sel.x
+                value: root.xf.x !== undefined ? root.xf.x : (root.sel.x === undefined ? 0.5 : root.sel.x)
                 format: v => Math.round(v * 100) + "%"
-                onMoved: v => root.project.setClipPosition(root.project.selectedClip, v, root.sel.y)
+                onMoved: v => {
+                    if (root.keyframeMode && root.xf.onClip)
+                        root.project.setClipKeyframe(root.project.selectedClip, "positionX", root.playback.position, v, true)
+                    else
+                        root.project.setClipPosition(root.project.selectedClip, v, root.xf.y !== undefined ? root.xf.y : root.sel.y)
+                }
             }
             SliderRow {
                 label: "Vertical position"
                 from: 0; to: 1; defaultValue: 0.5
-                value: root.sel.y === undefined ? 0.5 : root.sel.y
+                value: root.xf.y !== undefined ? root.xf.y : (root.sel.y === undefined ? 0.5 : root.sel.y)
                 format: v => Math.round(v * 100) + "%"
-                onMoved: v => root.project.setClipPosition(root.project.selectedClip, root.sel.x, v)
+                onMoved: v => {
+                    if (root.keyframeMode && root.xf.onClip)
+                        root.project.setClipKeyframe(root.project.selectedClip, "positionY", root.playback.position, v, true)
+                    else
+                        root.project.setClipPosition(root.project.selectedClip, root.xf.x !== undefined ? root.xf.x : root.sel.x, v)
+                }
             }
             SliderRow {
                 label: "Opacity"
                 from: 0; to: 1; defaultValue: 1
-                value: root.sel.opacity === undefined ? 1 : root.sel.opacity
+                value: root.xf.opacity !== undefined ? root.xf.opacity : (root.sel.opacity === undefined ? 1 : root.sel.opacity)
                 format: v => Math.round(v * 100) + "%"
-                onMoved: v => root.project.setClipOpacity(root.project.selectedClip, v)
+                onMoved: v => {
+                    if (root.keyframeMode && root.xf.onClip)
+                        root.project.setClipKeyframe(root.project.selectedClip, "opacity", root.playback.position, v, true)
+                    else
+                        root.project.setClipOpacity(root.project.selectedClip, v)
+                }
             }
             SliderRow {
                 label: "Duration"

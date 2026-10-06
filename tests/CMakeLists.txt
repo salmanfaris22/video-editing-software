@@ -22,7 +22,8 @@ endfunction()
 
 lectern_add_test_executable(lectern_core_tests
     SOURCES unit/core/TimeTest.cpp unit/core/QueueTest.cpp unit/core/FileSystemTest.cpp unit/core/MiscTest.cpp
-    LIBS lectern_core)
+            unit/packs/PackManagerTest.cpp
+    LIBS lectern_core lectern_packs)
 
 lectern_add_test_executable(lectern_mcp_tests
     SOURCES unit/mcp/ServerTest.cpp
@@ -44,7 +45,7 @@ lectern_add_test_executable(lectern_timeline_tests
 
 lectern_add_test_executable(lectern_capture_tests
     SOURCES unit/capture/SessionClockTest.cpp unit/capture/VideoPacerTest.cpp unit/capture/CaptureMiscTest.cpp
-            unit/capture/TimestampMappingTest.cpp
+            unit/capture/InputEventLogTest.cpp unit/capture/TimestampMappingTest.cpp
             integration/RecordingSessionTest.cpp integration/RecoveryTest.cpp
     LIBS lectern_capture lectern_services)
 
@@ -79,6 +80,7 @@ if(TARGET lectern_editor)
         editor/NodesTest.cpp
         editor/FilmEffectsTest.cpp
         editor/ExportTest.cpp
+        editor/QaRegressionTest.cpp
         editor/PlaybackTest.cpp)
     target_link_libraries(lectern_editor_tests PRIVATE lectern_editor lectern_test_support GTest::gtest)
     lectern_configure_target(lectern_editor_tests)
@@ -101,7 +103,7 @@ if(TARGET lectern_editor AND TARGET Qt6::Qml)
         ${LECTERN_UI_DIR}/ProjectController.h ${LECTERN_UI_DIR}/ProjectController.cpp
         ${LECTERN_UI_DIR}/ProjectEdits.cpp ${LECTERN_UI_DIR}/ProjectLooks.cpp
         ${LECTERN_UI_DIR}/ProjectColor.cpp ${LECTERN_UI_DIR}/ProjectCanvas.cpp
-        ${LECTERN_UI_DIR}/ProjectClipKeyframes.cpp
+        ${LECTERN_UI_DIR}/ProjectClipKeyframes.cpp ${LECTERN_UI_DIR}/ProjectLibrary.cpp
         ${LECTERN_UI_DIR}/ProjectTracks.cpp ${LECTERN_UI_DIR}/ProjectGrades.cpp ${LECTERN_UI_DIR}/ProjectNodes.cpp
         ${LECTERN_UI_DIR}/FrameGrab.cpp ${LECTERN_UI_DIR}/LookPreviews.cpp
         ${LECTERN_UI_DIR}/ProjectAssistant.cpp

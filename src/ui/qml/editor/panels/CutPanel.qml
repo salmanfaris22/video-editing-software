@@ -235,6 +235,33 @@ ScrollView {
                 checked: root.sel.enabled === true
                 onToggled: checked => root.project.setClipEnabled(root.project.selectedClip, checked)
             }
+            SectionLabel { text: "Speed" }
+            Segmented {
+                Layout.fillWidth: true
+                options: [
+                    { label: "0.5×", value: 0.5 },
+                    { label: "1×", value: 1 },
+                    { label: "2×", value: 2 },
+                    { label: "4×", value: 4 }
+                ]
+                value: root.sel.speed || 1
+                onSelected: v => root.project.setClipSpeed(root.project.selectedClip, v)
+            }
+            SliderRow {
+                label: "Custom speed"
+                from: 0.25; to: 4; stepSize: 0.05; defaultValue: 1
+                value: root.sel.speed || 1
+                format: v => v.toFixed(2) + "×"
+                onMoved: v => root.project.setClipSpeed(root.project.selectedClip, v)
+            }
+            ToggleRow {
+                Layout.fillWidth: true
+                iconName: "reverse"
+                title: "Reverse"
+                subtitle: "Play this clip backward (audio stays muted until retiming ships)"
+                checked: root.sel.reversed === true
+                onToggled: checked => root.project.setClipReversed(root.project.selectedClip, checked)
+            }
         }
         Item { Layout.preferredHeight: 8 }
     }

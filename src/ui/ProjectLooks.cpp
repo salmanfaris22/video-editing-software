@@ -298,6 +298,30 @@ void ProjectController::setClipEnabled(const QString& clipId, bool enabled) {
     });
 }
 
+void ProjectController::setClipSpeed(const QString& clipId, double speed) {
+    const auto id = clipIdFrom(clipId);
+    if (!id) return;
+    mutate(QStringLiteral("Speed"), [&](project::Project& p) -> Status {
+        timeline::Clip* c = findClip(p, *id);
+        if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        const double s = std::clamp(speed, 0.05, 32.0);
+        c->speed = Rational::fromDouble(s);
+        if (!c->speed.isPositive()) return fail(ErrorCode::InvalidArgument, "speed must be > 0");
+        return ok();
+    }, QStringLiteral("speed:") + clipId);
+}
+
+void ProjectController::setClipReversed(const QString& clipId, bool reversed) {
+    const auto id = clipIdFrom(clipId);
+    if (!id) return;
+    mutate(reversed ? QStringLiteral("Reverse clip") : QStringLiteral("Forward clip"), [&](project::Project& p) -> Status {
+        timeline::Clip* c = findClip(p, *id);
+        if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        c->reversed = reversed;
+        return ok();
+    });
+}
+
 void ProjectController::setClipTiming(const QString& clipId, double start, double duration) {
     const auto id = clipIdFrom(clipId);
     if (!id) return;
@@ -484,6 +508,58 @@ void ProjectController::importMedia(const QUrl& file, const QString& purpose, do
             if (ok) selectClip(qs(clipId.toString()));
         }, Qt::QueuedConnection);
     });
+}
+
+void ProjectController::placeMediaAt(const QString& mediaIdStr, const QString& purpose, double seconds) {
+    if (!project_ || busy()) return;
+    const auto uuid = Uuid::parse(mediaIdStr.toStdString());
+    if (!uuid) {
+        showMessage(QStringLiteral("Unknown media."));
+        return;
+    }
+    const project::MediaId mid(*uuid);
+    const project::MediaSource* src = project_->findMedia(mid);
+    if (!src) {
+        showMessage(QStringLiteral("Media is no longer in this project."));
+        return;
+    }
+    const bool music = purpose == QLatin1String("music") ||
+                       (purpose != QLatin1String("overlay") && src->kind == project::MediaKind::Audio);
+    const timeline::ClipId clipId = timeline::ClipId::generate();
+    const bool ok = mutate(music ? QStringLiteral("Add music") : QStringLiteral("Add overlay"), [&](project::Project& p) -> Status {
+        const project::MediaSource* m = p.findMedia(mid);
+        if (!m) return fail(ErrorCode::NotFound, "media not found");
+        timeline::Clip clip;
+        clip.id = clipId;
+        clip.name = m->name;
+        clip.media = m->id;
+        clip.sourceIn = m->info.start;
+        const Time timelineEnd = p.timeline.duration();
+        if (music) {
+            const Time start = timelineEnd > Time::zero() ? sec(std::max(0.0, seconds)) : Time::zero();
+            const Time room = timelineEnd > start ? timelineEnd - start : m->info.duration;
+            const Time length = timelineEnd > Time::zero() ? std::min(m->info.duration, room) : m->info.duration;
+            clip.range = {start, std::max(length, Time::fromSeconds(1))};
+            clip.audio.gainDb = -14;
+            clip.audio.fadeIn = std::min(Time::fromSeconds(1), clip.range.duration.scaled(Rational(1, 4)));
+            clip.audio.fadeOut = std::min(Time::fromSeconds(2), clip.range.duration.scaled(Rational(1, 4)));
+        } else {
+            const Time start = sec(std::max(0.0, seconds));
+            Time length = m->info.duration;
+            if (m->kind == project::MediaKind::Image) {
+                const Time room = timelineEnd - start;
+                length = room >= Time::fromSeconds(1) ? std::min(Time::fromSeconds(5), room) : Time::fromSeconds(5);
+            }
+            clip.range = {start, std::max(length, Time::fromMilliseconds(200))};
+            const bool logo = m->kind == project::MediaKind::Image;
+            clip.transform.position = logo ? timeline::Vec2{0.86, 0.14} : timeline::Vec2{0.5, 0.5};
+            clip.transform.scale = logo ? timeline::Vec2{0.18, 0.18} : timeline::Vec2{0.5, 0.5};
+        }
+        const auto kind = music ? timeline::TrackKind::Audio : timeline::TrackKind::Overlay;
+        timeline::Track& track = trackWithRoom(p, kind, music ? "Music" : "Overlay", clip.range);
+        return track.insertClip(std::move(clip));
+    });
+    if (ok) selectClip(qs(clipId.toString()));
 }
 
 // ---- Subtitles -------------------------------------------------------------

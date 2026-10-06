@@ -123,19 +123,30 @@ ProjectController::Mutation ProjectController::layerRectEdit(const QString& clip
     }
     label = QStringLiteral("Move on canvas");
     const bool text = layer.kind == editor::LayerKind::Text;
+    const bool keyframe = keyframeAtPlayhead_;
     return [=](project::Project& p) -> Status {
         timeline::Clip* c = clipById(p, clip);
         if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        const Time local = t - c->range.start;
+        const bool onClip = local >= Time::zero() && t < c->range.end();
         if (text && c->text) {
             // Resizing scales the font; the outline includes this instant's
             // animation offset, which is not part of the position.
             c->text->style.size = std::clamp(c->text->style.size * ratio, 8.0, 480.0);
-            c->transform.position.value = {std::clamp(cx - layer.textDx, -0.5, 1.5), std::clamp(cy - layer.textDy, -0.5, 1.5)};
+            const timeline::Vec2 pos{std::clamp(cx - layer.textDx, -0.5, 1.5), std::clamp(cy - layer.textDy, -0.5, 1.5)};
+            if (keyframe && onClip) c->transform.position.setKey(local, pos);
+            else c->transform.position.value = pos;
         } else {
             // Overlays: centered at the position, `scale` of the canvas width wide.
-            c->transform.position.value = {std::clamp(cx, -0.5, 1.5), std::clamp(cy, -0.5, 1.5)};
+            const timeline::Vec2 pos{std::clamp(cx, -0.5, 1.5), std::clamp(cy, -0.5, 1.5)};
             const double width = std::clamp(w, 0.02, 2.0);
-            c->transform.scale.value = {width, width};
+            if (keyframe && onClip) {
+                c->transform.position.setKey(local, pos);
+                c->transform.scale.setKey(local, {width, width});
+            } else {
+                c->transform.position.value = pos;
+                c->transform.scale.value = {width, width};
+            }
         }
         return ok();
     };

@@ -11,6 +11,15 @@ namespace {
 
 Time sec(double s) { return Time::fromSecondsF(s); }
 
+Clip mediaClip(Time start, Time duration, MediaId media) {
+    Clip c;
+    c.id = ClipId::generate();
+    c.kind = ClipKind::Media;
+    c.range = {start, duration};
+    c.media = media;
+    return c;
+}
+
 /// A recording as the importer builds it — screen, camera (started 100 ms
 /// late) and microphone in one link group — plus a free text overlay and a
 /// music bed, two markers and one layout region.
@@ -161,6 +170,16 @@ TEST(EditOps, DeletingAFreeClipLeavesAGap) {
     ASSERT_TRUE(edit::deleteClip(r.tl, r.text));
     EXPECT_TRUE(r.track("Text").clips.empty());
     EXPECT_EQ(r.track("Screen").clips[0].range.duration, sec(10));
+}
+
+TEST(EditOps, ClipSpeedAndReverseMapSourceTime) {
+    Clip c = mediaClip(Time::fromSeconds(0), Time::fromSeconds(4), MediaId::generate());
+    c.sourceIn = Time::fromSeconds(10);
+    c.speed = Rational(2, 1);
+    EXPECT_EQ(c.sourceTimeAt(Time::fromSeconds(1)), Time::fromSeconds(12));
+    c.reversed = true;
+    EXPECT_EQ(c.sourceTimeAt(Time::fromSeconds(0)), Time::fromSeconds(18));
+    EXPECT_EQ(c.sourceTimeAt(Time::fromSeconds(4)), Time::fromSeconds(10));
 }
 
 TEST(EditOps, DeleteClipLocalRemovesOneTrackOnly) {

@@ -468,6 +468,7 @@ json::Json toJson(const Clip& c) {
         j["mediaId"] = c.media.toString();
         j["sourceIn"] = json::toJson(c.sourceIn);
         j["speed"] = json::toJson(c.speed);
+        if (c.reversed) j["reversed"] = true;
     }
     j["transform"] = transformJson(c.transform);
     j["crop"] = animatedJson(c.crop);
@@ -538,6 +539,7 @@ Result<Clip> clipFromJson(const Json& j, const std::string& path) {
             if (!sp) return fail(std::move(sp).error());
             c.speed = *sp;
         }
+        c.reversed = j.value("reversed", false);
     }
     if (j.contains("transform")) {
         auto t = transformFrom(j["transform"], path + ".transform");

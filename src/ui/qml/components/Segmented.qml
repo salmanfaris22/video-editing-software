@@ -1,19 +1,20 @@
 import QtQuick
 import QtQuick.Controls.Basic
 
-// Compact segmented control. `options`: [{label, value}].
+// Compact segmented control. `options`: [{label, value, icon?}]. Set `iconMode`
+// to show icons only (tooltip = label).
 Rectangle {
     id: root
 
     property var options: []
     property var value
+    property bool iconMode: false
     signal selected(var value)
 
-    implicitHeight: 34
-    // Natural width from the labels (equal segments). It used to come from the
-    // segments, whose widths come from the row: a loop that collapsed the
-    // control to nothing inside a RowLayout.
+    implicitHeight: root.iconMode ? 30 : 34
     implicitWidth: {
+        if (root.iconMode)
+            return 6 + root.options.length * 30 + Math.max(0, root.options.length - 1) * row.spacing
         let widest = 0
         for (let i = 0; i < root.options.length; ++i)
             widest = Math.max(widest, metrics.advanceWidth(String(root.options[i].label)))
@@ -53,13 +54,27 @@ Rectangle {
                     border.width: segment.checkedState ? 1 : 0
                     border.color: Qt.rgba(0.49, 0.55, 1.0, 0.45)
                 }
-                contentItem: Label {
-                    text: segment.modelData.label
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: Theme.fontS
-                    font.weight: segment.checkedState ? Font.DemiBold : Font.Normal
-                    color: segment.checkedState ? Theme.text : Theme.textMuted
+                ToolTip.visible: root.iconMode && hovered
+                ToolTip.text: segment.modelData.label
+                ToolTip.delay: 400
+                contentItem: Item {
+                    Icon {
+                        visible: root.iconMode && segment.modelData.icon !== undefined
+                        anchors.centerIn: parent
+                        name: segment.modelData.icon
+                        size: 16
+                        color: segment.checkedState ? Theme.text : Theme.textMuted
+                    }
+                    Label {
+                        visible: !root.iconMode || segment.modelData.icon === undefined
+                        anchors.fill: parent
+                        text: segment.modelData.label
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: Theme.fontS
+                        font.weight: segment.checkedState ? Font.DemiBold : Font.Normal
+                        color: segment.checkedState ? Theme.text : Theme.textMuted
+                    }
                 }
             }
         }

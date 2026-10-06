@@ -144,6 +144,18 @@ Status RecordingSession::start() {
     const std::int64_t t0 = clock_.start();
     (void)registry_.add({config_.sessionId, config_.projectDir, sdir, createdAt_});
     setState(SessionState::Recording);
+    for (const Track& t : tracks_) {
+        if (t.plan.role != TrackRole::Screen || !t.plan.videoSource) continue;
+        const auto info = t.plan.videoSource->info();
+        const std::filesystem::path eventsFile = sessionDir() / "input-events.json";
+        inputRecorder_ = std::make_unique<InputEventRecorder>(clock_, eventsFile, std::max(1, info.width),
+                                                              std::max(1, info.height));
+        if (auto st = inputRecorder_->start(); !st) {
+            LEC_WARN("capture", "input event capture: {}", st.error().toString());
+            inputRecorder_.reset();
+        }
+        break;
+    }
     writeCheckpoint();
     LEC_INFO("capture", "session {} recording {} track(s) into {} (T0={} ns)", config_.sessionId, tracks_.size(),
              config_.projectDir.string(), t0);
@@ -230,6 +242,13 @@ void RecordingSession::finalize() {
             LEC_ERROR("capture", "track {}: writer did not finish in time", t.plan.trackId);
         }
         t.plan.videoSource->setConsumer(nullptr);
+    }
+
+    if (inputRecorder_) {
+        inputRecorder_->stop();
+        if (auto st = inputRecorder_->flush(); !st) {
+            LEC_WARN("capture", "writing input events failed: {}", st.error().toString());
+        }
     }
 
     SessionManifest manifest = buildManifest(true);
@@ -457,6 +476,14 @@ SessionManifest RecordingSession::buildManifest(bool final) const {
         mt.bytes = final ? o.bytes : (t.video ? t.video->bytesWritten() : t.audio->bytesWritten());
         if (o.error) mt.error = o.error->toString();
         m.tracks.push_back(std::move(mt));
+    }
+    if (inputRecorder_) {
+        const InputEventLog log = inputRecorder_->snapshot();
+        m.pointerEventCount = log.pointer.size();
+        m.keyEventCount = log.keys.size();
+        if (!log.pointer.empty() || !log.keys.empty()) {
+            m.inputEventsFile = "recordings/" + config_.sessionId + "/input-events.json";
+        }
     }
     return m;
 }

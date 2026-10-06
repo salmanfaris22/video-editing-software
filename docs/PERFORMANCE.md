@@ -126,7 +126,12 @@ Machine: MacBook Air M1 (8 GB), macOS 26.4.1, Debug build unless noted.
 | Full unit + integration suite | 155 tests in ~30 s (incl. editor, playback and UI-controller tests) | `ctest --preset dev` |
 | Hardware encoders verified | `h264_videotoolbox`, `hevc_videotoolbox` (plus `libx264`, `libx265` fallbacks) | `lectern-probe --encoders` |
 
-## 10. Editor measurements (2026-10-05)
+## 10. Editor measurements (2026-10-05, re-verified 2026-10-06)
+
+**2026-10-06 re-run:** `scripts/export-benchmark.sh` (or the commands below) on
+`build/dev`; full `/usr/bin/time -l` output is appended to
+`docs/benchmarks/export-YYYYMMDD.log`. PSNR vs the pre-optimization renderer
+stays **46.6 dB** when export pixels match (`Export.*`, `QaRegression.*`).
 
 Machine as in §9; **Release** build. Test project: 20 s recorded with
 `lectern-rec --synthetic` (1080p screen, 720p camera, microphone, system

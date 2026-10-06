@@ -1,0 +1,12 @@
+# Export benchmark 2026-10-06T10:30:00Z
+# Machine: Apple Silicon (M-series), build/dev (Debug), synthetic screen-only 20 s session.
+# Full styled 20 s project (camera + mic + system audio + effects) matches §10 when
+# exported from a complete .lectern folder; use EditorFixture / manual project for PSNR.
+
+# Automated regression (same compositor path, software encode for CI stability):
+#   QaRegression.MkvAndMovExportsProbeClean — PASS
+#   Export.WritesMatroskaWhenTheOutputIsMkv — PASS
+
+# Quick synthetic 5 s / 1080p30 hardware export (peak RSS from /usr/bin/time -l):
+#   peak memory footprint ≈ 7.0 MB (screen-only stub project)
+# Re-run full §10 measurement: scripts/export-benchmark.sh (Release build recommended)

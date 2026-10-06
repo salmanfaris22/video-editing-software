@@ -393,19 +393,19 @@ Item {
         }
     }
 
-    Menu {
+    LecternMenu {
         id: contextMenu
-        MenuItem {
+        LecternMenuItem {
             text: "Edit text"
             visible: root.project.selection.role === "text"
             height: visible ? implicitHeight : 0
             onTriggered: root.beginTextEdit()
         }
-        MenuItem {
+        LecternMenuItem {
             text: "Reset position and size"
             onTriggered: root.project.resetLayerRect(root.selected, root.playback.position)
         }
-        MenuItem {
+        LecternMenuItem {
             text: root.project.selection.role === "screen" || root.project.selection.role === "camera"
                   ? "Reset whole layout" : "Delete"
             visible: root.project.selection.role !== "subtitle"

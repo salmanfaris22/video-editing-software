@@ -45,11 +45,19 @@ Item {
     onScopeModeChanged: root.app.setWorkspaceValue("scopeMode", scopeMode)
     property string timelineGridMode: root.app.workspaceValue("timelineGridMode", "auto")
     onTimelineGridModeChanged: root.app.setWorkspaceValue("timelineGridMode", timelineGridMode)
+    property bool keyframeAtPlayhead: root.app.workspaceValue("keyframeAtPlayhead", true)
+    onKeyframeAtPlayheadChanged: {
+        root.app.setWorkspaceValue("keyframeAtPlayhead", keyframeAtPlayhead)
+        root.project.keyframeAtPlayhead = keyframeAtPlayhead
+    }
 
     function refocus() { root.forceActiveFocus() }
     function openExport() { exportDialog.open() }
 
-    Component.onCompleted: root.project.linkedEditMode = linkedEditMode
+    Component.onCompleted: {
+        root.project.linkedEditMode = linkedEditMode
+        root.project.keyframeAtPlayhead = keyframeAtPlayhead
+    }
 
     focus: true
     Keys.onPressed: event => {
@@ -252,6 +260,7 @@ Item {
                     project: root.project
                     playback: root.playback
                     editor: root
+                    app: root.app
                 }
                 PreviewPane {
                     Layout.fillWidth: true

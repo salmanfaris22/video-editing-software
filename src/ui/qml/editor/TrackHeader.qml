@@ -56,11 +56,15 @@ Rectangle {
         color: Theme.stroke
     }
 
+    ToolTip.visible: headerHover.hovered && !root.renaming
+    ToolTip.text: root.track.name + " (" + root.track.label + ")"
+    ToolTip.delay: 500
+
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 10
+        anchors.leftMargin: 8
         anchors.rightMargin: 4
-        spacing: 4
+        spacing: 2
         Rectangle {
             width: 28
             height: 20
@@ -74,16 +78,7 @@ Rectangle {
                 font.weight: Font.Bold
             }
         }
-        Label {
-            visible: !root.renaming
-            Layout.fillWidth: true
-            Layout.leftMargin: 4
-            text: root.track.name
-            color: root.track.hidden || root.track.muted ? Theme.textFaint : root.selected ? Theme.text : Theme.textSecondary
-            font.pixelSize: Theme.fontS
-            font.weight: root.selected ? Font.DemiBold : Font.Normal
-            elide: Text.ElideRight
-        }
+        Item { Layout.fillWidth: true; Layout.minimumWidth: 4 }
         TextField {
             id: nameField
             objectName: "layerNameField"
@@ -149,21 +144,21 @@ Rectangle {
         }
     }
 
-    Menu {
+    LecternMenu {
         id: layerMenu
-        MenuItem { text: "Rename…"; onTriggered: root.beginRename() }
-        MenuItem {
+        LecternMenuItem { text: "Rename…"; onTriggered: root.beginRename() }
+        LecternMenuItem {
             text: "Move layer up"
             enabled: root.track.canMoveUp
             onTriggered: root.project.moveTrack(root.track.id, 1)
         }
-        MenuItem {
+        LecternMenuItem {
             text: "Move layer down"
             enabled: root.track.canMoveDown
             onTriggered: root.project.moveTrack(root.track.id, -1)
         }
         MenuSeparator {}
-        MenuItem {
+        LecternMenuItem {
             text: root.track.clips.length > 0 ? "Delete layer and its " + root.track.clips.length
                                                 + (root.track.clips.length === 1 ? " clip" : " clips")
                                               : "Delete layer"

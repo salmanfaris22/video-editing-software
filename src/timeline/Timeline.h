@@ -242,6 +242,7 @@ struct Clip {
     MediaId media;             ///< Media clips only
     Time sourceIn;             ///< media time at range.start
     Rational speed{1, 1};
+    bool reversed = false;  ///< play source backward at `speed` (media time decreases)
     Transform transform;
     Animated<Vec4> crop{Vec4{}};
     Animated<double> opacity{1.0};
@@ -253,7 +254,11 @@ struct Clip {
     std::string fillColor;     ///< Color clips
 
     /// Media time shown at timeline time t (t within range).
-    [[nodiscard]] Time sourceTimeAt(Time t) const { return sourceIn + (t - range.start).scaled(speed); }
+    [[nodiscard]] Time sourceTimeAt(Time t) const {
+        const Time delta = (t - range.start).scaled(speed);
+        if (!reversed) return sourceIn + delta;
+        return sourceIn + range.duration.scaled(speed) - delta;
+    }
     /// Media duration consumed by the clip.
     [[nodiscard]] Time sourceDuration() const { return range.duration.scaled(speed); }
 

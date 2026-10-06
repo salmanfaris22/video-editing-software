@@ -238,11 +238,13 @@ Json toJson(const Project& p) {
     for (const auto& m : p.media) media.push_back(mediaJson(m));
     Json recordings = Json::array();
     for (const auto& r : p.recordings) {
-        recordings.push_back(Json{{"sessionId", r.sessionId},
-                                  {"manifest", r.manifest},
-                                  {"startedAt", r.startedAt},
-                                  {"duration", json::toJson(r.duration)},
-                                  {"state", r.state}});
+        Json entry{{"sessionId", r.sessionId},
+                   {"manifest", r.manifest},
+                   {"startedAt", r.startedAt},
+                   {"duration", json::toJson(r.duration)},
+                   {"state", r.state}};
+        if (!r.inputEvents.empty()) entry["inputEvents"] = r.inputEvents;
+        recordings.push_back(std::move(entry));
     }
     Json gallery = Json::array();
     for (const auto& st : p.gallery) {
@@ -345,6 +347,7 @@ Result<Project> projectFromJson(const json::Json& raw) {
             RecordingEntry r;
             r.sessionId = rj.value("sessionId", "");
             r.manifest = rj.value("manifest", "");
+            r.inputEvents = rj.value("inputEvents", "");
             r.startedAt = rj.value("startedAt", "");
             if (auto d = json::timeFrom(rj.value("duration", Json(0)), "project.recordings.duration")) r.duration = *d;
             r.state = rj.value("state", "");

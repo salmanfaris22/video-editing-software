@@ -8,6 +8,7 @@ other industry tools, and what exists today. The original design documents
 | Document | What it covers | Items | Lectern has (full / partial) |
 |---|---|---|---|
 | [SUMMARY.md](SUMMARY.md) | **Start here:** all decisions and the plan on one page (delivery, architecture, MCP, phases, next step) | – | – |
+| [PENDING_IMPROVEMENTS_PHASED_PLAN.md](PENDING_IMPROVEMENTS_PHASED_PLAN.md) | **Execution roadmap:** all pending/partial work by domain, Waves A–F, sprint steps, perf snapshot (2026-10-06) | – | – |
 | [INDUSTRY_TOOLS_FEATURES.md](INDUSTRY_TOOLS_FEATURES.md) | Main features of the 14 industry tools (Resolve, Premiere, Final Cut, Avid, After Effects, Fusion, Nuke, Houdini, Cinema 4D, Blender, Vegas, Pro Tools, Audition, RX) and which Lectern adopts | overview | – |
 | [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md) | Color pipeline, grading, curves, secondaries, scopes, LUTs, repair, effects, keying, compositing, transitions, time, motion, text, AI | 230 | 42 / 33 |
 | [PRO_INTERFACE_PARITY.md](PRO_INTERFACE_PARITY.md) | After Effects-style workspace: tools, viewer, panels, Effect Controls, timeline switches, graph editor, Character panel, menus | 203 | 28 / 45 |

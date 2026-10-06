@@ -48,11 +48,28 @@ struct ManifestPause {
     Time sessionTime;
 };
 
+/// Pointer event for auto-zoom and click overlays (normalized to the captured display, 0…1).
+struct ManifestPointerEvent {
+    Time sessionTime;
+    std::string type;  ///< "move" | "down" | "up"
+    double x = 0;
+    double y = 0;
+    int button = 0;  ///< 0 left, 1 right, 2 middle
+};
+
+/// Keystroke event (Unicode key name, e.g. "a", "Return", "Space").
+struct ManifestKeyEvent {
+    Time sessionTime;
+    std::string type;  ///< "down" | "up"
+    std::string key;
+    std::uint32_t modifiers = 0;
+};
+
 /// Recording session manifest (docs/RECORDING_ENGINE.md §8). Rewritten
 /// atomically on every state change and periodically as a checkpoint; it is
 /// the input for both project creation and crash recovery.
 struct SessionManifest {
-    static constexpr int kFormatVersion = 1;
+    static constexpr int kFormatVersion = 2;
 
     int formatVersion = kFormatVersion;
     std::string sessionId;
@@ -70,6 +87,10 @@ struct SessionManifest {
     std::int64_t checkpointHostNs = 0;
     std::vector<ManifestPause> pauses;
     std::vector<ManifestTrack> tracks;
+    /// Relative to the project directory; detailed events in input-events.json (format v2+).
+    std::string inputEventsFile;
+    std::uint64_t pointerEventCount = 0;
+    std::uint64_t keyEventCount = 0;
 };
 
 [[nodiscard]] json::Json toJson(const SessionManifest& manifest);
@@ -77,5 +98,19 @@ struct SessionManifest {
 Status writeManifest(const std::filesystem::path& path, const SessionManifest& manifest);
 [[nodiscard]] Result<SessionManifest> readManifest(const std::filesystem::path& path);
 [[nodiscard]] std::string hostClockName();
+
+struct InputEventLog {
+    static constexpr int kFormatVersion = 1;
+    int formatVersion = kFormatVersion;
+    int captureWidth = 0;
+    int captureHeight = 0;
+    std::vector<ManifestPointerEvent> pointer;
+    std::vector<ManifestKeyEvent> keys;
+};
+
+[[nodiscard]] json::Json toJson(const InputEventLog& log);
+[[nodiscard]] Result<InputEventLog> inputEventLogFromJson(const json::Json& value);
+Status writeInputEventLog(const std::filesystem::path& path, const InputEventLog& log);
+[[nodiscard]] Result<InputEventLog> readInputEventLog(const std::filesystem::path& path);
 
 }  // namespace lectern::capture

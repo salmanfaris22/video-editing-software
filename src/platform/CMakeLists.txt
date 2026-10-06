@@ -28,7 +28,8 @@ if(APPLE AND LECTERN_NATIVE_CAPTURE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/maco
         "-framework CoreGraphics"
         "-framework VideoToolbox"
         "-framework IOSurface"
-        "-framework Carbon")
+        "-framework Carbon"
+        "-framework CoreFoundation")
     lectern_enable_objc_arc(lectern_platform)
     target_compile_definitions(lectern_platform PUBLIC LECTERN_HAS_NATIVE_CAPTURE=1)
 elseif(WIN32 AND LECTERN_NATIVE_CAPTURE)

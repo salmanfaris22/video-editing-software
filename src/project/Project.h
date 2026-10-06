@@ -140,6 +140,7 @@ struct StyleSettings {
 struct RecordingEntry {
     std::string sessionId;
     std::string manifest;  ///< relative path to session.json
+    std::string inputEvents;  ///< relative path to input-events.json when captured
     std::string startedAt;
     Time duration;
     std::string state;

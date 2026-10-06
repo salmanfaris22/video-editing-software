@@ -113,24 +113,30 @@ json::Json toJson(const SessionManifest& m) {
     }
     json::Json tracks = json::Json::array();
     for (const auto& t : m.tracks) tracks.push_back(trackToJson(t));
-    return json::Json{{"format", "lectern.recording-session"},
-                      {"formatVersion", m.formatVersion},
-                      {"timebase", Time::kTicksPerSecond},
-                      {"sessionId", m.sessionId},
-                      {"title", m.title},
-                      {"state", std::string(toString(m.state))},
-                      {"recovered", m.recovered},
-                      {"stopReason", std::string(toString(m.stopReason))},
-                      {"createdAt", m.createdAtUtc},
-                      {"finishedAt", m.finishedAtUtc},
-                      {"appVersion", m.appVersion},
-                      {"hostClock", m.hostClock},
-                      {"startHostNs", m.startHostNs},
-                      {"stopHostNs", m.stopHostNs ? json::Json(*m.stopHostNs) : json::Json(nullptr)},
-                      {"duration", json::toJson(m.duration)},
-                      {"checkpointHostNs", m.checkpointHostNs},
-                      {"pauses", std::move(pauses)},
-                      {"tracks", std::move(tracks)}};
+    json::Json j{{"format", "lectern.recording-session"},
+                 {"formatVersion", m.formatVersion},
+                 {"timebase", Time::kTicksPerSecond},
+                 {"sessionId", m.sessionId},
+                 {"title", m.title},
+                 {"state", std::string(toString(m.state))},
+                 {"recovered", m.recovered},
+                 {"stopReason", std::string(toString(m.stopReason))},
+                 {"createdAt", m.createdAtUtc},
+                 {"finishedAt", m.finishedAtUtc},
+                 {"appVersion", m.appVersion},
+                 {"hostClock", m.hostClock},
+                 {"startHostNs", m.startHostNs},
+                 {"stopHostNs", m.stopHostNs ? json::Json(*m.stopHostNs) : json::Json(nullptr)},
+                 {"duration", json::toJson(m.duration)},
+                 {"checkpointHostNs", m.checkpointHostNs},
+                 {"pauses", std::move(pauses)},
+                 {"tracks", std::move(tracks)}};
+    if (!m.inputEventsFile.empty()) {
+        j["inputEvents"] = m.inputEventsFile;
+        j["pointerEventCount"] = m.pointerEventCount;
+        j["keyEventCount"] = m.keyEventCount;
+    }
+    return j;
 }
 
 Result<SessionManifest> manifestFromJson(const json::Json& j) {
@@ -184,6 +190,9 @@ Result<SessionManifest> manifestFromJson(const json::Json& j) {
             m.tracks.push_back(std::move(*track));
         }
     }
+    m.inputEventsFile = j.value("inputEvents", "");
+    m.pointerEventCount = j.value("pointerEventCount", std::uint64_t{0});
+    m.keyEventCount = j.value("keyEventCount", std::uint64_t{0});
     return m;
 }
 
@@ -197,6 +206,79 @@ Result<SessionManifest> readManifest(const std::filesystem::path& path) {
     auto parsed = json::parse(*text, path.string());
     if (!parsed) return fail(std::move(parsed).error());
     return manifestFromJson(*parsed);
+}
+
+json::Json toJson(const InputEventLog& log) {
+    json::Json pointer = json::Json::array();
+    for (const ManifestPointerEvent& e : log.pointer) {
+        pointer.push_back({{"t", json::toJson(e.sessionTime)},
+                           {"type", e.type},
+                           {"x", e.x},
+                           {"y", e.y},
+                           {"button", e.button}});
+    }
+    json::Json keys = json::Json::array();
+    for (const ManifestKeyEvent& e : log.keys) {
+        keys.push_back({{"t", json::toJson(e.sessionTime)},
+                        {"type", e.type},
+                        {"key", e.key},
+                        {"modifiers", e.modifiers}});
+    }
+    return json::Json{{"format", "lectern.input-events"},
+                      {"formatVersion", log.formatVersion},
+                      {"timebase", Time::kTicksPerSecond},
+                      {"captureWidth", log.captureWidth},
+                      {"captureHeight", log.captureHeight},
+                      {"pointer", std::move(pointer)},
+                      {"keys", std::move(keys)}};
+}
+
+Result<InputEventLog> inputEventLogFromJson(const json::Json& j) {
+    InputEventLog log;
+    log.formatVersion = j.value("formatVersion", 0);
+    if (log.formatVersion < 1 || log.formatVersion > InputEventLog::kFormatVersion) {
+        return fail(ErrorCode::Unsupported, "input-events version not supported");
+    }
+    log.captureWidth = j.value("captureWidth", 0);
+    log.captureHeight = j.value("captureHeight", 0);
+    if (const auto it = j.find("pointer"); it != j.end() && it->is_array()) {
+        for (const auto& p : *it) {
+            ManifestPointerEvent e;
+            if (p.contains("t")) {
+                if (auto t = json::timeFrom(p["t"], "pointer.t")) e.sessionTime = *t;
+            }
+            e.type = p.value("type", "move");
+            e.x = p.value("x", 0.0);
+            e.y = p.value("y", 0.0);
+            e.button = p.value("button", 0);
+            log.pointer.push_back(e);
+        }
+    }
+    if (const auto it = j.find("keys"); it != j.end() && it->is_array()) {
+        for (const auto& k : *it) {
+            ManifestKeyEvent e;
+            if (k.contains("t")) {
+                if (auto t = json::timeFrom(k["t"], "keys.t")) e.sessionTime = *t;
+            }
+            e.type = k.value("type", "down");
+            e.key = k.value("key", "");
+            e.modifiers = k.value("modifiers", std::uint32_t{0});
+            log.keys.push_back(e);
+        }
+    }
+    return log;
+}
+
+Status writeInputEventLog(const std::filesystem::path& path, const InputEventLog& log) {
+    return fs::writeFileAtomic(path, json::dump(toJson(log)), {.fsync = true, .keepBackup = false});
+}
+
+Result<InputEventLog> readInputEventLog(const std::filesystem::path& path) {
+    auto text = fs::readFile(path, 64u << 20);
+    if (!text) return fail(std::move(text).error());
+    auto parsed = json::parse(*text, path.string());
+    if (!parsed) return fail(std::move(parsed).error());
+    return inputEventLogFromJson(*parsed);
 }
 
 }  // namespace lectern::capture
