@@ -37,6 +37,8 @@ Item {
         console.info("page:", page)
     }
     property string scopeMode: root.app.workspaceValue("scopeMode", "parade")
+    property string colorPalette: root.app.workspaceValue("colorPalette", "primaries")
+    onColorPaletteChanged: root.app.setWorkspaceValue("colorPalette", colorPalette)
     onScopeModeChanged: root.app.setWorkspaceValue("scopeMode", scopeMode)
     property string timelineGridMode: root.app.workspaceValue("timelineGridMode", "auto")
     onTimelineGridModeChanged: root.app.setWorkspaceValue("timelineGridMode", timelineGridMode)

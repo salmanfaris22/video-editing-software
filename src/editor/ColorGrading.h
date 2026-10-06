@@ -95,6 +95,9 @@ void applyInputColor(QImage& image, const InputColor& input);
 using ColorCurves = std::array<std::array<std::uint8_t, 256>, 3>;
 [[nodiscard]] ColorCurves colorCurves(const ColorParams& color);
 
+/// A custom curve through control points (monotone cubic; clamped ends).
+[[nodiscard]] double evaluateCurve(const std::vector<timeline::Vec2>& points, double x);
+
 /// Color Boost (vibrance) and Hue rotation on one pixel (0…1), after saturation.
 /// The GPU shader mirrors it.
 [[nodiscard]] std::array<double, 3> boostAndHue(const ColorParams& color, double r, double g, double b);

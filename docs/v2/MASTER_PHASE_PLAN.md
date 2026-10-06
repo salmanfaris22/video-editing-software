@@ -4,8 +4,8 @@ Every open item from the v2 checklists (COLOR_EFFECTS_PARITY,
 PRO_INTERFACE_PARITY, DAVINCI_COLOR_PAGE, FULL_GAP_AUDIT) placed into one
 small phase. Generated 2026-10-05 from those documents by `scripts/` in this folder
 (`python3 scripts/build_master_plan.py`), so
-**each of the 636 open items (⬜ missing or 🟡 partly done) appears exactly
-once**; the 100 done items (✅) are listed in the appendix.
+**each of the 633 open items (⬜ missing or 🟡 partly done) appears exactly
+once**; the 103 done items (✅) are listed in the appendix.
 
 How it is organised:
 - **Stages 0–8** follow the order of work: ship basics in parallel; color
@@ -54,7 +54,7 @@ Model: P0 item ≈ 0.6M, P1 ≈ 0.5M, P2 ≈ 0.4M, P3 ≈ 0.8M (specialist work 
 | Stage | Tokens processed (est.) | Output tokens (≈ 5 %) |
 |---|---|---|
 | Stage 0 — Ship, privacy and recorder (parallel track) | ~16M | ~0.8M |
-| Stage 1 — Color grading like DaVinci (ROADMAP Phase 1) | ~88M | ~4.4M |
+| Stage 1 — Color grading like DaVinci (ROADMAP Phase 1) | ~87M | ~4.4M |
 | Stage 2 — Deep MCP and the pro-editor agent (ROADMAP Phase 2) | ~61M | ~3.1M |
 | Stage 3 — Effects, compositing, animation, text | ~46M | ~2.3M |
 | Stage 4 — Editing, audio, captions | ~20M | ~1.0M |
@@ -62,7 +62,7 @@ Model: P0 item ≈ 0.6M, P1 ≈ 0.5M, P2 ≈ 0.4M, P3 ≈ 0.8M (specialist work 
 | Stage 6 — Delivery and collaboration | ~9.8M | ~0.5M |
 | Stage 7 — Project, performance, platform | ~7.2M | ~0.4M |
 | Stage 8 — Specialist (P3, on demand) | ~105M | ~5.2M |
-| **All stages** | **~409M** (≈ 205M–819M) | **~20M** |
+| **All stages** | **~409M** (≈ 204M–818M) | **~20M** |
 
 Wave 1 only (all **a** phases + new-work phases): ~228M tokens processed.
 
@@ -82,11 +82,11 @@ Wave 1 only (all **a** phases + new-work phases): ~228M tokens processed.
 - **1.2b** Float pipeline and color management · power users (P2) · 1 item · ~0.4M tokens
 - **1.3a** Corrector layers (format v3) · must-have (P0/P1) · 8 items · ~5.0M tokens
 - **1.3b** Corrector layers (format v3) · power users (P2) · 2 items · ~0.8M tokens
-- **1.4a** Primaries (Resolve wheels) · must-have (P0/P1) · 9 items · ~5.0M tokens
+- **1.4a** Primaries (Resolve wheels) · must-have (P0/P1) · 8 items · ~5.0M tokens
 - **1.4b** Primaries (Resolve wheels) · power users (P2) · 11 items · ~4.4M tokens
 - **1.5a** Scopes · must-have (P0/P1) · 4 items · ~5.0M tokens
 - **1.5b** Scopes · power users (P2) · 6 items · ~2.4M tokens
-- **1.6a** Curves · must-have (P0/P1) · 6 items · ~3.0M tokens
+- **1.6a** Curves · must-have (P0/P1) · 4 items · ~2.5M tokens
 - **1.6b** Curves · power users (P2) · 5 items · ~2.0M tokens
 - **1.7a** Qualifier and secondaries · must-have (P0/P1) · 3 items · ~5.0M tokens
 - **1.7b** Qualifier and secondaries · power users (P2) · 5 items · ~2.0M tokens
@@ -332,7 +332,7 @@ Items: 2. User-facing features ship with their MCP tool and a test.
 
 Goal: Lumetri/Resolve primaries: wheels, contrast/pivot, shadows/highlights, auto balance.  
 Claude estimate: ~5.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 9. User-facing features ship with their MCP tool and a test.
+Items: 8. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
@@ -341,7 +341,6 @@ Items: 9. User-facing features ship with their MCP tool and a test.
 | COLOR §2.19 | Levels (input/output black/white, gamma, per channel) | ⬜ | P1 |
 | COLOR §2.21 | Black & White / Tint / Tritone | ⬜ | P1 |
 | COLOR §2.26 | Reset per section / per control | 🟡 | P1 |
-| DAVINCI §5.1 | **A** — Auto Balance | ⬜ | P1 |
 | DAVINCI §5.2 | White-balance picker (eyedropper) | ⬜ | P1 |
 | DAVINCI §5.7 | Mid/Detail | ⬜ | P1 |
 | UI §13.3 | Lumetri panel sections: Basic, Creative, Curves, Color Wheels & Match, HSL Secondary, Vignette | 🟡 | P1 |
@@ -397,17 +396,15 @@ Items: 6. User-facing features ship with their MCP tool and a test.
 ### 1.6a — Curves · must-have (P0/P1)
 
 Goal: Custom and hue/sat/lum curves.  
-Claude estimate: ~3.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 6. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~2.5M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 4. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §3.1 | RGB / Luma custom curves (spline points) | ⬜ | P1 |
-| COLOR §3.2 | Per-channel R, G, B curves | ⬜ | P1 |
 | COLOR §3.4 | Hue vs. Hue | ⬜ | P1 |
 | COLOR §3.5 | Hue vs. Saturation | ⬜ | P1 |
 | COLOR §3.6 | Hue vs. Luma | ⬜ | P1 |
-| DAVINCI §4.7 | 7 | ⬜ | P1 |
+| DAVINCI §4.7 | 7 | 🟡 | P1 |
 
 ### 1.6b — Curves · power users (P2)
 
@@ -539,7 +536,7 @@ Items: 4. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §2.9 | Auto white balance / auto tone | ⬜ | P1 |
+| COLOR §2.9 | Auto white balance / auto tone | 🟡 | P1 |
 | COLOR §2.24 | Match color between clips (shot match) | ⬜ | P1 |
 | COLOR §18.1 | Auto color / auto balance | ⬜ | P1 |
 | COLOR §18.2 | Shot match | ⬜ | P1 |
@@ -1866,14 +1863,14 @@ Items: 29. User-facing features ship with their MCP tool and a test.
 
 ## Appendix — already done (✅)
 
-**COLOR_EFFECTS_PARITY:** §1.1 GPU render pipeline (preview + export), §1.5 Per-clip input color space / gamma tagging, §1.15 Real-time playback at full rate with grades and effects, §2.1 Exposure, §2.2 Contrast with pivot, §2.3 Highlights / Shadows, §2.5 Temperature / Tint, §2.6 Saturation, §2.7 Vibrance, §2.8 Brightness, §2.11 Lift / Gamma / Gain wheels, §2.12 Offset wheel, §2.13 Shadows / Midtones / Highlights wheels (Lumetri style), §2.25 Copy / paste grade, apply to all of a source, §6.1 Waveform (luma, RGB overlay), §6.2 RGB Parade, §6.3 Vectorscope (with skin-tone line, 75%/100% targets), §6.4 Histogram, §7.1 3D LUT import (.cube), §7.2 LUT mix / intensity, §9.1 Gaussian Blur, §9.12 Background blur by person mask, §10.11 Digital zoom / punch-in (Ken Burns), §11.1 Vignette, §13.1 Opacity per layer, keyframable, §13.8 Picture-in-picture layouts, §17.1 Text layers with font, size, weight, color, background, §19.9 Undo per parameter, merge slider drags
+**COLOR_EFFECTS_PARITY:** §1.1 GPU render pipeline (preview + export), §1.5 Per-clip input color space / gamma tagging, §1.15 Real-time playback at full rate with grades and effects, §2.1 Exposure, §2.2 Contrast with pivot, §2.3 Highlights / Shadows, §2.5 Temperature / Tint, §2.6 Saturation, §2.7 Vibrance, §2.8 Brightness, §2.11 Lift / Gamma / Gain wheels, §2.12 Offset wheel, §2.13 Shadows / Midtones / Highlights wheels (Lumetri style), §2.25 Copy / paste grade, apply to all of a source, §3.1 RGB / Luma custom curves (spline points), §3.2 Per-channel R, G, B curves, §6.1 Waveform (luma, RGB overlay), §6.2 RGB Parade, §6.3 Vectorscope (with skin-tone line, 75%/100% targets), §6.4 Histogram, §7.1 3D LUT import (.cube), §7.2 LUT mix / intensity, §9.1 Gaussian Blur, §9.12 Background blur by person mask, §10.11 Digital zoom / punch-in (Ken Burns), §11.1 Vignette, §13.1 Opacity per layer, keyframable, §13.8 Picture-in-picture layouts, §17.1 Text layers with font, size, weight, color, background, §19.9 Undo per parameter, merge slider drags
 
 **PRO_INTERFACE_PARITY:** §1.1 ① Menu bar: File, Edit, Composition, Layer, Effect, Animation, View, Window, Help, §1.15 Resize frames by dragging dividers, §2.1 Home (start screen), §2.2 Selection [V], §2.16 Snapping toggle with options (edges, centers, guides), §3.1 Fit to window, §3.16 Bounding box with corner/edge handles, §3.20 Esc cancels a drag, §3.21 Double-click text to edit in place, §3.22 Right-click context menu on layers, §6.5 Time ruler with current-time indicator (drag to scrub), §6.9 Snapping (Shift while dragging in AE), §6.11 Auto-scroll during playback, edge scroll while dragging, §6.12 Video eye (hide), Audio speaker (mute), Solo, Lock, §6.15 Source name / layer name, rename (Enter), §6.28 Layer selection highlight; select layer by clicking the header, §6.30 Add, delete, rename layers / tracks, §6.40 Audio waveform under a layer (LL), §6.41 Drag layer bar to move in time, §6.43 Split layer (Ctrl+Shift+D), §6.44 Move a clip to another layer by dragging vertically, §6.45 Box select, Shift/⌘ add to selection, §8.4 Font size, §8.13 Background box / rounded pill with padding, §9.3 Audio (levels meter, volume), §9.15 Render Queue / Export settings, §12.1 Dark UI, one accent color, compact density, §12.5 Hover, pressed and selected states on every control
 
-**DAVINCI_COLOR_PAGE:** §1.4 Clips strip (thumbnail per clip, version, codec) + mini timeline, §1.5 Left palette area (one palette at a time), §1.7 Page bar along the bottom, §3.1 Picture, scrubber bar under it, §4.3 3 (selected), §4.19 right 2, §5.3 Temp, §5.4 Tint, §5.5 Contrast, §5.6 Pivot, §5.8 Lift, §5.9 Gamma, §5.10 Gain, §5.11 Offset, §5.12 Master jog wheel under each wheel, §5.14 Per-wheel reset, §5.15 Numeric fields: drag to scrub, double-click to type, double-click label to reset, §5.16 Color Boost, §5.17 Shadows, §5.18 Highlights, §5.19 Saturation, §5.20 Hue, §6.1 Parade (R, G, B side by side), §6.2 Waveform (luma / RGB / YRGB), §6.3 Vectorscope (with skin-tone indicator, 75 %/100 % targets), §6.4 Histogram
+**DAVINCI_COLOR_PAGE:** §1.4 Clips strip (thumbnail per clip, version, codec) + mini timeline, §1.5 Left palette area (one palette at a time), §1.7 Page bar along the bottom, §3.1 Picture, scrubber bar under it, §4.3 3 (selected), §4.19 right 2, §5.1 **A** — Auto Balance, §5.3 Temp, §5.4 Tint, §5.5 Contrast, §5.6 Pivot, §5.8 Lift, §5.9 Gamma, §5.10 Gain, §5.11 Offset, §5.12 Master jog wheel under each wheel, §5.14 Per-wheel reset, §5.15 Numeric fields: drag to scrub, double-click to type, double-click label to reset, §5.16 Color Boost, §5.17 Shadows, §5.18 Highlights, §5.19 Saturation, §5.20 Hue, §6.1 Parade (R, G, B side by side), §6.2 Waveform (luma / RGB / YRGB), §6.3 Vectorscope (with skin-tone indicator, 75 %/100 % targets), §6.4 Histogram
 
 **FULL_GAP_AUDIT:** §2.1 Split, trim, ripple delete, move, gap delete, §2.7 Snapping, magnetic timeline option, §2.14 Audio + video track count unlimited; add/delete tracks, §2.17 Remove silences / pauses, §2.25 Timeline zoom presets, fit, follow playhead, §2.28 Lock/hide/mute tracks, §2.29 Layout regions (screen/camera layouts by section), §3.1 Clip gain, track gain, mute, solo, §5.1 MP4 H.264 + AAC export, §6.1 Subtitle track, add/edit lines, §6.2 SRT / VTT import and export, §6.5 Caption styles: font, size, color, background, position, §9.1 Project manager (list, search, thumbnails, open recent), §9.2 Autosave, backups, crash recovery, §11.1 macOS, §16.2 Separate tracks for screen, camera, mic, system audio, §16.7 Countdown, stop hotkey, recording timer, §16.17 Crash-safe recording, recovery
 
 ---
 
-Totals: 636 open items in 87 phases with items (37 sub-phases) plus 8 new-work phases; 100 items done.
+Totals: 633 open items in 87 phases with items (37 sub-phases) plus 8 new-work phases; 103 items done.

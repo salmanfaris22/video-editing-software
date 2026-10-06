@@ -9,6 +9,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <array>
 #include <vector>
 
 namespace lectern::timeline {
@@ -71,6 +72,10 @@ struct ColorAdjustments {
     double pivot = 0.5;  ///< contrast turns around this level (0…1)
     Animated<double> colorBoost{0.0};  ///< vibrance: saturates muted colors more (−1…1)
     Animated<double> hue{0.0};         ///< hue rotation, −1…1 = −180°…180°
+    /// Custom curves (Resolve "Curves – Custom"): control points (in, out) in
+    /// 0…1 for luma (applied to all channels first) and R, G, B. Fewer than
+    /// two points, or exactly the diagonal, means no curve.
+    std::array<std::vector<Vec2>, 4> curves;  ///< Y, R, G, B
     /// A 3D LUT: a .cube file (path relative to the project folder) or a
     /// built-in camera log conversion ("builtin:apple-log", …); empty = none.
     std::string lut;

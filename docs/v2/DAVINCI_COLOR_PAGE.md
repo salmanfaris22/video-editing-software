@@ -39,7 +39,7 @@ other v2 documents.
 | 1.3 | Node editor — right top | ⬜ | P2 | Lectern starts with an ordered list of corrector layers (COLOR_EFFECTS_PARITY §5.1) |
 | 1.4 | Clips strip (thumbnail per clip, version, codec) + mini timeline | ✅ (clip strip) | P1 | Fast clip-to-clip grading |
 | 1.5 | Left palette area (one palette at a time) | ✅ (Primaries palette) | P1 | Adjust panel today |
-| 1.6 | Right palette area (Keyframes, Scopes, Info) | 🟡 (scopes) | P1 | |
+| 1.6 | Right palette area (Keyframes, Scopes, Info) | 🟡 (Primaries + Curves palettes) | P1 | |
 | 1.7 | Page bar along the bottom | ✅ (Edit | Color page bar) | P2 | Lectern: Simple / Pro / Color modes |
 
 ### 1.1 Page bar *(screenshot, image 4)*
@@ -108,7 +108,7 @@ highlighted with a red underline.
 | 4.4 | 4 | HDR Wheels (zones) | ⬜ | P2 |
 | 4.5 | 5 | RGB Mixer | ⬜ | P2 |
 | 4.6 | 6 | Motion Effects (temporal/spatial NR, motion blur) | ⬜ | P1 |
-| 4.7 | 7 | Curves (Custom, Hue vs Hue/Sat/Lum, Lum vs Sat, Sat vs Sat, Sat vs Lum) | ⬜ | P1 |
+| 4.7 | 7 | Curves (Custom, Hue vs Hue/Sat/Lum, Lum vs Sat, Sat vs Sat, Sat vs Lum) | 🟡 (Custom YRGB; hue/sat curves next) | P1 |
 | 4.8 | 8 | Color Slice (Resolve 20+; drop icon) — verify name in 21 | ⬜ | P2 |
 | 4.9 | 9 | Color Warper (hue-sat, chroma-luma mesh) | ⬜ | P3 |
 | 4.10 | 10 | Qualifier (HSL, RGB, Luma, 3D) | ⬜ | P1 |
@@ -134,7 +134,7 @@ Wheels (selected), Primaries Bars, Log Wheels, and a reset-all button.
 
 | # | Control | Default | Range (Resolve) | Lectern | P |
 |---|---|---|---|---|---|
-| 5.1 | **A** — Auto Balance | – | one-shot | ⬜ | P1 |
+| 5.1 | **A** — Auto Balance | – | one-shot | ✅ (A button) | P1 |
 | 5.2 | White-balance picker (eyedropper) | – | click a neutral area | ⬜ | P1 |
 | 5.3 | Temp | 0.0 | −4000…+4000 | ✅ (temperature, different scale) | – |
 | 5.4 | Tint | 0.00 | −100…+100 | ✅ | – |

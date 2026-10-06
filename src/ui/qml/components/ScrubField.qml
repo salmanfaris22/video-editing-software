@@ -29,22 +29,24 @@ Item {
         Label {
             anchors.verticalCenter: parent.verticalCenter
             text: root.label
-            color: Theme.textMuted
-            font.pixelSize: Theme.fontS
+            color: "#9CA2AF"
+            font.pixelSize: 11
         }
         Rectangle {
             id: box
-            width: 62
-            height: 22
+            width: 52
+            height: 20
             radius: 2
-            color: field.activeFocus ? Theme.bg : scrub.containsMouse || scrub.pressed ? Theme.hover : Theme.raised
-            border.color: field.activeFocus ? Theme.accent : Theme.stroke
+            color: field.activeFocus ? "#0B0C10" : scrub.pressed ? "#262A33" : scrub.containsMouse ? "#1E2128" : "#0E1014"
+            border.color: field.activeFocus ? Theme.accent : scrub.containsMouse ? "#3A3F4B" : "#262A33"
             Rectangle {  // colored underline like Resolve
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.margins: 3
-                height: 2
+                anchors.leftMargin: 3
+                anchors.rightMargin: 3
+                anchors.bottomMargin: 2
+                height: 1.5
                 radius: 1
                 color: root.accent
                 opacity: 0.8
@@ -55,8 +57,8 @@ Item {
                 anchors.margins: 3
                 horizontalAlignment: TextInput.AlignHCenter
                 verticalAlignment: TextInput.AlignVCenter
-                color: Theme.text
-                font.pixelSize: Theme.fontS
+                color: Math.abs(root.value - root.defaultValue) > 1e-9 ? "#FFFFFF" : "#C9CDD6"
+                font.pixelSize: 11
                 font.family: Theme.monoFamily
                 selectByMouse: true
                 validator: DoubleValidator {}

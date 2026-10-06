@@ -66,6 +66,12 @@ double effectValue(const timeline::Clip& c, const char* type, const char* param,
     return 0.0;
 }
 
+QVariantList curveList(const std::vector<timeline::Vec2>& pts) {
+    QVariantList out;
+    for (const auto& p : pts) out.append(QVariantMap{{"x", p.x}, {"y", p.y}});
+    return out;
+}
+
 QVariantMap wheelMap(const timeline::ColorAdjustments::Wheel& w) {
     return {{"x", w.x}, {"y", w.y}, {"master", w.master}};
 }
@@ -531,6 +537,10 @@ void ProjectController::rebuildSelection() {
         {"highlights", clip->color.highlights.value},
         {"colorBoost", clip->color.colorBoost.value},
         {"hue", clip->color.hue.value},
+        {"curveY", curveList(clip->color.curves[0])},
+        {"curveR", curveList(clip->color.curves[1])},
+        {"curveG", curveList(clip->color.curves[2])},
+        {"curveB", curveList(clip->color.curves[3])},
         {"gain", wheelMap(clip->color.gain)},
         {"lut", qs(clip->color.lut)},
         {"lutName", lutName(clip->color.lut)},

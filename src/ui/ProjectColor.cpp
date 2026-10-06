@@ -112,6 +112,95 @@ QVariantList ProjectController::wheelChannels(const QString& wheel, double x, do
     return {base, base + c[0], base + c[1], base + c[2]};
 }
 
+namespace {
+int curveIndex(const QString& channel) {
+    if (channel == QLatin1String("y")) return 0;
+    if (channel == QLatin1String("r")) return 1;
+    if (channel == QLatin1String("g")) return 2;
+    if (channel == QLatin1String("b")) return 3;
+    return -1;
+}
+std::vector<timeline::Vec2> curvePoints(const QVariantList& list) {
+    std::vector<timeline::Vec2> pts;
+    for (const QVariant& v : list) {
+        const QVariantMap m = v.toMap();
+        const double x = m.contains("x") ? m.value("x").toDouble() : v.toList().value(0).toDouble();
+        const double y = m.contains("y") ? m.value("y").toDouble() : v.toList().value(1).toDouble();
+        if (std::isfinite(x) && std::isfinite(y)) pts.push_back({std::clamp(x, 0.0, 1.0), std::clamp(y, 0.0, 1.0)});
+    }
+    std::sort(pts.begin(), pts.end(), [](const auto& a, const auto& b) { return a.x < b.x; });
+    // Points closer than 1 % in x merge (a curve is a function of x).
+    std::vector<timeline::Vec2> out;
+    for (const auto& p : pts) {
+        if (!out.empty() && p.x - out.back().x < 0.01) out.back() = p;
+        else out.push_back(p);
+    }
+    return out;
+}
+}  // namespace
+
+void ProjectController::setCurve(const QString& clipId, const QString& channel, const QVariantList& points) {
+    const auto id = clipIdFrom(clipId);
+    const int index = curveIndex(channel);
+    if (!id || index < 0) return;
+    auto pts = curvePoints(points);
+    if (pts.size() < 2) pts.clear();
+    mutate(QStringLiteral("Curve"), [&](project::Project& p) -> Status {
+        timeline::Clip* c = clipById(p, *id);
+        if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        c->color.curves[static_cast<std::size_t>(index)] = pts;
+        return ok();
+    }, QStringLiteral("curve:") + channel + clipId);
+}
+
+QVariantList ProjectController::curveSamples(const QVariantList& points, int count) const {
+    const auto pts = curvePoints(points);
+    QVariantList out;
+    count = std::clamp(count, 2, 1024);
+    for (int i = 0; i < count; ++i) {
+        const double x = static_cast<double>(i) / (count - 1);
+        out.append(pts.size() < 2 ? x : editor::evaluateCurve(pts, x));
+    }
+    return out;
+}
+
+void ProjectController::autoBalance(const QString& clipId, double meanR, double meanG, double meanB) {
+    const auto id = clipIdFrom(clipId);
+    if (!id || !project_) return;
+    const timeline::Clip* clip = nullptr;
+    for (const auto& t : project_->timeline.tracks)
+        for (const auto& c : t.clips)
+            if (c.id == *id) clip = &c;
+    if (!clip || meanR <= 0 || meanG <= 0 || meanB <= 0) return;
+    // Temp scales R up / B down (±0.15), Tint scales G down and R, B up (0.10 / 0.05) —
+    // the channel gains of editor::colorCurves. Solve for equal channel averages.
+    const double temp0 = clip->color.temperature.value;
+    const double tint0 = clip->color.tint.value;
+    auto gains = [](double t, double n) {
+        return std::array<double, 3>{1.0 + 0.15 * t + 0.05 * n, 1.0 - 0.10 * n, 1.0 - 0.15 * t + 0.05 * n};
+    };
+    const auto g0 = gains(temp0, tint0);
+    // The source's own averages, before the current Temp/Tint.
+    const double r = meanR / g0[0], g = meanG / g0[1], b = meanB / g0[2];
+    double best = 1e9, bestT = temp0, bestN = tint0;
+    for (double t = -1.0; t <= 1.0001; t += 0.01) {
+        for (double n = -1.0; n <= 1.0001; n += 0.01) {
+            const auto k = gains(t, n);
+            const double R = r * k[0], G = g * k[1], B = b * k[2];
+            const double m = (R + G + B) / 3.0;
+            const double err = (R - m) * (R - m) + (G - m) * (G - m) + (B - m) * (B - m) + 1e-4 * (t * t + n * n);
+            if (err < best) { best = err; bestT = t; bestN = n; }
+        }
+    }
+    mutate(QStringLiteral("Auto balance"), [&](project::Project& p) -> Status {
+        timeline::Clip* c = clipById(p, *id);
+        if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        c->color.temperature.value = std::round(bestT * 100) / 100;
+        c->color.tint.value = std::round(bestN * 100) / 100;
+        return ok();
+    });
+}
+
 void ProjectController::setColorWheel(const QString& clipId, const QString& wheel, double x, double y, double master) {
     const auto id = clipIdFrom(clipId);
     if (!id || !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(master)) return;

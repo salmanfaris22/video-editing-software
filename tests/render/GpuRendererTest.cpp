@@ -460,3 +460,17 @@ TEST_F(GpuRenderer, ResolvePrimariesMatchTheCpu) {
     EXPECT_GT(compare(plain, r.cpuImage).mean, 3.0);  // the grade really changes the picture
     EXPECT_CLOSE(d, 1.0, 0.002);
 }
+
+TEST_F(GpuRenderer, CustomCurvesMatchTheCpu) {
+    test::EditorFixture f;
+    useDetailImage(f);
+    Both r(f);
+    r.at(f.project, 0.5);
+    const QImage plain = r.cpuImage;
+    timeline::ColorAdjustments& c = clipOf(f, "Camera").color;
+    c.curves[0] = {{0, 0.05}, {0.35, 0.25}, {0.7, 0.8}, {1, 0.95}};  // S-curve on luma
+    c.curves[3] = {{0, 0}, {0.5, 0.6}, {1, 1}};                        // lift blue mids
+    const Difference d = r.at(f.project, 0.5);
+    EXPECT_GT(compare(plain, r.cpuImage).mean, 3.0);
+    EXPECT_CLOSE(d, 1.0, 0.002);
+}

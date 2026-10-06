@@ -64,6 +64,7 @@ qt_add_qml_module(lectern_ui
         qml/editor/ClipItem.qml
         qml/editor/ColorPage.qml
         qml/editor/color/ColorWheel.qml
+        qml/editor/color/CurveEditor.qml
         qml/editor/ExportDialog.qml
         qml/editor/panels/SetupPanel.qml
         qml/editor/panels/LayoutPanel.qml

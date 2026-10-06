@@ -9,6 +9,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+
 using namespace lectern;
 using namespace lectern::ui;
 using test::QmlHarness;
@@ -143,4 +145,64 @@ TEST(ColorPage, ScopesFollowThePictureAndSwitchModes) {
         test::settle(20);
         EXPECT_EQ(scope->property("mode").toString(), mode);
     }
+}
+
+TEST(ColorPage, CurvesAddDragAndRemovePointsPerChannel) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    p.ui->click(p.center("palette-curves"));
+    QQuickItem* editor = p.ui->find("curveEditor");
+    ASSERT_TRUE(editor && editor->isVisible());
+    const double w = editor->width() - 20, h = editor->height() - 20;  // the plot area (10 px margins)
+    auto at = [&](double x, double y) { return QmlHarness::at(editor, {10 + x * w, 10 + (1 - y) * h}); };
+    // Click on the diagonal at 0.5 and drag the new point up to 0.7: a brighter midtone curve.
+    p.ui->drag(at(0.5, 0.5), at(0.5, 0.7));
+    QVariantList y = p.project.selection().value("curveY").toList();
+    ASSERT_EQ(y.size(), 3);
+    EXPECT_NEAR(y[1].toMap().value("y").toDouble(), 0.7, 0.02);
+    EXPECT_NEAR(y[1].toMap().value("x").toDouble(), 0.5, 0.02);
+    // The engine curve passes through the point and stays monotone.
+    const QVariantList samples = p.project.curveSamples(y, 11);
+    EXPECT_NEAR(samples[5].toDouble(), 0.7, 0.02);
+    for (int i = 1; i < samples.size(); ++i) EXPECT_GE(samples[i].toDouble() + 1e-9, samples[i - 1].toDouble());
+    // Red channel has its own curve.
+    p.ui->click(p.center("curve-r"));
+    p.ui->drag(at(0.75, 0.75), at(0.75, 0.6));
+    EXPECT_EQ(p.project.selection().value("curveR").toList().size(), 3);
+    EXPECT_EQ(p.project.selection().value("curveY").toList().size(), 3);  // luma unchanged
+    // Double-click removes the point; a straight curve is stored as no curve.
+    QTest::mouseDClick(&p.ui->window(), Qt::LeftButton, {}, at(0.75, 0.6));
+    test::settle(60);
+    EXPECT_EQ(p.project.selection().value("curveR").toList().size(), 2);
+    // Reset curves clears all channels.
+    p.ui->click(p.center("resetGrade"));
+    EXPECT_TRUE(p.project.selection().value("curveY").toList().isEmpty());
+    EXPECT_TRUE(p.project.selection().value("curveR").toList().isEmpty());
+    if (const char* dump = std::getenv("LECTERN_DUMP_DIR")) {
+        p.ui->drag(at(0.5, 0.5), at(0.5, 0.68));
+        p.ui->window().grabWindow().save(QString::fromLocal8Bit(dump) + "/curves.png");
+    }
+}
+
+TEST(ColorPage, AutoBalanceRemovesAColorCast) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    // Give the clip a strong warm/green cast, then Auto Balance it.
+    const QString clip = p.project.selectedClip();
+    p.project.setColorValue(clip, "temperature", 0.8);
+    p.project.setColorValue(clip, "tint", -0.6);
+    QQuickItem* scope = p.ui->find("scope");
+    ASSERT_TRUE(scope);
+    auto cast = [&] {
+        const QVariantMap s = scope->property("stats").toMap();
+        const double r = s.value("meanR").toDouble(), g = s.value("meanG").toDouble(), b = s.value("meanB").toDouble();
+        const double m = (r + g + b) / 3;
+        return std::abs(r - m) + std::abs(g - m) + std::abs(b - m);
+    };
+    ASSERT_TRUE(test::waitFor([&] { return cast() > 0.05; }, 5000)) << "cast " << cast();
+    const double before = cast();
+    p.ui->click(p.center("autoBalance"));
+    // The test picture is strongly colored by design, so Temp/Tint reach their limits: at least halved.
+    EXPECT_TRUE(test::waitFor([&] { return cast() < before * 0.5; }, 5000)) << before << " -> " << cast();
+    EXPECT_TRUE(p.project.canUndo());
 }

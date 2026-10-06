@@ -506,6 +506,44 @@ std::array<double, 3> boostAndHue(const ColorParams& c, double r, double g, doub
     return {std::clamp(r, 0.0, 1.0), std::clamp(g, 0.0, 1.0), std::clamp(b, 0.0, 1.0)};
 }
 
+double evaluateCurve(const std::vector<timeline::Vec2>& pts, double x) {
+    if (pts.size() < 2) return x;
+    if (x <= pts.front().x) return pts.front().y;
+    if (x >= pts.back().x) return pts.back().y;
+    // Monotone cubic (Fritsch–Carlson): smooth, and never overshoots between points.
+    const std::size_t n = pts.size();
+    std::vector<double> d(n - 1), m(n);
+    for (std::size_t i = 0; i + 1 < n; ++i) {
+        const double dx = std::max(1e-9, pts[i + 1].x - pts[i].x);
+        d[i] = (pts[i + 1].y - pts[i].y) / dx;
+    }
+    m[0] = d[0];
+    m[n - 1] = d[n - 2];
+    for (std::size_t i = 1; i + 1 < n; ++i) m[i] = d[i - 1] * d[i] <= 0 ? 0.0 : (d[i - 1] + d[i]) / 2.0;
+    for (std::size_t i = 0; i + 1 < n; ++i) {
+        if (d[i] == 0) {
+            m[i] = m[i + 1] = 0;
+            continue;
+        }
+        const double a = m[i] / d[i];
+        const double b = m[i + 1] / d[i];
+        const double s = a * a + b * b;
+        if (s > 9) {
+            const double t = 3.0 / std::sqrt(s);
+            m[i] = t * a * d[i];
+            m[i + 1] = t * b * d[i];
+        }
+    }
+    std::size_t k = 0;
+    while (k + 2 < n && x > pts[k + 1].x) ++k;
+    const double h = std::max(1e-9, pts[k + 1].x - pts[k].x);
+    const double t = (x - pts[k].x) / h;
+    const double t2 = t * t;
+    const double t3 = t2 * t;
+    return (2 * t3 - 3 * t2 + 1) * pts[k].y + (t3 - 2 * t2 + t) * h * m[k] + (-2 * t3 + 3 * t2) * pts[k + 1].y +
+           (t3 - t2) * h * m[k + 1];
+}
+
 ColorCurves colorCurves(const ColorParams& c) {
     const double gain = std::pow(2.0, c.exposure);
     const double contrast = 1.0 + c.contrast;
@@ -532,6 +570,9 @@ ColorCurves colorCurves(const ColorParams& c) {
             if (x > 0) x = std::pow(x, exponent);
             x *= highlights;
             x += 0.25 * c.offset.master + offsetC[ch];  // Offset moves the whole signal
+            // Custom curves: luma (all channels) then this channel's own curve.
+            if (!c.curves[0].empty()) x = evaluateCurve(c.curves[0], std::clamp(x, 0.0, 1.0));
+            if (!c.curves[ch + 1].empty()) x = evaluateCurve(c.curves[ch + 1], std::clamp(x, 0.0, 1.0));
             curve[ch][static_cast<std::size_t>(v)] = static_cast<std::uint8_t>(std::clamp(std::lround(x * 255.0), 0L, 255L));
         }
     }

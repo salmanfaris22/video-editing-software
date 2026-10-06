@@ -85,7 +85,7 @@ these. They are the P0 work.
 | 2.6 | Saturation | ● | ● | ● | ✅ | – | |
 | 2.7 | Vibrance | ● | ● | ◐ (Color Boost) | ✅ (Color Boost) | P1 | Protects skin tones |
 | 2.8 | Brightness | ● | ◐ | ◐ | ✅ | – | |
-| 2.9 | Auto white balance / auto tone | ● (Auto Color/Levels/Contrast) | ● (Auto) | ● (Auto Balance, AI) | ⬜ | P1 | One-click fix for webcams |
+| 2.9 | Auto white balance / auto tone | ● (Auto Color/Levels/Contrast) | ● (Auto) | ● (Auto Balance, AI) | 🟡 (Auto Balance from the picture) | P1 | One-click fix for webcams |
 | 2.10 | White-balance picker (eyedropper) | ● | ● | ● | ⬜ | P1 | |
 | 2.11 | Lift / Gamma / Gain wheels | ● (Lumetri, Color Balance) | ● | ● | ✅ | – | |
 | 2.12 | Offset wheel | – | ◐ | ● | ✅ (Offset wheel) | P1 | |
@@ -109,8 +109,8 @@ these. They are the P0 work.
 
 | # | Feature | AE | PR | DR | Lectern | P | Notes |
 |---|---|---|---|---|---|---|---|
-| 3.1 | RGB / Luma custom curves (spline points) | ● (Curves) | ● (RGB Curves) | ● (Custom) | ⬜ | P1 | |
-| 3.2 | Per-channel R, G, B curves | ● | ● | ● | ⬜ | P1 | |
+| 3.1 | RGB / Luma custom curves (spline points) | ● (Curves) | ● (RGB Curves) | ● (Custom) | ✅ (Curves – Custom) | P1 | |
+| 3.2 | Per-channel R, G, B curves | ● | ● | ● | ✅ | P1 | |
 | 3.3 | Luma vs. Saturation | – | ● | ● | ⬜ | P2 | |
 | 3.4 | Hue vs. Hue | – | ● | ● | ⬜ | P1 | |
 | 3.5 | Hue vs. Saturation | – | ● | ● | ⬜ | P1 | |

@@ -480,6 +480,24 @@ TEST(ProjectControllerUi, LayersSelectAddRenameReorderDeleteAndMoveClips) {
     EXPECT_TRUE(saved.validate());
 }
 
+TEST(ProjectControllerUi, AutoBalanceRecoversAKnownCast) {
+    OpenProject o;
+    ProjectController& c = o.controller;
+    const QString clip = o.clipId("Screen");
+    // A neutral gray source shown with Temp 0.4, Tint −0.3: the channel gains of colorCurves.
+    c.setColorValue(clip, "temperature", 0.4);
+    c.setColorValue(clip, "tint", -0.3);
+    const double gray = 0.5;
+    const double r = gray * (1.0 + 0.15 * 0.4 + 0.05 * -0.3), g = gray * (1.0 - 0.10 * -0.3), b = gray * (1.0 - 0.15 * 0.4 + 0.05 * -0.3);
+    c.autoBalance(clip, r, g, b);
+    c.selectClip(clip);
+    EXPECT_NEAR(c.selection().value("temperature").toDouble(), 0.0, 0.011);
+    EXPECT_NEAR(c.selection().value("tint").toDouble(), 0.0, 0.011);
+    c.undo();
+    c.selectClip(clip);
+    EXPECT_NEAR(c.selection().value("temperature").toDouble(), 0.4, 1e-9);
+}
+
 TEST(PlaybackControllerUi, PlaysSeeksAndRendersFrames) {
     OpenProject p;
     PlaybackController playback(&p.controller, /*silent=*/true);

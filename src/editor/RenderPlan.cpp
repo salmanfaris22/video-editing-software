@@ -52,6 +52,14 @@ ColorParams colorAt(const timeline::ColorAdjustments& c, Time local) {
     p.highlights = std::clamp(c.highlights.evaluate(local), -1.0, 1.0);
     p.colorBoost = std::clamp(c.colorBoost.evaluate(local), -1.0, 1.0);
     p.hue = std::clamp(c.hue.evaluate(local), -1.0, 1.0);
+    for (std::size_t i = 0; i < 4; ++i) {
+        // The diagonal (or a single point) is no curve at all.
+        const auto& pts = c.curves[i];
+        const bool identity = pts.size() < 2 || std::all_of(pts.begin(), pts.end(), [](const timeline::Vec2& v) {
+                                  return std::abs(v.x - v.y) < 1e-6;
+                              });
+        if (!identity) p.curves[i] = pts;
+    }
     p.lut = c.lut;
     p.lutAmount = std::clamp(c.lutAmount, 0.0, 1.0);
     return p;

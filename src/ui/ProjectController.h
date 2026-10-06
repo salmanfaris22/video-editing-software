@@ -199,6 +199,14 @@ public:
     /// What a wheel does to each channel, for the Color page readouts: [Y, R, G, B]
     /// (lift/offset: added level, gamma: exponent shift, gain: multiplier).
     Q_INVOKABLE QVariantList wheelChannels(const QString& wheel, double x, double y, double master) const;
+    /// Custom curve of a channel ("y", "r", "g", "b"): control points [{x, y}…] in 0…1 (sorted here).
+    /// Fewer than two points removes the curve. Point drags merge into one undo step.
+    Q_INVOKABLE void setCurve(const QString& clipId, const QString& channel, const QVariantList& points);
+    /// `count` samples of the curve through `points` (exactly what the renderer applies), for drawing.
+    Q_INVOKABLE QVariantList curveSamples(const QVariantList& points, int count = 128) const;
+    /// Neutralizes a color cast: adjusts the clip's Temp and Tint so the average of the
+    /// shown picture (`meanR/G/B`, 0…1, e.g. from the scopes) becomes gray.
+    Q_INVOKABLE void autoBalance(const QString& clipId, double meanR, double meanG, double meanB);
     Q_INVOKABLE void setColorWheel(const QString& clipId, const QString& wheel, double x, double y, double master);
     /// ref: a built-in conversion ("builtin:…"), a project LUT path, or "" for none.
     Q_INVOKABLE void setColorLut(const QString& clipId, const QString& ref);

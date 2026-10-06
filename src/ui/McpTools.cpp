@@ -240,6 +240,19 @@ void registerMcpTools(Server& server, ProjectController* p) {
          object({{"clipId", text(64)}, {"wheel", choice({"lift", "gamma", "gain", "offset"})}, {"x", number(-1, 1)}, {"y", number(-1, 1)}, {"master", number(-1, 1)}},
                 {"clipId", "wheel", "x", "y", "master"}),
          [p](const Json& a) { p->setColorWheel(str(a, "clipId"), str(a, "wheel"), a["x"], a["y"], a["master"]); });
+    edit("set_curve",
+         "Set a custom curve (Resolve Curves - Custom): channel y (luma, all channels), r, g or b; points are "
+         "[[in, out], ...] in 0..1 (at least 2; fewer removes the curve).",
+         object({{"clipId", text(64)}, {"channel", choice({"y", "r", "g", "b"})},
+                 {"points", {{"type", "array"}, {"maxItems", 32},
+                             {"items", {{"type", "array"}, {"minItems", 2}, {"maxItems", 2}, {"items", number(0, 1)}}}}}},
+                {"clipId", "channel", "points"}),
+         [p](const Json& a) {
+             QVariantList pts;
+             // One QVariant per point (QList::append(QList) would concatenate the numbers).
+             for (const auto& pt : a["points"]) pts.append(QVariant(QVariantList{pt[0].get<double>(), pt[1].get<double>()}));
+             p->setCurve(str(a, "clipId"), str(a, "channel"), pts);
+         });
     edit("reset_color", "Reset a clip's current color adjustments.", object({{"clipId", text(64)}}, {"clipId"}),
          [p](const Json& a) { p->resetColor(str(a, "clipId")); });
     edit("apply_lut", "Apply a built-in LUT from list_presets. File-based LUT imports are not exposed.",

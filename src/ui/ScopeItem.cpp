@@ -62,6 +62,7 @@ void ScopeItem::analyze(const QImage& frame) {
     int black = 255;
     int white = 0;
     long long clipped = 0;
+    double sumR = 0, sumG = 0, sumB = 0;
     for (int y = 0; y < small.height(); ++y) {
         const auto* row = reinterpret_cast<const QRgb*>(small.constScanLine(y));
         for (int x = 0; x < columns_; ++x) {
@@ -84,6 +85,9 @@ void ScopeItem::analyze(const QImage& frame) {
             const int vx = std::clamp(static_cast<int>(128 + cb * 255), 0, 255);
             const int vy = std::clamp(static_cast<int>(128 - cr * 255), 0, 255);
             density[static_cast<std::size_t>(vy * 256 + vx)]++;
+            sumR += r;
+            sumG += g;
+            sumB += b;
             black = std::min(black, l);
             white = std::max(white, l);
             if (r >= 254 || g >= 254 || b >= 254) ++clipped;
@@ -100,7 +104,10 @@ void ScopeItem::analyze(const QImage& frame) {
     const double pixels = static_cast<double>(columns_) * samplesPerColumn_;
     stats_ = QVariantMap{{"black", black * 1023 / 255},
                          {"white", white * 1023 / 255},
-                         {"clippedPercent", 100.0 * static_cast<double>(clipped) / std::max(1.0, pixels)}};
+                         {"clippedPercent", 100.0 * static_cast<double>(clipped) / std::max(1.0, pixels)},
+                         {"meanR", sumR / std::max(1.0, pixels) / 255.0},
+                         {"meanG", sumG / std::max(1.0, pixels) / 255.0},
+                         {"meanB", sumB / std::max(1.0, pixels) / 255.0}};
     emit statsChanged();
     update();
 }

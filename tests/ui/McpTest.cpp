@@ -281,3 +281,17 @@ TEST(McpUi, GetScopesMeasuresTheGradedPicture) {
     EXPECT_GT(after["result"]["structuredContent"]["averageLuma"].get<double>(), luma0 + 30);
     EXPECT_LE(after["result"]["structuredContent"]["white"]["r"].get<int>(), 1023);
 }
+
+TEST(McpUi, SetCurveShapesTheGradeAndValidatesPoints) {
+    Project p;
+    const auto clip = p.clip();
+    const auto r = p.call("set_curve", {{"clipId", clip}, {"channel", "y"}, {"points", {{0, 0}, {0.5, 0.65}, {1, 1}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    ASSERT_EQ(p.controller.selection().value("curveY").toList().size(), 3);
+    EXPECT_EQ(p.call("set_curve", {{"clipId", clip}, {"channel", "y"}, {"points", {{0, 2}}}})["error"]["code"], -32602);
+    EXPECT_EQ(p.call("set_curve", {{"clipId", clip}, {"channel", "x"}, {"points", Json::array()}})["error"]["code"], -32602);
+    p.call("set_curve", {{"clipId", clip}, {"channel", "y"}, {"points", Json::array()}});  // removes it
+    p.controller.selectClip(QString::fromStdString(clip));
+    EXPECT_TRUE(p.controller.selection().value("curveY").toList().isEmpty());
+}

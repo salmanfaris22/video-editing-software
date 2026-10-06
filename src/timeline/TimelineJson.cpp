@@ -178,6 +178,13 @@ Json colorJson(const ColorAdjustments& c) {
     if (c.pivot != 0.5) j["pivot"] = c.pivot;
     if (c.colorBoost.value != 0.0 || !c.colorBoost.keys.empty()) j["colorBoost"] = animatedJson(c.colorBoost);
     if (c.hue.value != 0.0 || !c.hue.keys.empty()) j["hue"] = animatedJson(c.hue);
+    static constexpr const char* kCurveKeys[4] = {"curveY", "curveR", "curveG", "curveB"};
+    for (std::size_t i = 0; i < 4; ++i) {
+        if (c.curves[i].empty()) continue;
+        Json pts = Json::array();
+        for (const Vec2& p : c.curves[i]) pts.push_back(Json::array({p.x, p.y}));
+        j[kCurveKeys[i]] = pts;
+    }
     if (!c.lut.empty()) {
         j["lut"] = c.lut;
         j["lutAmount"] = c.lutAmount;
@@ -206,6 +213,16 @@ Result<ColorAdjustments> colorFrom(const Json& j, const std::string& path) {
     c.pivot = std::clamp(j.value("pivot", 0.5), 0.0, 1.0);
     if (j.contains("colorBoost")) { LEC_READ_ANIM(double, c.colorBoost, j, "colorBoost", path) }
     if (j.contains("hue")) { LEC_READ_ANIM(double, c.hue, j, "hue", path) }
+    static constexpr const char* kCurveKeys[4] = {"curveY", "curveR", "curveG", "curveB"};
+    for (std::size_t i = 0; i < 4; ++i) {
+        const auto it = j.find(kCurveKeys[i]);
+        if (it == j.end() || !it->is_array()) continue;
+        for (const Json& p : *it) {
+            if (p.is_array() && p.size() == 2 && p[0].is_number() && p[1].is_number())
+                c.curves[i].push_back({std::clamp(p[0].get<double>(), 0.0, 1.0), std::clamp(p[1].get<double>(), 0.0, 1.0)});
+        }
+        std::sort(c.curves[i].begin(), c.curves[i].end(), [](const Vec2& a, const Vec2& b) { return a.x < b.x; });
+    }
     c.lut = j.value("lut", "");
     c.lutAmount = std::clamp(j.value("lutAmount", 1.0), 0.0, 1.0);
     c.inputColorSpace = j.value("inputColorSpace", "auto");

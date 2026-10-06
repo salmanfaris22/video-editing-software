@@ -33,13 +33,15 @@ struct ColorParams {
     double highlights = 0;   ///< −1…1, brights only
     double colorBoost = 0;   ///< −1…1 vibrance
     double hue = 0;          ///< −1…1 = −180°…180°
+    std::array<std::vector<timeline::Vec2>, 4> curves;  ///< custom curves Y, R, G, B (control points)
     std::string lut;         ///< .cube path relative to the project, or "builtin:<id>"
     double lutAmount = 1.0;
     /// Everything except the LUT is a per-channel curve plus saturation.
     [[nodiscard]] bool curvesAreIdentity() const noexcept {
         return exposure == 0 && brightness == 0 && contrast == 0 && saturation == 0 && temperature == 0 && tint == 0 &&
                lift.isIdentity() && gamma.isIdentity() && gain.isIdentity() && offset.isIdentity() && shadows == 0 &&
-               highlights == 0 && colorBoost == 0 && hue == 0;
+               highlights == 0 && colorBoost == 0 && hue == 0 && curves[0].empty() && curves[1].empty() &&
+               curves[2].empty() && curves[3].empty();
     }
     [[nodiscard]] bool isIdentity() const noexcept { return curvesAreIdentity() && (lut.empty() || lutAmount <= 0); }
     friend bool operator==(const ColorParams&, const ColorParams&) = default;
