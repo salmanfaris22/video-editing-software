@@ -55,7 +55,7 @@ highlighted with a red underline.
 | 1.10 | Clapper with cut | Cut | Simple editor (today) 🟡 |
 | 1.11 | Timeline bars | Edit | Simple editor timeline 🟡 |
 | 1.12 | Wand | Fusion | Pro mode motion graphics ⬜ |
-| 1.13 | Color dots (selected) | Color | Color workspace (this doc) ⬜ |
+| 1.13 | Color dots (selected) | Color | Color page (Edit · Color page bar) ✅ |
 | 1.14 | Music note | Fairlight | Audio panel 🟡 |
 | 1.15 | Rocket | Deliver | Export dialog ✅ |
 | 1.16 | House | Project manager / home | Home screen ✅ |
@@ -157,8 +157,8 @@ have a crosshair picker (black point / white point) at their top-left.
 | 5.11 | Offset | 25.00 25.00 25.00 (R G B only) | whole image | ✅ | P1 |
 | 5.12 | Master jog wheel under each wheel | – | luminance of that range | ✅ | P1 |
 | 5.13 | Black point / white point pickers on Lift / Gain | – | set black/white from the image | ⬜ | P2 |
-| 5.14 | Per-wheel reset | – | ✅ | 🟡 | P1 |
-| 5.15 | Numeric fields: drag to scrub, double-click to type, double-click label to reset | – | ✅ (scrub fields) | ⬜ | P0 (same as scrubby fields in PRO_INTERFACE §5.5) |
+| 5.14 | Per-wheel reset | – | – | ✅ | – |
+| 5.15 | Numeric fields: drag to scrub, double-click to type, double-click label to reset | – | – | 🟡 (scrub fields for the top and bottom rows; the wheels' Y R G B fields are read-only) | P0 (same as scrubby fields in PRO_INTERFACE §5.5) |
 
 ### 5.3 Bottom row
 
@@ -352,15 +352,20 @@ a field, pick white balance).
 
 | Section | Items | ✅ | 🟡 | ⬜ |
 |---|---|---|---|---|
-| 1 Layout (page bar mapping not counted) | 7 | 0 | 2 | 5 |
+| 1 Layout (page bar mapping not counted) | 7 | 3 | 2 | 2 |
 | 2 Top toolbar | 16 | 0 | 1 | 15 |
 | 3 Viewer | 9 | 1 | 2 | 6 |
-| 4 Palette bar | 20 | 0 | 4 | 16 |
-| 5 Primaries | 24 | 6 | 3 | 15 |
-| 6 Scopes | 10 | 0 | 0 | 10 |
+| 4 Palette bar | 20 | 2 | 4 | 14 |
+| 5 Primaries | 24 | 16 | 1 | 7 |
+| 6 Scopes | 10 | 4 | 1 | 5 |
 | 8 Node editor | 11 | 0 | 1 | 10 |
 | 9 Gallery | 7 | 0 | 0 | 7 |
-| **Total** | **104** | **7** | **13** | **84** |
+| **Total** | **104** | **26** | **12** | **66** |
+
+Counts recomputed 2026-10-06. The gap list against all of Resolve's color
+features (pipeline, AI tools, film tools, grade management), and the
+comparison with every other grading tool, is in
+[COLOR_GRADING_COMPARISON.md](COLOR_GRADING_COMPARISON.md).
 
 Section 7 lists palette controls as prose (no per-row status): all ⬜ except
 Magic Mask (person segmentation exists), Blur (blur exists) and Sizing
