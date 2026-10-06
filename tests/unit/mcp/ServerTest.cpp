@@ -37,6 +37,26 @@ TEST(McpServer, LifecycleAndProtocolNegotiation) {
     EXPECT_EQ((*server.handle(request("ping"), s))["result"], Json::object());
 }
 
+TEST(McpServer, EchoesEveryHandshakeRevisionAndAnswersProbesBeforeIt) {
+    for (const char* version : {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}) {
+        Server server;
+        Session s{.id = "s"};
+        const auto reply = server.handle(request("initialize", {{"protocolVersion", version}, {"capabilities", Json::object()},
+                                                                {"clientInfo", {{"name", "c"}, {"version", "1"}}}}), s);
+        EXPECT_EQ((*reply)["result"]["protocolVersion"], version);
+    }
+    Server server;
+    Session s{.id = "s"};
+    // A future revision gets our newest one back; the client decides whether to go on.
+    const auto reply = server.handle(request("initialize", {{"protocolVersion", "2031-01-01"}, {"capabilities", Json::object()},
+                                                            {"clientInfo", {{"name", "c"}, {"version", "1"}}}}), s);
+    EXPECT_EQ((*reply)["result"]["protocolVersion"], std::string(Server::protocolVersion));
+    // The stateless-era probe before the handshake: "method not found", so the client falls back.
+    Session fresh{.id = "f"};
+    EXPECT_EQ((*server.handle(request("server/discover", {{"protocolVersion", "2026-07-28"}}), fresh))["error"]["code"], -32601);
+    EXPECT_EQ((*server.handle(request("tools/list"), fresh))["error"]["code"], -32000);
+}
+
 TEST(McpServer, RejectsMalformedMessagesBatchesAndDeepNesting) {
     Server server; Session s;
     EXPECT_EQ((*server.handle(std::string_view("{"), s))["error"]["code"], -32700);

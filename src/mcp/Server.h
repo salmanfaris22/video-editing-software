@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <array>
 #include <atomic>
 #include <functional>
 #include <map>
@@ -49,6 +50,8 @@ public:
     using Notify = std::function<void(const Json&)>;
     static constexpr std::size_t maxMessageBytes = 1024 * 1024;
     static constexpr std::string_view protocolVersion = "2025-11-25";
+    /// The `initialize` handshake revisions this server speaks (a client's choice is echoed).
+    static constexpr std::array<std::string_view, 4> handshakeVersions{"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"};
 
     void addTool(Tool tool);
     void addResource(std::string uri, std::string name, std::string description,

@@ -66,7 +66,10 @@ McpController::~McpController() { stop(); }
 void McpController::enableAppTools(McpAppHooks hooks) { registerMcpAppTools(server_, std::move(hooks)); }
 
 QString McpController::defaultDiscoveryFile() {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/Lectern/mcp/connection.json");
+    // Automated runs (LECTERN_APP_DATA_DIR) keep the endpoint out of the user's own data.
+    const QString isolated = qEnvironmentVariable("LECTERN_APP_DATA_DIR");
+    const QString root = isolated.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) : isolated;
+    return root + QStringLiteral("/Lectern/mcp/connection.json");
 }
 
 bool McpController::enabled() const { return listener_->isListening(); }
@@ -128,6 +131,8 @@ void McpController::stop() {
     listener_->close();
     for (auto* socket : listener_->findChildren<QTcpSocket*>()) socket->abort();
     sessions_.clear();
+    opened_.clear();
+    denied_.clear();
     token_.clear();
     if (discoveryLock_ && discoveryLock_->isLocked()) QFile::remove(discoveryFile_);
     discoveryLock_.reset();
@@ -147,7 +152,16 @@ void McpController::approve(const QString& id, const QString& access) {
 
 void McpController::revoke(const QString& id) {
     sessions_.erase(id.toStdString());
+    opened_.erase(id.toStdString());
     emit clientsChanged();
+}
+
+void McpController::deny(const QString& id) {
+    const auto it = sessions_.find(id.toStdString());
+    if (it == sessions_.end()) return;
+    denied_.insert(it->second.clientName);
+    log(QString::fromStdString(it->second.clientName), QStringLiteral("Access denied"), QStringLiteral("until assistants are turned off"));
+    revoke(id);
 }
 
 int McpController::undoEdits(const QString& id) {
@@ -207,7 +221,7 @@ void McpController::receive(QTcpSocket* socket) {
     auto it = sessions_.find(headers.value("mcp-session-id").toStdString());
     if (request[0] == "DELETE") {
         if (it == sessions_.end()) { respond(socket, 404); return; }
-        sessions_.erase(it); emit clientsChanged(); respond(socket, 200, "{}"); return;
+        opened_.erase(it->first); sessions_.erase(it); emit clientsChanged(); respond(socket, 200, "{}"); return;
     }
     bool lengthOk = false;
     const auto length = headers.value("content-length").toLongLong(&lengthOk);
@@ -229,9 +243,26 @@ void McpController::receive(QTcpSocket* socket) {
     const bool initialize = message.is_object() && message.contains("method") && message["method"] == "initialize";
     if (initialize && it == sessions_.end()) {
         if (!headers.value("mcp-session-id").isEmpty()) { respond(socket, 404); return; }
-        if (sessions_.size() >= 16) { respond(socket, 429); return; }
+        const auto& params = message.value("params", Json::object());
+        const auto name = params.is_object() && params.contains("clientInfo") && params["clientInfo"].is_object()
+                              ? params["clientInfo"].value("name", std::string()) : std::string();
+        if (denied_.contains(name.substr(0, 128))) {
+            respond(socket, 403, QByteArray::fromStdString(mcp::Server::error(message.value("id", Json()), -32001,
+                "You denied this assistant access to Lectern. Allow it again by turning Assistants → Allow AI Assistants off and on.").dump()));
+            return;
+        }
+        if (sessions_.size() >= 16) {  // make room: the oldest assistant still waiting for approval goes
+            auto oldest = sessions_.end();
+            for (auto s = sessions_.begin(); s != sessions_.end(); ++s) {
+                if (s->second.access == mcp::Access::Denied && (oldest == sessions_.end() || opened_[s->first] < opened_[oldest->first])) oldest = s;
+            }
+            if (oldest == sessions_.end()) { respond(socket, 429); return; }
+            opened_.erase(oldest->first);
+            sessions_.erase(oldest);
+        }
         const auto id = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
         it = sessions_.emplace(id, mcp::Session{.id = id}).first;
+        opened_[id] = ++openedCount_;
     } else if (it == sessions_.end()) { respond(socket, 404); return; }
     if (!initialize) {
         const auto version = headers.value("mcp-protocol-version", "2025-03-26");
@@ -239,7 +270,7 @@ void McpController::receive(QTcpSocket* socket) {
     }
     const auto response = server_.handle(message, it->second);
     if (initialize) {
-        if (!it->second.initialized) { sessions_.erase(it); respond(socket, 400, response ? QByteArray::fromStdString(response->dump()) : QByteArray()); return; }
+        if (!it->second.initialized) { opened_.erase(it->first); sessions_.erase(it); respond(socket, 400, response ? QByteArray::fromStdString(response->dump()) : QByteArray()); return; }
         emit clientsChanged();
     }
     if (message.is_object() && message.value("method", Json()) == "tools/call") {

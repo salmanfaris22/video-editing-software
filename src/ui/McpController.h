@@ -6,8 +6,10 @@
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
+#include <cstdint>
 #include <functional>
 #include <memory>
+#include <set>
 
 class QTcpServer;
 class QTcpSocket;
@@ -46,10 +48,13 @@ public:
     Q_INVOKABLE void setEnabled(bool enabled);
     Q_INVOKABLE void approve(const QString& sessionId, const QString& access);
     Q_INVOKABLE void revoke(const QString& sessionId);
+    /// Ends the session and refuses new ones from this assistant until access is turned off and on.
+    Q_INVOKABLE void deny(const QString& sessionId);
     Q_INVOKABLE int undoEdits(const QString& sessionId);
     Q_INVOKABLE void copySetup();
     /// Adds the tools that need the app (recent projects, opening one).
     void enableAppTools(McpAppHooks hooks);
+    /// <app data>/Lectern/mcp/connection.json (under LECTERN_APP_DATA_DIR when that is set).
     static QString defaultDiscoveryFile();
 
 signals:
@@ -66,6 +71,9 @@ private:
     QTcpServer* listener_;
     mcp::Server server_;
     std::map<std::string, mcp::Session> sessions_;
+    std::map<std::string, std::uint64_t> opened_;  ///< session id → order it was opened in
+    std::uint64_t openedCount_ = 0;
+    std::set<std::string> denied_;                 ///< assistant names the user denied
     QString discoveryFile_;
     std::unique_ptr<QLockFile> discoveryLock_;
     QByteArray token_;

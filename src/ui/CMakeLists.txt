@@ -28,6 +28,7 @@ qt_add_qml_module(lectern_ui
     QML_FILES
         qml/Main.qml
         qml/AssistantsDialog.qml
+        qml/AssistantRequest.qml
         qml/Theme.qml
         qml/components/IconButton.qml
         qml/components/MiniSlider.qml

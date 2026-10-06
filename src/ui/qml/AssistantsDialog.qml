@@ -50,6 +50,7 @@ Dialog {
                 Button { text: "Edit"; onClicked: root.assistants.approve(modelData.id, "edit") }
                 Button { text: "Undo edits"; onClicked: root.assistants.undoEdits(modelData.id) }
                 Button { text: "Revoke"; onClicked: root.assistants.revoke(modelData.id) }
+                Button { text: "Deny"; onClicked: root.assistants.deny(modelData.id) }
             }
         }
         Label {

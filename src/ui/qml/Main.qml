@@ -224,6 +224,9 @@ ApplicationWindow {
         assistants: window.app.assistants
         anchors.centerIn: parent
     }
+    AssistantRequest {
+        assistants: window.app.assistants
+    }
 
     Loader {
         id: viewLoader

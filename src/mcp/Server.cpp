@@ -137,14 +137,21 @@ std::optional<Json> Server::handle(const Json& m, Session& session, const Notify
             !p["clientInfo"].contains("version") || !p["clientInfo"]["version"].is_string())
             return error(id, -32602, "initialize requires protocolVersion, capabilities and clientInfo");
         session.clientName = p["clientInfo"]["name"].get<std::string>().substr(0, 128);
+        // Echo any handshake revision we speak; otherwise offer ours (the client decides).
         const std::string version = p["protocolVersion"];
-        session.protocolVersion = (version == "2025-03-26" || version == "2025-06-18") ? version : std::string(protocolVersion);
+        const bool known = std::find(handshakeVersions.begin(), handshakeVersions.end(), version) != handshakeVersions.end();
+        session.protocolVersion = known ? version : std::string(protocolVersion);
         session.initialized = true;
         return reply({{"protocolVersion", session.protocolVersion},
                       {"capabilities", {{"tools", Json::object()}, {"resources", Json::object()}, {"prompts", Json::object()}}},
                       {"serverInfo", {{"name", "lectern"}, {"version", "0.1.0"}}},
                       {"instructions", "Approve this connection in Lectern's AI assistants panel before accessing a project. Edits use the app's undo history."}});
     }
+    static constexpr std::string_view kMethods[] = {"tools/list", "tools/call", "resources/list", "resources/read",
+                                                     "resources/templates/list", "prompts/list", "prompts/get"};
+    // Unknown methods (e.g. the 2026 `server/discover` probe) are "not found" even
+    // before the handshake, so clients fall back to `initialize`.
+    if (std::find(std::begin(kMethods), std::end(kMethods), method) == std::end(kMethods)) return error(id, -32601, "Method not found");
     if (!session.ready) return error(id, -32000, "Initialize the session first");
     if (method == "tools/list") return reply({{"tools", tools()}});
     if (method == "resources/list") {
@@ -165,7 +172,6 @@ std::optional<Json> Server::handle(const Json& m, Session& session, const Notify
         return reply({{"description", it->second.description["description"]},
                       {"messages", Json::array({{{"role", "user"}, {"content", {{"type", "text"}, {"text", it->second.text}}}}})}});
     }
-    if (method != "tools/call" && method != "resources/read") return error(id, -32601, "Method not found");
     auto flag = std::make_shared<std::atomic_bool>(false);
     const auto key = std::make_pair(session.id, id.dump());
     {

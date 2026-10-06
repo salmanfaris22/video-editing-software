@@ -99,6 +99,7 @@ if(TARGET lectern_editor AND TARGET Qt6::Qml)
         ui/ControllerTest.cpp
         ui/SegmentationTest.cpp
         ui/McpTest.cpp
+        ui/McpBridgeTest.cpp
         editor/EditorFixture.cpp
         ${LECTERN_UI_DIR}/ProjectController.h ${LECTERN_UI_DIR}/ProjectController.cpp
         ${LECTERN_UI_DIR}/ProjectEdits.cpp ${LECTERN_UI_DIR}/ProjectLooks.cpp
@@ -116,6 +117,9 @@ if(TARGET lectern_editor AND TARGET Qt6::Qml)
     target_link_libraries(lectern_ui_tests PRIVATE
         lectern_editor lectern_services lectern_platform lectern_test_support Qt6::Qml Qt6::Gui GTest::gtest)
     target_link_libraries(lectern_ui_tests PRIVATE lectern_mcp Qt6::Network)
+    if(TARGET lectern-mcp)
+        add_dependencies(lectern_ui_tests lectern-mcp)  # McpBridgeTest runs the real bridge
+    endif()
     lectern_configure_target(lectern_ui_tests)
     gtest_discover_tests(lectern_ui_tests
         DISCOVERY_TIMEOUT 120
@@ -148,6 +152,7 @@ if(TARGET lectern_ui)
         qml/TimelineInteractionTest.cpp
         qml/ColorPageTest.cpp
         qml/ThemeTest.cpp
+        qml/AssistantsTest.cpp
         editor/EditorFixture.cpp)
     target_include_directories(lectern_qml_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(lectern_qml_tests PRIVATE

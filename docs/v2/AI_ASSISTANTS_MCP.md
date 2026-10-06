@@ -12,11 +12,16 @@ server** (Model Context Protocol). One server works with every MCP client:
 | **ChatGPT** (web/desktop, connectors / developer mode) | **Remote** HTTPS MCP endpoint | Needs a relay because ChatGPT runs in the cloud, §6.4 |
 | Any other MCP client (Cursor, VS Code, Gemini CLI …) | stdio or HTTP | Same server |
 
-Status: **design only** (2026-10-05). Client setup steps reflect how these
-products worked at the time of writing and change often; verify against
-each vendor's current MCP documentation before release. MCP protocol
-details refer to the published specification (JSON-RPC 2.0; stdio and
-Streamable HTTP transports; tools, resources, prompts).
+Status (2026-10-07): **built and verified with real clients** — 49 tools,
+2 resources, 2 prompts; the in-app endpoint with per-assistant approval;
+the `lectern-mcp` stdio bridge; a headless mode. Checked end to end with
+the official Python SDK (2.3.0, both handshake and "auto" mode), the
+official MCP Inspector CLI (TypeScript SDK) and Claude Code 2.1.291 —
+see §6.6. Codex, Claude Desktop and ChatGPT were not run here (unverified).
+Client setup steps change often; verify against each vendor's current MCP
+documentation. Protocol: JSON-RPC 2.0 over stdio (bridge) and
+Streamable HTTP on 127.0.0.1 (app); handshake revisions 2024-11-05,
+2025-03-26, 2025-06-18 and 2025-11-25.
 
 ---
 
@@ -95,8 +100,8 @@ Components:
 |---|---|---|
 | `src/mcp/` (Qt-free) | new module | JSON-RPC 2.0 + MCP message handling, tool/resource/prompt registry, JSON Schemas, argument validation, result formatting |
 | MCP endpoint in the app | `src/ui/McpController` | Streamable HTTP server bound to `127.0.0.1` (reuses `src/network/HttpServer`), bearer token, dispatches tools to controllers on the UI thread |
-| `lectern-mcp` | `tools/lectern-mcp` | Small executable that clients start. Speaks MCP over stdio; forwards to the running app (token read from a user-only file); if the app is not running, starts the headless engine for `--project` |
-| Consent UI | QML | Shows connected clients, asks before sensitive actions (§5), activity log, "Undo all assistant edits" |
+| `lectern-mcp` | `tools/lectern-mcp` | Small executable that clients start. Speaks MCP over stdio and relays to the running app (URL and token from a user-only connection file). Starts before Lectern does (answers the handshake and the tool list itself, and tells the assistant how to turn access on), opens a new session when Lectern restarts or the user ends the old one, ends its session when the assistant quits (also on SIGTERM). Never exits on a failed request. `--project DIR [--allow-edits]` serves one project without the app; each edit is on disk before its reply |
+| Consent UI | QML | `AssistantRequest.qml`: a prompt on the window when an assistant connects (Read only · Read and edit · Deny); Assistants menu and `AssistantsDialog.qml`: on/off, connected clients, revoke, deny, undo an assistant's edits, activity log |
 | Relay (optional) | Lectern cloud service | Gives ChatGPT a public HTTPS URL with OAuth; the app opens an outbound tunnel; disabled by default |
 
 Implementation language: MCP has official SDKs for TypeScript, Python, C#,
@@ -219,9 +224,10 @@ sequenceDiagram
 
 | Rule | Detail |
 |---|---|
-| Off until enabled | Settings → AI assistants → "Allow assistants to control Lectern" (per client) |
-| Local only by default | HTTP endpoint binds to `127.0.0.1`; random port written to a user-only file with a random bearer token; stdio bridge reads it |
-| Approval levels | *Read only* · *Edit (undoable)* · *Full (export, import files, recording)*; chosen per client |
+| Off until enabled | Assistants → "Allow AI Assistants"; off again when Lectern quits |
+| Local only by default | HTTP endpoint binds to `127.0.0.1`; random port written to a user-only file (0600) with a random 64-character bearer token; Host and Origin are checked; the stdio bridge reads the file |
+| Approval per connection | each new session waits for the user: a prompt on the window offers *Read only* · *Read and edit* · *Deny*; until then every tool call answers "needs approval". *Deny* also refuses that assistant's new sessions until access is turned off and on. At most 16 sessions; the oldest unapproved one makes room |
+| Approval levels | *Read only* · *Edit (undoable)* (built); *Full (export, import files, recording)* planned |
 | Always confirm in Lectern | starting a recording, overwriting files outside the project, deleting layers with clips, sharing/uploading |
 | Undoable | each tool call is one labelled undo step; "Undo all assistant edits since …" button |
 | Visible | top-bar chip "Claude is editing…" with an activity log of every call |
@@ -235,8 +241,14 @@ sequenceDiagram
 ## 6. Client setup
 
 The paths below assume the macOS app bundle; on Windows use
-`C:\Program Files\Lectern\lectern-mcp.exe`. Lectern's Settings page will show
-these snippets with the correct paths and a "Copy" button.
+`C:\Program Files\Lectern\lectern-mcp.exe`; in a development build the
+bridge is `build/dev/bin/lectern-mcp`. Assistants → "Copy Setup for
+Claude / Codex" copies the JSON below with the correct path.
+
+Steps for every client: (1) add the server as below; (2) in Lectern turn
+on Assistants → Allow AI Assistants; (3) when the assistant connects,
+answer Lectern's prompt (Read only or Read and edit). The order of 1 and 2
+does not matter: the bridge waits for Lectern.
 
 ### 6.1 Claude Desktop
 
@@ -262,13 +274,14 @@ Restart Claude Desktop; Lectern's tools appear in the tools menu.
 # stdio (recommended)
 claude mcp add lectern -- /Applications/Lectern.app/Contents/MacOS/lectern-mcp
 
-# or the app's local HTTP endpoint (port and token shown in Lectern's settings)
-claude mcp add --transport http lectern http://127.0.0.1:<port>/mcp \
-  --header "Authorization: Bearer <token>"
+# without the app, one project (read only unless --allow-edits)
+claude mcp add lectern-project -- /Applications/Lectern.app/Contents/MacOS/lectern-mcp --project ~/Movies/MyRecording
 ```
 
 Check with `claude mcp list`, or `/mcp` inside a session. A project-scoped
-`.mcp.json` can be committed to share the setup with a team.
+`.mcp.json` can be committed to share the setup with a team. (The app's
+HTTP endpoint is not meant to be added directly: its port and token change
+every time access is turned on; the bridge follows them.)
 
 ### 6.3 OpenAI Codex (CLI / IDE extension)
 
@@ -301,11 +314,64 @@ at the time; verify in OpenAI's documentation.
 ### 6.5 Testing with MCP Inspector
 
 ```bash
+# interactive (browser UI)
 npx @modelcontextprotocol/inspector /Applications/Lectern.app/Contents/MacOS/lectern-mcp
+# scripted: pass the server through a config file (the CLI swallows server flags such as --project)
+npx -y @modelcontextprotocol/inspector --cli --config lectern.json --server lectern --method tools/list
+npx -y @modelcontextprotocol/inspector --cli --config lectern.json --server lectern \
+    --method tools/call --tool-name set_color --tool-arg clipId=<id> --tool-arg 'values={"exposure":0.3}'
 ```
 
 Lists the tools, calls them by hand, and shows raw JSON-RPC — used in
 development and in the release checklist.
+
+### 6.6 Verified clients and how to re-run the checks
+
+| Client | Mode | Checked (2026-10-07) |
+|---|---|---|
+| Official Python SDK 2.3.0, `ClientSession` | headless | handshake (2025-11-25); all 49 input schemas valid JSON Schema 2020-12; get_timeline, set_effect, list_looks, apply_look, add_node, get_scopes, render_frame (PNG image content); -32602 on a bad enum; tool error on an unknown clip; resources list/read; prompts list/get; ping; `server/discover` → -32601 |
+| Official Python SDK 2.3.0, `Client` ("auto": `server/discover` probe, then handshake) | app, through the bridge | connects (2025-11-25), 49 tools, waits for approval, add_marker lands in the app's project |
+| MCP Inspector CLI (TypeScript SDK) | headless | tools/list, tools/call (get_project, set_color saved to disk with the undo label "Assistant: set_color", render_frame PNG), resources/list, prompts/list |
+| Claude Code 2.1.291 (`claude -p --mcp-config … --strict-mcp-config`, Haiku) | headless | finds the Screen clip, enables Sharpen; the edit is on disk |
+| Claude Code 2.1.291 | app, through the bridge | approved as "claude-code", add_marker completed in the app |
+
+Automated (every build): `tests/unit/mcp/ServerTest.cpp` (protocol),
+`tests/ui/McpTest.cpp` (tools, HTTP consent), `tests/ui/McpBridgeTest.cpp`
+(the real `lectern-mcp` process against the app's endpoint: starting before
+Lectern, approval levels, Lectern restarting, revoke, deny, session end on
+quit and on SIGTERM, probes and bad lines, headless edits surviving a
+SIGKILL), `tests/qml/AssistantsTest.cpp` (the approval prompt).
+
+Any real client against the app endpoint (the test plays the user and
+approves):
+
+```bash
+# official Python SDK
+LECTERN_TEST_MCP_CLIENT="uv run -q --no-project --with mcp python '$PWD/tests/mcp/sdk_client.py'" \
+  build/dev/bin/lectern_ui_tests --gtest_filter='McpBridge.RealClient*'
+# Claude Code
+LECTERN_TEST_MCP_CLIENT='claude -p "Add a marker named real-client at 1 s with the lectern tools." \
+  --mcp-config "$LECTERN_TEST_MCP_CONFIG" --strict-mcp-config --allowedTools mcp__lectern__add_marker < /dev/null' \
+  build/dev/bin/lectern_ui_tests --gtest_filter='McpBridge.RealClient*'
+```
+
+Problems found and fixed by these runs: headless edits could be lost when
+the assistant ended the bridge (the save timer never ran while the bridge
+waited on stdin); the bridge left sessions behind (16 later, new assistants
+were refused), exited on Lectern restarting or on the newer clients'
+`server/discover` probe, and could not start before Lectern; no prompt told
+the user an assistant was waiting; 2024-11-05 clients were offered another
+revision.
+
+### 6.7 Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| Tool calls answer "Lectern isn't reachable" | Lectern is closed or Assistants → Allow AI Assistants is off. Turn it on; the next call connects |
+| Tool calls answer "needs approval" | Answer the prompt in Lectern's window (or Assistants → Manage Assistants…) |
+| "You denied this assistant access" | Turn Allow AI Assistants off and on, then approve it |
+| "Lectern did not answer in time" | Lectern was busy for 30 s; the request may have run — check the project before retrying |
+| Headless: "Disable the app's assistant endpoint…" | The app has access on; edit through the app, or turn it off and close the project first |
 
 ---
 
@@ -338,7 +404,7 @@ flowchart TB
 | 1 | `src/mcp/JsonRpc.*`, `src/mcp/Server.*` | unit: message parsing, errors, batching rules, cancellation |
 | 2 | `src/mcp/Tools.*` (schemas), `src/ui/McpTools.cpp` (bindings) | controller tests per tool (same pattern as `tests/ui/ControllerTest.cpp`); schema validation rejects bad input |
 | 3 | `src/ui/McpController.*` | integration: HTTP call to localhost changes the timeline; wrong token refused |
-| 4 | `tools/lectern-mcp/main.cpp` | spawn the bridge in a test, run `initialize` + `tools/list` + `get_timeline` over stdio |
+| 4 | `tools/lectern-mcp/main.cpp` | spawn the bridge in a test, run `initialize` + `tools/list` + `get_timeline` over stdio (done: `tests/ui/McpBridgeTest.cpp`) |
 | 5 | QML settings page + top-bar chip | QML interaction tests (`tests/qml/`) |
 | 6 | docs + snippets | manual checklist with each client; MCP Inspector run in CI |
 | 7 | relay service (separate repo) | security review, OAuth flow tests |

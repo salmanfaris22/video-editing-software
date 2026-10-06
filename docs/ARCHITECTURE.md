@@ -15,6 +15,7 @@ This document is the entry point. Subsystem details live in:
 | [PHONE_CAMERA_PROTOCOL.md](PHONE_CAMERA_PROTOCOL.md) | Phone-as-camera discovery, pairing, transport, clock sync |
 | [PROJECT_FORMAT.md](PROJECT_FORMAT.md) | On-disk project layout, schema, autosave, relinking |
 | [PERFORMANCE.md](PERFORMANCE.md) | Budgets, hot paths, threading, profiling playbook |
+| [SYSTEM_REQUIREMENTS.md](SYSTEM_REQUIREMENTS.md) | OS, hardware, permissions, developer toolchain |
 
 ---
 
