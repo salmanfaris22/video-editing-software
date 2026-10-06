@@ -310,6 +310,45 @@ TEST(EditOps, RecordingSegmentsMoveTogetherIntoTheGap) {
     EXPECT_FALSE(edit::moveClip(r.tl, r.track("Screen").clips.back().id, sec(2)));
 }
 
+TEST(EditOps, OneClipOfARecordingMovesAloneAndLeavesItsGroup) {
+    Recording r;
+    // Split at 4 s and make room after the recording, like the timeline in practice.
+    ASSERT_TRUE(edit::splitAt(r.tl, sec(4)));
+    const Clip camRight = r.track("Camera").clips.back();
+    const Time screenStart = r.track("Screen").clips.back().range.start;
+    const Time micStart = r.track("Microphone").clips.back().range.start;
+    ASSERT_TRUE(edit::isLinkedSegment(r.tl, camRight.id));
+    // Move only the camera's right half to 12 s: the screen and mic stay.
+    ASSERT_TRUE(edit::moveClipAlone(r.tl, camRight.id, sec(12)));
+    const Clip* moved = r.tl.findClip(camRight.id);
+    ASSERT_TRUE(moved);
+    EXPECT_EQ(moved->range.start, sec(12));
+    EXPECT_FALSE(moved->linkGroup);  // it edits on its own now
+    EXPECT_EQ(r.track("Screen").clips.back().range.start, screenStart);
+    EXPECT_EQ(r.track("Microphone").clips.back().range.start, micStart);
+    EXPECT_TRUE(edit::isLinkedSegment(r.tl, r.track("Screen").clips.back().id));  // the rest stays linked
+    EXPECT_TRUE(r.tl.validate());
+    // A later normal move of the screen no longer drags the camera along.
+    ASSERT_TRUE(edit::moveClip(r.tl, r.track("Screen").clips.back().id, sec(4.5)));
+    EXPECT_EQ(r.tl.findClip(camRight.id)->range.start, sec(12));
+    // It can change tracks (same kind) on its own too.
+    r.tl.tracks.push_back({TrackId::generate(), TrackKind::Video, "Camera 2"});
+    const TrackId cam2 = r.tl.tracks.back().id;
+    ASSERT_TRUE(edit::moveClipAlone(r.tl, camRight.id, sec(1), cam2));
+    EXPECT_EQ(r.track("Camera 2").clips.size(), 1u);
+    // A failed move (no room) changes nothing, not even the link.
+    const Clip screenLeft = r.track("Screen").clips.front();
+    const Time blocked = r.track("Camera").clips.front().range.start;
+    EXPECT_FALSE(edit::moveClipAlone(r.tl, screenLeft.id, sec(1), r.track("Microphone").id));  // wrong kind
+    EXPECT_EQ(r.tl.findClip(screenLeft.id)->linkGroup, screenLeft.linkGroup);
+    EXPECT_EQ(r.track("Camera").clips.front().range.start, blocked);
+    // Unlinking the second-to-last member frees the last one as well.
+    Recording two;
+    ASSERT_TRUE(edit::unlinkClip(two.tl, two.camera));
+    ASSERT_TRUE(edit::unlinkClip(two.tl, two.mic));
+    EXPECT_FALSE(two.tl.findClip(two.screen)->linkGroup);
+}
+
 TEST(EditOps, FreeClipsMoveBetweenTracksOfTheSameKind) {
     Recording r;
     const TrackId first = r.track("Text").id;

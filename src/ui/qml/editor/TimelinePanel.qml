@@ -52,6 +52,8 @@ Rectangle {
     readonly property string dragSelectMode: root.editor ? root.editor.dragSelectMode : "drag"
     readonly property string marqueeMatch: root.editor ? root.editor.marqueeMatch : "touch"
     readonly property string linkedEditMode: root.editor ? root.editor.linkedEditMode : "track"
+    /// "linked": a recording segment moves on every track; "one": only the dragged clip (⌥ toggles while dragging).
+    readonly property string moveMode: root.editor && root.editor.timelineMoveMode ? root.editor.timelineMoveMode : "linked"
     readonly property bool cutAllTracks: root.linkedEditMode === "allTracks"
     readonly property int clipInset: 5
 
@@ -105,6 +107,11 @@ Rectangle {
             onTriggered: root.project.splitAt(root.playhead)
         }
         MenuItem { text: "Delete (leave gap)\t⌫"; onTriggered: { root.project.linkedEditMode = "track"; root.project.deleteSelected() } }
+        MenuItem {
+            text: "Unlink from Recording (move on its own)"
+            enabled: root.menuClip.linked === true
+            onTriggered: root.project.unlinkClip(root.menuClip.id)
+        }
         MenuItem {
             text: "Ripple delete (close gap)\t⇧⌫"
             onTriggered: root.project.removeRange(root.menuClip.start, root.menuClip.start + root.menuClip.duration)
@@ -556,6 +563,26 @@ Rectangle {
                 ]
                 value: root.linkedEditMode
                 onSelected: v => { if (root.editor) root.editor.linkedEditMode = v }
+            }
+        }
+        ColumnLayout {
+            spacing: 0
+            Layout.alignment: Qt.AlignVCenter
+            Label {
+                text: "Move"
+                color: Theme.textFaint
+                font.pixelSize: 9
+            }
+            Segmented {
+                objectName: "moveMode"
+                implicitHeight: 26
+                Layout.minimumWidth: implicitWidth
+                options: [
+                    { label: "Linked", value: "linked" },
+                    { label: "One", value: "one" }
+                ]
+                value: root.moveMode
+                onSelected: v => { if (root.editor) root.editor.timelineMoveMode = v }
             }
         }
         IconButton {
@@ -1074,9 +1101,13 @@ Rectangle {
                                 root.dropOk = ok
                             }
                             onTrimRequested: (edge, seconds) => root.project.trimClip(modelData.id, edge, seconds)
-                            onMoveRequested: (seconds, laneOffset) => {
-                                if (laneOffset !== 0)
-                                    root.project.moveClipToTrack(modelData.id, root.project.tracks[lane.index + laneOffset].id, seconds)
+                            linkedMove: root.moveMode === "linked"
+                            onMoveRequested: (seconds, laneOffset, alone) => {
+                                const trackId = laneOffset !== 0 ? root.project.tracks[lane.index + laneOffset].id : ""
+                                if (alone)
+                                    root.project.moveClipAlone(modelData.id, seconds, trackId)
+                                else if (laneOffset !== 0)
+                                    root.project.moveClipToTrack(modelData.id, trackId, seconds)
                                 else
                                     root.project.moveClip(modelData.id, seconds)
                             }

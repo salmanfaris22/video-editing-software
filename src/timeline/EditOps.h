@@ -54,6 +54,13 @@ Status moveClip(Timeline& tl, const ClipId& id, Time newStart);
 /// Moves a free clip onto another track of the same kind (or along its own),
 /// placed in the gap at `newStart` like moveClip; fails when it does not fit.
 Status moveClipToTrack(Timeline& tl, const ClipId& id, const TrackId& track, Time newStart);
+/// Moves only this clip, even when it is part of a recording segment
+/// (Resolve with linked selection off, Premiere ⌥-drag): it leaves its link
+/// group — the other tracks stay where they are — and lands in the gap at
+/// `newStart` on `track` (its own track when empty).
+Status moveClipAlone(Timeline& tl, const ClipId& id, Time newStart, const TrackId& track = {});
+/// Takes a clip out of its recording segment's link group (it then edits on its own).
+Status unlinkClip(Timeline& tl, const ClipId& id);
 
 /// Moves a clip's left/right edge to `edge`. Linked segments trim as a group
 /// and ripple (later content follows); free clips stop at neighbours. Both

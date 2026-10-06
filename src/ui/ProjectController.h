@@ -142,6 +142,12 @@ public:
     Q_INVOKABLE void deleteTrack(const QString& trackId);
     /// Moves a free clip onto another layer of the same kind, starting near `seconds`.
     Q_INVOKABLE void moveClipToTrack(const QString& clipId, const QString& trackId, double seconds);
+    /// Moves only this clip even when it belongs to a recording segment (⌥-drag,
+    /// or the timeline's Move: One): it leaves the recording's link group and
+    /// lands at `seconds` on `trackId` (its own track when empty).
+    Q_INVOKABLE void moveClipAlone(const QString& clipId, double seconds, const QString& trackId = {});
+    /// Takes a clip out of its recording segment, so it moves and trims on its own.
+    Q_INVOKABLE void unlinkClip(const QString& clipId);
     Q_INVOKABLE void addMarker(double seconds, const QString& label = {});
     Q_INVOKABLE void removeMarker(const QString& markerId);
     /// Finds pauses in the narration (async; results in `silences`).

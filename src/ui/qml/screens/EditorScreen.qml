@@ -28,6 +28,9 @@ Item {
         root.app.setWorkspaceValue("timelineLinkedEdit", linkedEditMode)
         root.project.linkedEditMode = linkedEditMode
     }
+    /// Timeline drag of a recording segment: "linked" (every track) or "one" (only that clip).
+    property string timelineMoveMode: root.app.workspaceValue("timelineMoveMode", "linked")
+    onTimelineMoveModeChanged: root.app.setWorkspaceValue("timelineMoveMode", timelineMoveMode)
     property real timelineTrackHeight: root.app.workspaceValue("timelineTrackHeight", 48)
     onTimelineTrackHeightChanged: root.app.setWorkspaceValue("timelineTrackHeight", timelineTrackHeight)
     /// Page (Resolve-style page bar at the bottom): "edit" or "color".

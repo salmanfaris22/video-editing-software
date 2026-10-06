@@ -421,6 +421,37 @@ Status moveClipToTrack(Timeline& tl, const ClipId& id, const TrackId& trackId, T
     return ok();
 }
 
+Status unlinkClip(Timeline& tl, const ClipId& id) {
+    const auto ref = locate(tl, id);
+    if (!ref) return fail(ErrorCode::NotFound, "clip not found");
+    if (ref->track->locked) return fail(ErrorCode::InvalidState, "the track is locked");
+    Clip& clip = ref->track->clips[ref->index];
+    if (!clip.linkGroup) return ok();
+    const LinkGroupId group = *clip.linkGroup;
+    clip.linkGroup.reset();
+    // A group of one is no group: free the last member too.
+    std::vector<Clip*> rest;
+    for (Track& t : tl.tracks) {
+        for (Clip& c : t.clips) {
+            if (c.linkGroup && *c.linkGroup == group) rest.push_back(&c);
+        }
+    }
+    if (rest.size() == 1) rest.front()->linkGroup.reset();
+    return ok();
+}
+
+Status moveClipAlone(Timeline& tl, const ClipId& id, Time newStart, const TrackId& track) {
+    const auto ref = locate(tl, id);
+    if (!ref) return fail(ErrorCode::NotFound, "clip not found");
+    if (ref->track->locked) return fail(ErrorCode::InvalidState, "the track is locked");
+    const TrackId target = track == TrackId{} ? ref->track->id : track;
+    Timeline work = tl;  // all or nothing: unlinking must not stick when the move fails
+    LEC_TRY(unlinkClip(work, id));
+    LEC_TRY(moveClipToTrack(work, id, target, newStart));
+    tl = std::move(work);
+    return ok();
+}
+
 Status trimStart(Timeline& tl, const ClipId& id, Time edge, const MediaBounds& bounds) {
     const auto ref = locate(tl, id);
     if (!ref) return fail(ErrorCode::NotFound, "clip not found");

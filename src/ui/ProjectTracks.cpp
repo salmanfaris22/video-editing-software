@@ -116,4 +116,22 @@ void ProjectController::moveClipToTrack(const QString& clipId, const QString& tr
     }
 }
 
+void ProjectController::moveClipAlone(const QString& clipId, double seconds, const QString& trackId) {
+    const auto clip = clipIdFrom(clipId);
+    if (!clip) return;
+    const auto track = trackId.isEmpty() ? std::optional<timeline::TrackId>(timeline::TrackId{}) : trackIdFrom(trackId);
+    if (!track) return;
+    if (mutate(QStringLiteral("Move clip alone"), [&](project::Project& p) {
+            return timeline::edit::moveClipAlone(p.timeline, *clip, sec(seconds), *track);
+        }) && !trackId.isEmpty()) {
+        selectTrack(trackId);
+    }
+}
+
+void ProjectController::unlinkClip(const QString& clipId) {
+    const auto clip = clipIdFrom(clipId);
+    if (!clip) return;
+    mutate(QStringLiteral("Unlink from recording"), [&](project::Project& p) { return timeline::edit::unlinkClip(p.timeline, *clip); });
+}
+
 }  // namespace lectern::ui

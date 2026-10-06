@@ -369,6 +369,46 @@ TEST(TimelineInteraction, RecordingSegmentsDragTogetherIntoAGap) {
     EXPECT_TRUE(t.project.canUndo());
 }
 
+TEST(TimelineInteraction, OptionDragMovesOnlyThatClipOfARecording) {
+    Timeline t;
+    ASSERT_TRUE(t.ui->ok());
+    t.project.clearSelection();
+    t.project.splitAt(4.0);
+    test::settle(80);
+    auto partAfter = [&](const QString& track) {
+        for (const QVariant& cv : t.track(t.trackIndex(track)).value("clips").toList()) {
+            const QVariantMap c = cv.toMap();
+            if (c.value("start").toDouble() > 3.5) return c;
+        }
+        return QVariantMap();
+    };
+    const QVariantMap screen = partAfter("Screen");
+    const QVariantMap camera = partAfter("Camera");
+    ASSERT_TRUE(camera.value("linked").toBool());
+    QQuickItem* screenItem = t.clipItem(screen.value("id").toString());
+    ASSERT_TRUE(screenItem);
+    const double screenX0 = screenItem->x();
+    // ⌥-drag the camera part 1.5 s to the right: the screen does not follow, even while dragging.
+    const QPoint from = t.clipCenter(camera.value("id").toString());
+    const QPoint to = from + QPoint(int(1.5 * t.pps()), 0);
+    t.ui->press(from, Qt::AltModifier);
+    for (int i = 1; i <= 10; ++i) {
+        t.ui->move(from + (to - from) * i / 10, Qt::AltModifier);
+        test::settle(8);
+    }
+    EXPECT_NEAR(screenItem->x(), screenX0, 0.5);
+    t.ui->release(to, Qt::AltModifier);
+    test::settle(80);
+    const QVariantMap movedCamera = partAfter("Camera");
+    const QVariantMap stillScreen = partAfter("Screen");
+    EXPECT_NEAR(movedCamera.value("start").toDouble(), camera.value("start").toDouble() + 1.5, 2.0 / t.pps());
+    EXPECT_NEAR(stillScreen.value("start").toDouble(), screen.value("start").toDouble(), 1e-9);
+    EXPECT_FALSE(movedCamera.value("linked").toBool());  // it left the recording's link
+    EXPECT_EQ(t.project.undoLabel(), "Move clip alone");
+    t.project.undo();
+    EXPECT_TRUE(partAfter("Camera").value("linked").toBool());
+}
+
 namespace {
 /// Clicks the menu item whose text starts with `prefix` (like choosing it with the mouse).
 bool chooseMenuItem(QObject* menu, const QString& prefix) {

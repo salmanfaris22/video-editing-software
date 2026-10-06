@@ -24,7 +24,10 @@ Item {
     property Item dragSpace: root.parent
     signal selectRequested(bool additive)
     signal trimRequested(string edge, real seconds)
-    signal moveRequested(real seconds, int laneOffset)
+    /// Recording segments move with every track; false (Move: One) or ⌥ while
+    /// dragging moves only this clip, which then leaves the recording's link.
+    property bool linkedMove: true
+    signal moveRequested(real seconds, int laneOffset, bool alone)
     signal openRequested()
     /// Right-click: the context menu at a scene position.
     signal contextRequested(real sceneX, real sceneY)
@@ -200,6 +203,7 @@ Item {
         property point scenePoint
         property int mods: 0
         property bool moving: false
+        property bool alone: false
         onPressed: mouse => {
             scenePoint = mapToItem(null, mouse.x, mouse.y)
             if (mouse.button === Qt.RightButton) {
@@ -229,9 +233,10 @@ Item {
             let start = Math.max(0, root.clip.start + dx / root.pxPerSecond)
             if (root.snapMove) start = root.snapMove(start, root.clip.duration, root.clip.id, mods)
             root.moveDx = (start - root.clip.start) * root.pxPerSecond
-            if (root.clip.linked) root.groupDrag(root.moveDx)
-            // A recording segment stays on its tracks (it only slides in time).
-            const offset = root.clip.linked ? 0 : Math.round(dy / Math.max(1, root.laneHeight))
+            alone = root.clip.linked && (!root.linkedMove || (mods & Qt.AltModifier))
+            root.groupDrag(root.clip.linked && !alone ? root.moveDx : 0)
+            // A recording segment stays on its tracks (it only slides in time), unless it moves alone.
+            const offset = root.clip.linked && !alone ? 0 : Math.round(dy / Math.max(1, root.laneHeight))
             const ok = offset === 0 || (root.acceptsLane ? root.acceptsLane(offset) : false)
             root.laneShift = ok ? offset : 0
             root.laneHover(offset, ok)
@@ -247,7 +252,8 @@ Item {
             moving = false
             root.dragEnded()
             if (apply && wasMoving && (Math.abs(dx) > 0.5 || lanes !== 0))
-                root.moveRequested(Math.max(0, root.clip.start + dx / root.pxPerSecond), lanes)
+                root.moveRequested(Math.max(0, root.clip.start + dx / root.pxPerSecond), lanes, alone)
+            alone = false
         }
         onDoubleClicked: root.openRequested()
     }
