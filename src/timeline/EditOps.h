@@ -48,7 +48,8 @@ Status deleteClip(Timeline& tl, const ClipId& id);
 Status deleteClipLocal(Timeline& tl, const ClipId& id);
 
 /// Moves a free clip on its track; the start is clamped between neighbours
-/// and zero. Linked recording segments cannot be moved.
+/// and zero. A linked recording segment moves with its whole link group (all
+/// tracks by the same amount), sliding as far as every track has room.
 Status moveClip(Timeline& tl, const ClipId& id, Time newStart);
 /// Moves a free clip onto another track of the same kind (or along its own),
 /// placed in the gap at `newStart` like moveClip; fails when it does not fit.

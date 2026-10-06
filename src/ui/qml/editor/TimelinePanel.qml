@@ -31,6 +31,9 @@ Rectangle {
     property real scrubSceneX: 0
     property int scrubMods: 0
     // Lane a clip is being dragged over (-1: none) and whether it can land there.
+    // A recording segment being dragged: its other tracks follow (link group, offset in px).
+    property string groupDragGroup: ""
+    property real groupDragDx: 0
     property int dropLane: -1
     property bool dropOk: false
     // Edge auto-scroll while dragging (pixels per tick, signed).
@@ -159,14 +162,23 @@ Rectangle {
     function contentXAt(sceneX) { return lanes.contentX + lanes.mapFromItem(null, sceneX, 0).x }
 
     // ---- Snapping -------------------------------------------------------------
+    function linkGroupOf(clipId) {
+        const tracks = root.project.tracks
+        for (let ti = 0; ti < tracks.length; ++ti)
+            for (let ci = 0; ci < tracks[ti].clips.length; ++ci)
+                if (tracks[ti].clips[ci].id === clipId) return tracks[ti].clips[ci].linkGroup || ""
+        return ""
+    }
     function snapPoints(excludeId, withPlayhead) {
         const pts = [0, root.project.duration]
         if (withPlayhead) pts.push(root.playhead)
+        const group = excludeId ? root.linkGroupOf(excludeId) : ""
         const tracks = root.project.tracks
         for (let ti = 0; ti < tracks.length; ++ti) {
             const clips = tracks[ti].clips
             for (let ci = 0; ci < clips.length; ++ci) {
                 if (clips[ci].id === excludeId) continue
+                if (group !== "" && clips[ci].linkGroup === group) continue  // the recording being moved
                 pts.push(clips[ci].start, clips[ci].start + clips[ci].duration)
             }
         }
@@ -476,9 +488,8 @@ Rectangle {
             spacing: 0
             Layout.alignment: Qt.AlignVCenter
             Label { text: "Zoom"; color: Theme.textFaint; font.pixelSize: 9 }
-            Slider {
+            MiniSlider {
                 id: zoom
-                focusPolicy: Qt.NoFocus
                 from: 2
                 to: 300
                 Layout.preferredWidth: 80
@@ -497,9 +508,8 @@ Rectangle {
             spacing: 0
             Layout.alignment: Qt.AlignVCenter
             Label { text: "Tracks"; color: Theme.textFaint; font.pixelSize: 9 }
-            Slider {
+            MiniSlider {
                 id: trackSize
-                focusPolicy: Qt.NoFocus
                 from: 32
                 to: 88
                 stepSize: 4
@@ -953,7 +963,9 @@ Rectangle {
                                 root.project.selectClip(modelData.id, additive)
                             }
                             onDragPointer: sceneX => root.edgeDrag(sceneX)
-                            onDragEnded: { root.stopEdgeDrag(); root.dropLane = -1 }
+                            groupShift: root.groupDragGroup !== "" && modelData.linkGroup === root.groupDragGroup ? root.groupDragDx : 0
+                            onGroupDrag: dx => { root.groupDragGroup = modelData.linkGroup; root.groupDragDx = dx }
+                            onDragEnded: { root.stopEdgeDrag(); root.dropLane = -1; root.groupDragGroup = ""; root.groupDragDx = 0 }
                             onLaneHover: (offset, ok) => {
                                 root.dropLane = offset === 0 ? -1 : lane.index + offset
                                 root.dropOk = ok

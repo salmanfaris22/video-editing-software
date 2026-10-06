@@ -32,7 +32,11 @@ Item {
     signal laneHover(int laneOffset, bool ok)
 
     readonly property color baseColor: root.clip.color
-    readonly property bool movable: !root.clip.linked && !root.locked
+    // Recording segments move too: the whole recording (every track) slides together.
+    readonly property bool movable: !root.locked
+    /// Offset while another part of the same recording is being dragged.
+    property real groupShift: 0
+    signal groupDrag(real dx)
     readonly property bool dragging: bodyMouse.moving || root.trimEdge !== ""
     property real moveDx: 0
     property int laneShift: 0
@@ -42,7 +46,8 @@ Item {
     readonly property real baseWidth: Math.max(4, root.clip.duration * root.pxPerSecond)
     readonly property real handleWidth: Math.max(3, Math.min(8, root.clip.duration * root.pxPerSecond / 4))
 
-    x: root.clip.start * root.pxPerSecond + root.moveDx + (root.trimEdge === "start" ? root.trimDx : 0)
+    x: root.clip.start * root.pxPerSecond + root.moveDx + (bodyMouse.moving ? 0 : root.groupShift)
+       + (root.trimEdge === "start" ? root.trimDx : 0)
     // Moving onto another layer: the clip follows into that lane.
     transform: Translate { y: root.laneShift * root.laneHeight }
     z: root.dragging ? 30 : root.selected ? 2 : 1
@@ -215,7 +220,9 @@ Item {
             let start = Math.max(0, root.clip.start + dx / root.pxPerSecond)
             if (root.snapMove) start = root.snapMove(start, root.clip.duration, root.clip.id, mods)
             root.moveDx = (start - root.clip.start) * root.pxPerSecond
-            const offset = Math.round(dy / Math.max(1, root.laneHeight))
+            if (root.clip.linked) root.groupDrag(root.moveDx)
+            // A recording segment stays on its tracks (it only slides in time).
+            const offset = root.clip.linked ? 0 : Math.round(dy / Math.max(1, root.laneHeight))
             const ok = offset === 0 || (root.acceptsLane ? root.acceptsLane(offset) : false)
             root.laneShift = ok ? offset : 0
             root.laneHover(offset, ok)

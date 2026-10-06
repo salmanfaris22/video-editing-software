@@ -346,11 +346,48 @@ std::optional<Time> placeInGap(const Track& track, Time wanted, Time duration) {
 }
 }  // namespace
 
+namespace {
+/// Slides a recording segment (every clip of its link group, on every track)
+/// by the same amount, as far as the neighbours and time zero allow.
+Status moveLinkedGroup(Timeline& tl, const ClipId& id, Time newStart) {
+    const Clip* self = tl.findClip(id);
+    const LinkGroupId group = *self->linkGroup;
+    const auto inGroup = [&](const Clip& c) { return c.linkGroup && *c.linkGroup == group; };
+    Time lo = -Time::max();
+    Time hi = Time::max();
+    for (const Track& t : tl.tracks) {
+        for (const Clip& m : t.clips) {
+            if (!inGroup(m)) continue;
+            if (t.locked) return fail(ErrorCode::InvalidState, "a track of this recording is locked");
+            lo = std::max(lo, Time::zero() - m.range.start);  // never before 0
+            for (const Clip& other : t.clips) {
+                if (inGroup(other)) continue;
+                if (other.range.start < m.range.start) {
+                    lo = std::max(lo, other.range.end() - m.range.start);
+                } else {
+                    hi = std::min(hi, other.range.start - m.range.end());
+                }
+            }
+        }
+    }
+    if (hi < lo) return fail(ErrorCode::InvalidArgument, "no room to move the recording");
+    const Time delta = std::clamp(std::max(Time::zero(), newStart) - self->range.start, lo, hi);
+    if (delta == Time::zero()) return ok();
+    for (Track& t : tl.tracks) {
+        for (Clip& m : t.clips) {
+            if (inGroup(m)) m.range.start = m.range.start + delta;
+        }
+        std::stable_sort(t.clips.begin(), t.clips.end(), [](const Clip& a, const Clip& b) { return a.range.start < b.range.start; });
+    }
+    return ok();
+}
+}  // namespace
+
 Status moveClip(Timeline& tl, const ClipId& id, Time newStart) {
     const auto ref = locate(tl, id);
     if (!ref) return fail(ErrorCode::NotFound, "clip not found");
     if (ref->track->locked) return fail(ErrorCode::InvalidState, "the track is locked");
-    if (isLinkedSegment(tl, id)) return fail(ErrorCode::Unsupported, "recording segments move with the timeline");
+    if (isLinkedSegment(tl, id)) return moveLinkedGroup(tl, id, newStart);
     Track& track = *ref->track;
     const Time duration = track.clips[ref->index].range.duration;
     Clip moving = std::move(track.clips[ref->index]);

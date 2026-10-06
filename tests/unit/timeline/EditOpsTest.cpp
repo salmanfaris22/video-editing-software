@@ -280,8 +280,34 @@ TEST(EditOps, MovingFreeClipsSnapsIntoGaps) {
     EXPECT_EQ(overlay.clips[1].range.start, sec(6));
     ASSERT_TRUE(edit::moveClip(r.tl, r.text, sec(-3)));
     EXPECT_EQ(overlay.clips[0].range.start, sec(0));
-    EXPECT_FALSE(edit::moveClip(r.tl, r.screen, sec(2)));  // recording segments do not float
+    // A recording segment moves with its link group (here the whole recording starts at 0 with nothing before it).
     EXPECT_TRUE(r.tl.validate());
+}
+
+TEST(EditOps, RecordingSegmentsMoveTogetherIntoTheGap) {
+    Recording r;
+    // Split at 4 s, then delete the left part on this track only (gap 0–4 s) the way "Cut: Track" does.
+    ASSERT_TRUE(edit::splitAt(r.tl, sec(4)));
+    std::vector<ClipId> left;
+    for (const Track& t : r.tl.tracks)
+        if (!t.clips.empty() && t.clips.front().linkGroup && t.clips.front().range.start < sec(1)) left.push_back(t.clips.front().id);
+    for (const ClipId& c : left) ASSERT_TRUE(edit::deleteClipLocal(r.tl, c));
+    const Clip* screen = nullptr;
+    for (const Clip& c : r.track("Screen").clips) screen = &c;
+    ASSERT_TRUE(screen);
+    const Time cameraOffset = r.track("Camera").clips.back().range.start - screen->range.start;
+    // Drag to 1 s: every track moves by the same amount.
+    ASSERT_TRUE(edit::moveClip(r.tl, screen->id, sec(1)));
+    EXPECT_EQ(r.track("Screen").clips.back().range.start, sec(1));
+    EXPECT_EQ(r.track("Camera").clips.back().range.start - r.track("Screen").clips.back().range.start, cameraOffset);
+    EXPECT_EQ(r.track("Microphone").clips.back().range.start, sec(1));
+    // Dragging before 0 stops at 0 (the camera, which starts 0.1 s later, keeps its offset).
+    ASSERT_TRUE(edit::moveClip(r.tl, r.track("Screen").clips.back().id, sec(-5)));
+    EXPECT_EQ(r.track("Screen").clips.back().range.start, sec(0));
+    EXPECT_TRUE(r.tl.validate());
+    // A locked track of the recording blocks the move.
+    r.track("Microphone").locked = true;
+    EXPECT_FALSE(edit::moveClip(r.tl, r.track("Screen").clips.back().id, sec(2)));
 }
 
 TEST(EditOps, FreeClipsMoveBetweenTracksOfTheSameKind) {

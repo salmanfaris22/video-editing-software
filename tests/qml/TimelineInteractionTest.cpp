@@ -309,3 +309,62 @@ TEST(TimelineInteraction, ScrubbingAtTheEdgeAutoScrolls) {
     test::settle(100);
     EXPECT_EQ(t.contentX(), x);  // stops on release
 }
+
+TEST(TimelineInteraction, RecordingSegmentsDragTogetherIntoAGap) {
+    Timeline t;
+    ASSERT_TRUE(t.ui->ok());
+    // Split at 2 s and 4 s, then delete the middle part on every track (leaves a gap).
+    t.project.setLinkedEditMode(QStringLiteral("track"));
+    t.project.clearSelection();
+    t.project.splitAt(2.0);
+    t.project.splitAt(4.0);
+    QStringList middle;
+    for (const QVariant& tv : t.project.tracks()) {
+        for (const QVariant& cv : tv.toMap().value("clips").toList()) {
+            const QVariantMap c = cv.toMap();
+            if (c.value("linked").toBool() && std::abs(c.value("start").toDouble() - 2.0) < 0.15) middle << c.value("id").toString();
+        }
+    }
+    ASSERT_GE(middle.size(), 3);
+    t.project.selectClips(middle);
+    t.project.deleteSelected();
+    test::settle(80);
+    auto partAfter = [&](const QString& track) {  // the recording part starting at or after 3.9 s
+        for (const QVariant& cv : t.track(t.trackIndex(track)).value("clips").toList()) {
+            const QVariantMap c = cv.toMap();
+            if (c.value("start").toDouble() > 3.5) return c;
+        }
+        return QVariantMap();
+    };
+    const QVariantMap screen = partAfter("Screen");
+    const QVariantMap camera = partAfter("Camera");
+    ASSERT_FALSE(screen.isEmpty());
+    ASSERT_FALSE(camera.isEmpty());
+    const double cameraOffset = camera.value("start").toDouble() - screen.value("start").toDouble();
+    QQuickItem* screenItem = t.clipItem(screen.value("id").toString());
+    QQuickItem* cameraItem = t.clipItem(camera.value("id").toString());
+    ASSERT_TRUE(screenItem && cameraItem);
+    const double cameraX0 = cameraItem->x();
+
+    // Drag the screen part 2 s to the left by hand; the camera part follows while dragging.
+    const QPoint from = t.clipCenter(screen.value("id").toString());
+    const QPoint to = from - QPoint(int(2.0 * t.pps()), 0);
+    t.ui->press(from, Qt::ControlModifier);
+    for (int i = 1; i <= 10; ++i) {
+        t.ui->move(from + (to - from) * i / 10, Qt::ControlModifier);
+        test::settle(8);
+    }
+    EXPECT_LT(cameraItem->x(), cameraX0 - 1.5 * t.pps());  // follows live
+    t.ui->release(to, Qt::ControlModifier);
+    test::settle(80);
+
+    double screenStart = -1;
+    double cameraStart = -1;
+    for (const QVariant& cv : t.track(t.trackIndex("Screen")).value("clips").toList())
+        if (cv.toMap().value("id") == screen.value("id")) screenStart = cv.toMap().value("start").toDouble();
+    for (const QVariant& cv : t.track(t.trackIndex("Camera")).value("clips").toList())
+        if (cv.toMap().value("id") == camera.value("id")) cameraStart = cv.toMap().value("start").toDouble();
+    EXPECT_NEAR(screenStart, 2.0, 2.0 / t.pps());       // the gap is closed
+    EXPECT_NEAR(cameraStart - screenStart, cameraOffset, 1e-6);  // tracks stay in sync
+    EXPECT_TRUE(t.project.canUndo());
+}

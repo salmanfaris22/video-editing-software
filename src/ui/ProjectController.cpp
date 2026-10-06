@@ -619,6 +619,7 @@ void ProjectController::rebuildViews() {
                                      {"enabled", c.enabled},
                                      {"muted", c.audio.muted},
                                      {"linked", c.linkGroup.has_value() && timeline::edit::isLinkedSegment(p.timeline, c.id)},
+                                     {"linkGroup", c.linkGroup ? qs(c.linkGroup->toString()) : QString()},
                                      {"fadeIn", c.audio.fadeIn.toSecondsF()},
                                      {"fadeOut", c.audio.fadeOut.toSecondsF()}});
             if (c.kind == timeline::ClipKind::Text && c.text) {
