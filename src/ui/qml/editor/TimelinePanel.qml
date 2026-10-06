@@ -86,6 +86,86 @@ Rectangle {
         case "empty-audio": root.project.addTrack("audio"); break
         }
     }
+    // ---- Right-click menus (Resolve / After Effects style) -----------------------
+    property var menuClip: ({})        // the clip right-clicked
+    property string menuTrackKind: ""
+    property real menuTime: 0          // timeline time under the pointer
+    function clipAt(id) {
+        for (const track of root.project.tracks)
+            for (const clip of track.clips)
+                if (clip.id === id) return { clip: clip, track: track }
+        return null
+    }
+    Menu {
+        id: clipMenu
+        objectName: "clipMenu"
+        MenuItem {
+            text: "Split at playhead\tS"
+            enabled: root.menuClip.start !== undefined && root.playhead > root.menuClip.start && root.playhead < root.menuClip.start + root.menuClip.duration
+            onTriggered: root.project.splitAt(root.playhead)
+        }
+        MenuItem { text: "Delete (leave gap)\t⌫"; onTriggered: { root.project.linkedEditMode = "track"; root.project.deleteSelected() } }
+        MenuItem {
+            text: "Ripple delete (close gap)\t⇧⌫"
+            onTriggered: root.project.removeRange(root.menuClip.start, root.menuClip.start + root.menuClip.duration)
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: root.menuClip.enabled === false ? "Enable clip\tD" : "Disable clip\tD"
+            onTriggered: root.project.setClipEnabled(root.menuClip.id, root.menuClip.enabled === false)
+        }
+        MenuItem {
+            text: root.menuClip.muted ? "Unmute audio" : "Mute audio"
+            visible: (root.menuClip.audioPath || "").length > 0
+            height: visible ? implicitHeight : 0
+            onTriggered: root.project.setClipAudio(root.menuClip.id, "muted", !root.menuClip.muted)
+        }
+        MenuItem {
+            text: "Select all on this layer"
+            onTriggered: {
+                const found = root.clipAt(root.menuClip.id)
+                if (found) root.project.selectClips(found.track.clips.map(c => c.id))
+            }
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "Grade this clip\t⇧6"
+            visible: root.menuTrackKind !== "audio" && root.menuClip.role !== "text" && root.menuClip.role !== "subtitle"
+            height: visible ? implicitHeight : 0
+            onTriggered: {
+                root.project.selectClip(root.menuClip.id)
+                if (root.editor) root.editor.page = "color"
+            }
+        }
+        MenuItem {
+            text: "Properties…"
+            onTriggered: {
+                if (!root.editor) return
+                const r = root.menuClip.role
+                root.editor.tool = r === "text" ? "style" : r === "subtitle" ? "subtitles" : r === "overlay" ? "overlay"
+                                 : root.menuTrackKind === "audio" ? "audio" : "effects"
+            }
+        }
+    }
+    Menu {
+        id: laneMenu
+        objectName: "laneMenu"
+        MenuItem { text: "Add marker here\tM"; onTriggered: root.project.addMarker(root.menuTime, "") }
+        MenuItem { text: "Add text here"; onTriggered: { root.project.addText("Your text", root.menuTime, 4.0, "title"); if (root.editor) root.editor.tool = "style" } }
+        MenuItem { text: "Split all tracks here"; onTriggered: { root.project.clearSelection(); root.project.splitAt(root.menuTime) } }
+        MenuSeparator {}
+        MenuItem { text: "Add layer…"; onTriggered: addLayerMenu.popup() }
+        MenuItem { text: "Select all clips\t⌘A"; onTriggered: root.project.selectAllClips() }
+    }
+    Menu {
+        id: rulerMenu
+        objectName: "rulerMenu"
+        MenuItem { text: "Add marker\tM"; onTriggered: root.project.addMarker(root.menuTime, "") }
+        MenuItem { text: "Set in point here\tI"; enabled: !!root.editor; onTriggered: { root.editor.markIn = root.menuTime; if (root.editor.markOut <= root.menuTime) root.editor.markOut = -1 } }
+        MenuItem { text: "Set out point here\tO"; enabled: !!root.editor; onTriggered: { root.editor.markOut = root.menuTime; if (root.editor.markIn < 0 || root.editor.markIn >= root.menuTime) root.editor.markIn = 0 } }
+        MenuItem { text: "Fit timeline to window"; onTriggered: root.fitToWidth() }
+    }
+
     Menu {
         id: addLayerMenu
         objectName: "addLayerMenu"
@@ -610,9 +690,17 @@ Rectangle {
                     objectName: "timelineRuler"
                     anchors.fill: parent
                     preventStealing: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.IBeamCursor
-                    onPressed: mouse => root.beginScrub(mapToItem(null, mouse.x, 0).x, mouse.modifiers)
-                    onPositionChanged: mouse => { if (pressed) root.scrubTo(mapToItem(null, mouse.x, 0).x, mouse.modifiers) }
+                    onPressed: mouse => {
+                        if (mouse.button === Qt.RightButton) {
+                            root.menuTime = root.timeAt(mouse.x)
+                            rulerMenu.popup()
+                            return
+                        }
+                        root.beginScrub(mapToItem(null, mouse.x, 0).x, mouse.modifiers)
+                    }
+                    onPositionChanged: mouse => { if (pressed && root.scrubbing) root.scrubTo(mapToItem(null, mouse.x, 0).x, mouse.modifiers) }
                     onReleased: root.endScrub()
                     onCanceled: root.endScrub()
                 }
@@ -870,9 +958,18 @@ Rectangle {
                         property bool dragSelect: false
                         property bool clickPending: false
                         preventStealing: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
                         property bool scrub: false
                         onPressed: mouse => {
                             root.activated()
+                            if (mouse.button === Qt.RightButton) {
+                                root.project.selectTrack(lane.modelData.id)
+                                root.menuTime = root.timeAt(mouse.x)
+                                laneMenu.popup()
+                                clickPending = false
+                                dragSelect = false
+                                return
+                            }
                             const p = mapToItem(trackLanes, mouse.x, mouse.y)
                             pressX = p.x
                             pressY = p.y
@@ -900,7 +997,7 @@ Rectangle {
                             }
                         }
                         onPositionChanged: mouse => {
-                            if (!pressed) return
+                            if (!pressed || (pressedButtons & Qt.RightButton)) return
                             if (scrub) { root.scrubTo(mapToItem(null, mouse.x, 0).x, mouse.modifiers); return }
                             const p = mapToItem(trackLanes, mouse.x, mouse.y)
                             if (clickPending) {
@@ -963,6 +1060,12 @@ Rectangle {
                                 root.project.selectClip(modelData.id, additive)
                             }
                             onDragPointer: sceneX => root.edgeDrag(sceneX)
+                            onContextRequested: (sx, sy) => {
+                                root.activated()
+                                root.menuClip = modelData
+                                root.menuTrackKind = lane.modelData.kind
+                                clipMenu.popup()
+                            }
                             groupShift: root.groupDragGroup !== "" && modelData.linkGroup === root.groupDragGroup ? root.groupDragDx : 0
                             onGroupDrag: dx => { root.groupDragGroup = modelData.linkGroup; root.groupDragDx = dx }
                             onDragEnded: { root.stopEdgeDrag(); root.dropLane = -1; root.groupDragGroup = ""; root.groupDragDx = 0 }

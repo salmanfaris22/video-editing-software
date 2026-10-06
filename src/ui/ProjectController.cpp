@@ -268,6 +268,7 @@ bool ProjectController::mutate(const QString& label, const Mutation& edit, const
     if (assistantEditing_ && !assistantError_.isEmpty()) return false;
     project::Project work = *project_;
     if (auto st = edit(work); !st) {
+        if (st.error().code() != ErrorCode::Cancelled) LEC_WARN("edit", "{} refused: {}", label.toStdString(), st.error().message());
         if (assistantEditing_) assistantError_ = qs(st.error().message());
         if (st.error().code() != ErrorCode::Cancelled) showMessage(qs(st.error().message()));
         return false;
@@ -288,6 +289,7 @@ bool ProjectController::mutate(const QString& label, const Mutation& edit, const
     if (merge) {
         undo_.back().atMs = now;  // keep the original "before" of the drag
     } else {
+        LEC_INFO("edit", "{}", label.toStdString());  // one line per undo step (slider drags merge)
         undo_.push_back({std::move(*project_), label, mergeKey, now});
         if (undo_.size() > kUndoLimit) undo_.erase(undo_.begin());
     }
@@ -303,6 +305,7 @@ void ProjectController::undo() {
     if (!project_ || undo_.empty()) return;
     UndoStep step = std::move(undo_.back());
     undo_.pop_back();
+    LEC_INFO("edit", "undo: {}", step.label.toStdString());
     redo_.push_back({*project_, step.label, {}, 0, step.assistantId});
     *project_ = std::move(step.before);
     documentChanged();
@@ -313,6 +316,7 @@ void ProjectController::redo() {
     if (!project_ || redo_.empty()) return;
     UndoStep step = std::move(redo_.back());
     redo_.pop_back();
+    LEC_INFO("edit", "redo: {}", step.label.toStdString());
     undo_.push_back({*project_, step.label, {}, 0, step.assistantId});
     *project_ = std::move(step.before);
     documentChanged();

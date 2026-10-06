@@ -1,4 +1,6 @@
 #include "ui/McpController.h"
+
+#include "core/Log.h"
 #include "ui/ProjectController.h"
 
 #include <QClipboard>
@@ -153,6 +155,7 @@ int McpController::undoEdits(const QString& id) {
 }
 
 void McpController::log(const QString& client, const QString& action, const QString& outcome) {
+    LEC_INFO("mcp", "{}: {} → {}", client.toStdString(), action.toStdString(), outcome.toStdString());
     activity_.prepend(QVariantMap{{"client", client}, {"action", action}, {"outcome", outcome},
                                  {"time", QDateTime::currentDateTime().toString(QStringLiteral("HH:mm:ss"))}});
     while (activity_.size() > 100) activity_.removeLast();

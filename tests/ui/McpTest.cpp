@@ -267,3 +267,17 @@ TEST(McpUi, SetClipColorSpaceIsUndoableAndValidated) {
     EXPECT_EQ(p.controller.selection().value("inputColorSpace").toString(), "auto");
     EXPECT_EQ(p.controller.selection().value("detectedColorSpace").toString(), "Rec.709");
 }
+
+TEST(McpUi, GetScopesMeasuresTheGradedPicture) {
+    Project p;
+    const auto before = p.call("get_scopes", {{"time", 1.0}});
+    ASSERT_FALSE(before["result"]["isError"].get<bool>()) << before;
+    const double luma0 = before["result"]["structuredContent"]["averageLuma"];
+    // Brighten every visible clip; the measured average luma goes up.
+    for (const auto& track : p.controller.snapshot()->timeline.tracks)
+        for (const auto& clip : track.clips)
+            if (track.kind == timeline::TrackKind::Video) p.controller.setColorValue(QString::fromStdString(clip.id.toString()), "exposure", 1.0);
+    const auto after = p.call("get_scopes", {{"time", 1.0}});
+    EXPECT_GT(after["result"]["structuredContent"]["averageLuma"].get<double>(), luma0 + 30);
+    EXPECT_LE(after["result"]["structuredContent"]["white"]["r"].get<int>(), 1023);
+}

@@ -32,13 +32,17 @@ Item {
     onTimelineTrackHeightChanged: root.app.setWorkspaceValue("timelineTrackHeight", timelineTrackHeight)
     /// Page (Resolve-style page bar at the bottom): "edit" or "color".
     property string page: root.app.workspaceValue("editorPage", "edit")
-    onPageChanged: root.app.setWorkspaceValue("editorPage", page)
+    onPageChanged: {
+        root.app.setWorkspaceValue("editorPage", page)
+        console.info("page:", page)
+    }
     property string scopeMode: root.app.workspaceValue("scopeMode", "parade")
     onScopeModeChanged: root.app.setWorkspaceValue("scopeMode", scopeMode)
     property string timelineGridMode: root.app.workspaceValue("timelineGridMode", "auto")
     onTimelineGridModeChanged: root.app.setWorkspaceValue("timelineGridMode", timelineGridMode)
 
     function refocus() { root.forceActiveFocus() }
+    function openExport() { exportDialog.open() }
 
     Component.onCompleted: root.project.linkedEditMode = linkedEditMode
 
@@ -51,7 +55,18 @@ Item {
         case Qt.Key_Space: root.playback.toggle(); break
         case Qt.Key_S: root.project.splitAt(root.playback.position); break
         case Qt.Key_Delete:
-        case Qt.Key_Backspace: root.project.deleteSelected(); break
+        case Qt.Key_Backspace:
+            if (shift && root.project.selection.start !== undefined) {  // ripple delete: close the gap
+                const sel = root.project.selection
+                root.project.removeRange(sel.start, sel.start + sel.duration)
+            } else {
+                root.project.deleteSelected()
+            }
+            break
+        case Qt.Key_D:  // enable / disable the selected clip (Resolve)
+            if (root.project.selectedClip.length > 0)
+                root.project.setClipEnabled(root.project.selectedClip, root.project.selection.enabled === false)
+            break
         case Qt.Key_M: root.project.addMarker(root.playback.position, ""); break
         case Qt.Key_Left: shift ? root.playback.seek(root.playback.position - 1) : root.playback.step(-1); break
         case Qt.Key_Right: shift ? root.playback.seek(root.playback.position + 1) : root.playback.step(1); break
@@ -74,6 +89,18 @@ Item {
     Shortcut { sequence: "S"; context: Qt.WindowShortcut; enabled: root.project.duration > 0; onActivated: root.project.splitAt(root.playback.position) }
     Shortcut { sequence: "Delete"; context: Qt.WindowShortcut; enabled: root.project.selectedClips.length > 0; onActivated: root.project.deleteSelected() }
     Shortcut { sequence: "Backspace"; context: Qt.WindowShortcut; enabled: root.project.selectedClips.length > 0; onActivated: root.project.deleteSelected() }
+    Shortcut {  // ripple delete: remove the selected clip's time on every track
+        sequences: ["Shift+Backspace", "Shift+Delete"]
+        context: Qt.WindowShortcut
+        enabled: root.project.selection.start !== undefined
+        onActivated: root.project.removeRange(root.project.selection.start, root.project.selection.start + root.project.selection.duration)
+    }
+    Shortcut {  // enable / disable the selected clip, like Resolve
+        sequence: "D"
+        context: Qt.WindowShortcut
+        enabled: root.project.selectedClip.length > 0
+        onActivated: root.project.setClipEnabled(root.project.selectedClip, root.project.selection.enabled === false)
+    }
     Shortcut { sequence: "M"; context: Qt.WindowShortcut; enabled: root.project.duration > 0; onActivated: root.project.addMarker(root.playback.position, "") }
     Shortcut { sequence: "Escape"; context: Qt.WindowShortcut; onActivated: { root.project.clearSelection(); root.markIn = -1; root.markOut = -1 } }
 

@@ -37,7 +37,7 @@ it wholesale would lose Lectern's ease of use. So:
 
 | # | Area | AE | PR | DR | Lectern | P | Notes |
 |---|---|---|---|---|---|---|---|
-| 1.1 | ① Menu bar: File, Edit, Composition, Layer, Effect, Animation, View, Window, Help | ● | ● (Sequence, Clip, Markers, Graphics) | ● (Timeline, Clip, Mark, View, Playback, Fusion, Color, Fairlight, Workspace) | ⬜ | P1 | Native macOS menu bar via Qt `MenuBar`; every command also listed there with its shortcut |
+| 1.1 | ① Menu bar: File, Edit, Composition, Layer, Effect, Animation, View, Window, Help | ● | ● (Sequence, Clip, Markers, Graphics) | ● (Timeline, Clip, Mark, View, Playback, Fusion, Color, Fairlight, Workspace) | ✅ (native macOS menu bar) | P1 | Native macOS menu bar via Qt `MenuBar`; every command also listed there with its shortcut |
 | 1.2 | ② Tools bar (selection, hand, zoom, shapes, pen, type, brush, puppet …) | ● | ● (vertical) | ◐ (Edit page toolbar) | ⬜ | P0 | See §2 |
 | 1.3 | ③ Workspace switcher (Default, Review, Learn, Small Screen, Standard, Effects, Color, Animation …) | ● | ● | ● (pages) | 🟡 | P1 | Lectern remembers panel sizes and tool; no named workspaces |
 | 1.4 | ④ Project panel (media bin) | ● | ● | ● (Media Pool) | ⬜ | P1 | See §4 |
@@ -123,7 +123,7 @@ viewer or timeline today.
 | 3.19 | Nudge with arrow keys (1 px, Shift 10 px) | ● | ● | ● | ⬜ | P1 | |
 | 3.20 | Esc cancels a drag | ◐ | ◐ | ◐ | ✅ | – | |
 | 3.21 | Double-click text to edit in place | ● | ● | ● | ✅ | – | |
-| 3.22 | Right-click context menu on layers | ● | ● | ● | ✅ | – | Reset, delete, edit text |
+| 3.22 | Right-click context menu on layers | ● | ● | ● | ✅ (plus timeline clip/lane/ruler menus) | – | Reset, delete, edit text |
 | 3.23 | Click-through layer picking (Alt-click selects the layer below) | ◐ | – | – | ⬜ | P2 | |
 | 3.24 | Motion path display with keyframe points | ● | ◐ | ● | ⬜ | P2 | |
 | 3.25 | Effect on-viewer controls (zoom center, crop, mask points, tracker points) | ● | ● | ● | 🟡 | P1 | |
@@ -158,7 +158,7 @@ viewer or timeline today.
 | 5.2 | fx toggle per effect (bypass), Reset, About | ● | ● | ● | 🟡 | P1 | Enable toggles for the 4 effects |
 | 5.3 | Drag to reorder effects | ● | ● | ● | ⬜ | P1 |
 | 5.4 | Stopwatch per parameter (start keyframing), keyframe navigator ◀ ◆ ▶ | ● | ● | ● | 🟡 | P0 | Keyframes section for transform only |
-| 5.5 | Scrubby number fields (drag on the value) and click-to-type | ● | ● | ● | ⬜ | P0 | Core pro feel |
+| 5.5 | Scrubby number fields (drag on the value) and click-to-type | ● | ● | ● | 🟡 (scrub fields on the Color page) | P0 | Core pro feel |
 | 5.6 | Angle dial, color swatch + eyedropper, point picker (crosshair), checkbox, popup, curve | ● | ● | ● | 🟡 | P1 |
 | 5.7 | Copy / paste effects, save as animation preset | ● | ● | ● | ⬜ | P1 |
 | 5.8 | Expression field per parameter (Alt-click stopwatch) | ● | – | ● | ⬜ | P3 |

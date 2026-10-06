@@ -1,5 +1,7 @@
 #include "ui/ProjectController.h"
 
+#include "core/Log.h"
+
 #include <QDateTime>
 
 namespace lectern::ui {
@@ -21,6 +23,7 @@ QString ProjectController::assistantEdit(const QString& clientId, const QString&
     assistantEditing_ = false;
     setLinkedEditMode(modeBefore);
     if (!assistantError_.isEmpty()) {
+        LEC_WARN("mcp", "assistant edit by {} failed ({}): {}", clientId.toStdString(), label.toStdString(), assistantError_.toStdString());
         *project_ = std::move(before);
         selectedClips_ = selectionBefore;
         selectedClip_ = selectedClips_.isEmpty() ? QString() : selectedClips_.last();
@@ -29,6 +32,7 @@ QString ProjectController::assistantEdit(const QString& clientId, const QString&
         return assistantError_;
     }
     if (*project_ == before) return {};
+    LEC_INFO("mcp", "assistant edit by {}: {}", clientId.toStdString(), label.toStdString());
     undo_.push_back({std::move(before), QStringLiteral("Assistant: ") + label, {},
                      QDateTime::currentMSecsSinceEpoch(), clientId});
     if (undo_.size() > 200) undo_.erase(undo_.begin());

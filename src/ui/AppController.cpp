@@ -1,4 +1,7 @@
 #include "ui/AppController.h"
+#include "core/FileSystem.h"
+#include <QCoreApplication>
+#include <QUrl>
 
 #include "capture/synthetic/SyntheticSources.h"
 #include "core/Log.h"
@@ -146,6 +149,26 @@ QVariant AppController::workspaceValue(const QString& key, const QVariant& fallb
 
 void AppController::setWorkspaceValue(const QString& key, const QVariant& value) {
     workspace_.setValue(QStringLiteral("workspace/") + key, value);
+}
+
+void AppController::showLogs() {
+    LEC_INFO("app", "showing logs in {}", fs::logDirectory().string());
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(fs::logDirectory().string())));
+}
+
+void AppController::showShortcuts() {
+    // Next to the app in development builds; the online copy otherwise.
+    QDir dir(QCoreApplication::applicationDirPath());
+    for (int i = 0; i < 6; ++i) {
+        const QString pdf = dir.filePath(QStringLiteral("docs/v2/SHORTCUTS.pdf"));
+        if (QFileInfo::exists(pdf)) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(pdf));
+            return;
+        }
+        if (!dir.cdUp()) break;
+    }
+    QDesktopServices::openUrl(QUrl(QStringLiteral(
+        "https://github.com/salmanfaris22/video-editing-software/blob/main/docs/v2/SHORTCUTS.pdf")));
 }
 
 QVariantList AppController::recentProjects() const {

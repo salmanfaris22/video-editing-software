@@ -1,5 +1,7 @@
 #include "ui/PlaybackController.h"
 
+#include "core/Log.h"
+
 #include "platform/AudioOutput.h"
 #include "ui/ProjectController.h"
 
@@ -57,19 +59,23 @@ void PlaybackController::follow() {
 }
 
 void PlaybackController::play() {
-    if (engine_) engine_->play();
+    if (!engine_) return;
+    LEC_INFO("playback", "play from {:.2f} s", position_);
+    engine_->play();
 }
 
 void PlaybackController::pause() {
-    if (engine_) engine_->pause();
+    if (!engine_) return;
+    LEC_INFO("playback", "pause at {:.2f} s", position_);
+    engine_->pause();
 }
 
 void PlaybackController::toggle() {
     if (!engine_) return;
     if (engine_->playing()) {
-        engine_->pause();
+        pause();
     } else {
-        engine_->play();
+        play();
     }
 }
 

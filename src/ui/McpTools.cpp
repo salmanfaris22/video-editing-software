@@ -15,6 +15,7 @@
 #include <QFileInfo>
 #include <QUrl>
 
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <map>
@@ -340,6 +341,52 @@ void registerMcpTools(Server& server, ProjectController* p) {
                                                  {{"type", "text"}, {"text", info.dump()}}})},
                         {"structuredContent", info},
                         {"isError", false}};
+        });
+
+    add("get_scopes",
+        "Measure the edited picture at a time like video scopes: per-channel black/white levels (0-1023), "
+        "average luma and saturation, and the percentage of clipped pixels.",
+        object({{"time", time()}}, {"time"}), Access::Read,
+        [p, rendering](const Json& a, const Context&) {
+            const auto snapshot = p->snapshot();
+            if (!rendering->frames || rendering->dir != p->directory()) {
+                rendering->dir = p->directory();
+                rendering->frames = std::make_unique<editor::FrameProvider>(rendering->dir, true);
+                rendering->renderer = editor::makeRenderer();
+                rendering->renderer->setProjectDirectory(rendering->dir);
+            }
+            rendering->frames->setProject(snapshot);
+            const double t = std::clamp(a["time"].get<double>(), 0.0, p->duration());
+            QImage image(320, std::max(2, 320 * snapshot->canvas.height / std::max(1, snapshot->canvas.width)), QImage::Format_RGB32);
+            rendering->renderer->render(editor::buildRenderPlan(*snapshot, Time::fromSecondsF(t)), image,
+                                        [&](const editor::VisualLayer& l, QSizeF box) { return rendering->frames->image(l, box); });
+            std::array<int, 3> lo{255, 255, 255};
+            std::array<int, 3> hi{0, 0, 0};
+            double lumaSum = 0, satSum = 0;
+            long long clipped = 0;
+            const long long n = static_cast<long long>(image.width()) * image.height();
+            for (int y = 0; y < image.height(); ++y) {
+                const auto* row = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+                for (int x = 0; x < image.width(); ++x) {
+                    const std::array<int, 3> c{qRed(row[x]), qGreen(row[x]), qBlue(row[x])};
+                    for (int i = 0; i < 3; ++i) {
+                        lo[static_cast<std::size_t>(i)] = std::min(lo[static_cast<std::size_t>(i)], c[static_cast<std::size_t>(i)]);
+                        hi[static_cast<std::size_t>(i)] = std::max(hi[static_cast<std::size_t>(i)], c[static_cast<std::size_t>(i)]);
+                    }
+                    lumaSum += 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+                    const int mx = std::max({c[0], c[1], c[2]});
+                    const int mn = std::min({c[0], c[1], c[2]});
+                    satSum += mx > 0 ? static_cast<double>(mx - mn) / mx : 0.0;
+                    if (mx >= 254 || mn <= 1) ++clipped;
+                }
+            }
+            auto ten = [](int v) { return v * 1023 / 255; };
+            return Server::result(Json{{"time", t},
+                                       {"black", {{"r", ten(lo[0])}, {"g", ten(lo[1])}, {"b", ten(lo[2])}}},
+                                       {"white", {{"r", ten(hi[0])}, {"g", ten(hi[1])}, {"b", ten(hi[2])}}},
+                                       {"averageLuma", lumaSum / static_cast<double>(n) * 1023.0 / 255.0},
+                                       {"averageSaturation", satSum / static_cast<double>(n)},
+                                       {"clippedPercent", 100.0 * static_cast<double>(clipped) / static_cast<double>(n)}});
         });
 
     // ---- Export -----------------------------------------------------------------

@@ -35,12 +35,12 @@ other v2 documents.
 | # | Area | Lectern now | P | Notes |
 |---|---|---|---|---|
 | 1.1 | Gallery (stills, PowerGrades, memories) — left top | ⬜ | P2 | Screenshot shows "No stills created" |
-| 1.2 | Viewer — centre top | 🟡 | P0 | Lectern preview exists, no color-page tools |
+| 1.2 | Viewer — centre top | 🟡 (Color page viewer) | P0 | Lectern preview exists, no color-page tools |
 | 1.3 | Node editor — right top | ⬜ | P2 | Lectern starts with an ordered list of corrector layers (COLOR_EFFECTS_PARITY §5.1) |
-| 1.4 | Clips strip (thumbnail per clip, version, codec) + mini timeline | ⬜ | P1 | Fast clip-to-clip grading |
-| 1.5 | Left palette area (one palette at a time) | 🟡 | P1 | Adjust panel today |
-| 1.6 | Right palette area (Keyframes, Scopes, Info) | ⬜ | P1 | |
-| 1.7 | Page bar along the bottom | ⬜ | P2 | Lectern: Simple / Pro / Color modes |
+| 1.4 | Clips strip (thumbnail per clip, version, codec) + mini timeline | ✅ (clip strip) | P1 | Fast clip-to-clip grading |
+| 1.5 | Left palette area (one palette at a time) | ✅ (Primaries palette) | P1 | Adjust panel today |
+| 1.6 | Right palette area (Keyframes, Scopes, Info) | 🟡 (scopes) | P1 | |
+| 1.7 | Page bar along the bottom | ✅ (Edit | Color page bar) | P2 | Lectern: Simple / Pro / Color modes |
 
 ### 1.1 Page bar *(screenshot, image 4)*
 
@@ -104,7 +104,7 @@ highlighted with a red underline.
 |---|---|---|---|---|
 | 4.1 | 1 | Camera Raw | ⬜ | P3 |
 | 4.2 | 2 | Color Match (chart match) | ⬜ | P2 |
-| 4.3 | 3 (selected) | Primaries — Color Wheels / Primaries Bars / Log Wheels | 🟡 | P0 |
+| 4.3 | 3 (selected) | Primaries — Color Wheels / Primaries Bars / Log Wheels | ✅ | P0 |
 | 4.4 | 4 | HDR Wheels (zones) | ⬜ | P2 |
 | 4.5 | 5 | RGB Mixer | ⬜ | P2 |
 | 4.6 | 6 | Motion Effects (temporal/spatial NR, motion blur) | ⬜ | P1 |
@@ -120,7 +120,7 @@ highlighted with a red underline.
 | 4.16 | 16 | Sizing (input, output, node, reference sizing) | 🟡 | P1 |
 | 4.17 | 17 | Stereo 3D | ⬜ | P3 |
 | 4.18 | right 1 | Keyframes (dynamic/static per node) | ⬜ | P1 |
-| 4.19 | right 2 | Scopes | ⬜ | P1 |
+| 4.19 | right 2 | Scopes | ✅ | P1 |
 | 4.20 | right 3 | Info (clip metadata, node info) | ⬜ | P3 |
 
 ---
@@ -138,8 +138,8 @@ Wheels (selected), Primaries Bars, Log Wheels, and a reset-all button.
 | 5.2 | White-balance picker (eyedropper) | – | click a neutral area | ⬜ | P1 |
 | 5.3 | Temp | 0.0 | −4000…+4000 | ✅ (temperature, different scale) | – |
 | 5.4 | Tint | 0.00 | −100…+100 | ✅ | – |
-| 5.5 | Contrast | 1.000 | 0…2 | 🟡 (no pivot, different scale) | P1 |
-| 5.6 | Pivot | 0.435 | 0…1 | ⬜ | P1 |
+| 5.5 | Contrast | 1.000 | 0…2 | ✅ (contrast with pivot) | P1 |
+| 5.6 | Pivot | 0.435 | 0…1 | ✅ | P1 |
 | 5.7 | Mid/Detail | 0.00 | −100…+100 | ⬜ | P1 |
 
 ### 5.2 Wheels
@@ -154,21 +154,21 @@ have a crosshair picker (black point / white point) at their top-left.
 | 5.8 | Lift | 0.00 0.00 0.00 0.00 | shadows | ✅ (no YRGB fields, no black picker) | P1 for fields |
 | 5.9 | Gamma | 0.00 0.00 0.00 0.00 | midtones | ✅ (same note) | P1 |
 | 5.10 | Gain | 1.00 1.00 1.00 1.00 | highlights | ✅ (same note, no white picker) | P1 |
-| 5.11 | Offset | 25.00 25.00 25.00 (R G B only) | whole image | ⬜ | P1 |
-| 5.12 | Master jog wheel under each wheel | – | luminance of that range | 🟡 (master slider) | P1 |
+| 5.11 | Offset | 25.00 25.00 25.00 (R G B only) | whole image | ✅ | P1 |
+| 5.12 | Master jog wheel under each wheel | – | luminance of that range | ✅ | P1 |
 | 5.13 | Black point / white point pickers on Lift / Gain | – | set black/white from the image | ⬜ | P2 |
-| 5.14 | Per-wheel reset | – | | 🟡 | P1 |
-| 5.15 | Numeric fields: drag to scrub, double-click to type, double-click label to reset | – | | ⬜ | P0 (same as scrubby fields in PRO_INTERFACE §5.5) |
+| 5.14 | Per-wheel reset | – | ✅ | 🟡 | P1 |
+| 5.15 | Numeric fields: drag to scrub, double-click to type, double-click label to reset | – | ✅ (scrub fields) | ⬜ | P0 (same as scrubby fields in PRO_INTERFACE §5.5) |
 
 ### 5.3 Bottom row
 
 | # | Control | Default | Range | Lectern | P |
 |---|---|---|---|---|---|
-| 5.16 | Color Boost | 0.00 | −100…+100 | ⬜ (vibrance) | P1 |
-| 5.17 | Shadows | 0.00 | −100…+100 | ⬜ | P1 |
-| 5.18 | Highlights | 0.00 | −100…+100 | ⬜ | P1 |
+| 5.16 | Color Boost | 0.00 | −100…+100 | ✅ | P1 |
+| 5.17 | Shadows | 0.00 | −100…+100 | ✅ | P1 |
+| 5.18 | Highlights | 0.00 | −100…+100 | ✅ | P1 |
 | 5.19 | Saturation | 50.00 | 0…100 | ✅ (different scale) | – |
-| 5.20 | Hue | 50.00 | 0…100 (50 = none) | ⬜ | P2 |
+| 5.20 | Hue | 50.00 | 0…100 (50 = none) | ✅ | P2 |
 | 5.21 | Lum Mix | 100.00 | 0…100 | ⬜ | P2 |
 
 Each bottom-row and top-row field has a small colored indicator bar under it
@@ -192,13 +192,13 @@ scale 0, 128, 256 … 1023 (10-bit code values), yellow graticule.
 
 | # | Feature | Lectern | P |
 |---|---|---|---|
-| 6.1 | Parade (R, G, B side by side) | ⬜ | P1 |
-| 6.2 | Waveform (luma / RGB / YRGB) | ⬜ | P1 |
-| 6.3 | Vectorscope (with skin-tone indicator, 75 %/100 % targets) | ⬜ | P1 |
-| 6.4 | Histogram | ⬜ | P1 |
+| 6.1 | Parade (R, G, B side by side) | ✅ | P1 |
+| 6.2 | Waveform (luma / RGB / YRGB) | ✅ | P1 |
+| 6.3 | Vectorscope (with skin-tone indicator, 75 %/100 % targets) | ✅ | P1 |
+| 6.4 | Histogram | ✅ | P1 |
 | 6.5 | CIE chromaticity | ⬜ | P3 |
 | 6.6 | 1-up / 2-up / 4-up layout | ⬜ | P2 |
-| 6.7 | Scale: 10-bit (0–1023), %, HDR nits | ⬜ | P1 (10-bit and %) |
+| 6.7 | Scale: 10-bit (0–1023), %, HDR nits | 🟡 (10-bit scale) | P1 (10-bit and %) |
 | 6.8 | Scope settings: brightness, graticule, color, low-pass filter, extents | ⬜ | P2 |
 | 6.9 | Expand to a floating window | ⬜ | P2 |
 | 6.10 | Scopes driven by the graded output at full resolution, real time | ⬜ | P1 (GPU compute) |

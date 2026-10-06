@@ -61,6 +61,17 @@ int main(int argc, char** argv) {
     // Logging: stderr + rotating file (docs/ARCHITECTURE.md §7).
     Logger::instance().addSink(makeStderrSink());
     Logger::instance().addSink(makeRotatingFileSink(fs::logDirectory() / "lectern.log"));
+    // Qt and QML messages (warnings, console.log/info) go to the same log.
+    qInstallMessageHandler([](QtMsgType type, const QMessageLogContext& context, const QString& message) {
+        const LogLevel level = type == QtDebugMsg ? LogLevel::Debug
+                               : type == QtInfoMsg ? LogLevel::Info
+                               : type == QtWarningMsg ? LogLevel::Warn
+                                                      : LogLevel::Error;
+        const char* category = context.category && std::string_view(context.category) != "default" ? context.category
+                               : context.file && std::string_view(context.file).ends_with(".qml")    ? "qml"
+                                                                                                    : "qt";
+        LEC_LOG(level, category, "{}", message.toStdString());
+    });
     Logger::instance().setLevel(logLevelFromString(cli.value(logLevel).toStdString()));
     LEC_INFO("app", "{} {} starting", LECTERN_PRODUCT_NAME, LECTERN_VERSION);
 

@@ -26,6 +26,8 @@ Item {
     signal trimRequested(string edge, real seconds)
     signal moveRequested(real seconds, int laneOffset)
     signal openRequested()
+    /// Right-click: the context menu at a scene position.
+    signal contextRequested(real sceneX, real sceneY)
     /// Pointer (scene coordinates) while dragging, for edge auto-scroll; ended() when released.
     signal dragPointer(real sceneX)
     signal dragEnded()
@@ -192,6 +194,7 @@ Item {
         anchors.rightMargin: root.handleWidth
         hoverEnabled: true
         preventStealing: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: root.movable && pressed ? Qt.ClosedHandCursor : Qt.PointingHandCursor
         property point pressPoint
         property point scenePoint
@@ -199,13 +202,19 @@ Item {
         property bool moving: false
         onPressed: mouse => {
             scenePoint = mapToItem(null, mouse.x, mouse.y)
+            if (mouse.button === Qt.RightButton) {
+                // Like Resolve: right-click keeps a multi-selection that includes this clip.
+                if (!root.selected) root.selectRequested(false)
+                root.contextRequested(scenePoint.x, scenePoint.y)
+                return
+            }
             pressPoint = root.dragSpace.mapFromItem(null, scenePoint.x, scenePoint.y)
             moving = false
             const additive = mouse.modifiers & (Qt.ControlModifier | Qt.MetaModifier | Qt.ShiftModifier)
             root.selectRequested(additive)
         }
         onPositionChanged: mouse => {
-            if (!pressed || !root.movable) return
+            if (!pressed || !root.movable || (pressedButtons & Qt.RightButton)) return
             scenePoint = mapToItem(null, mouse.x, mouse.y)
             mods = mouse.modifiers
             track()
@@ -227,7 +236,7 @@ Item {
             root.laneShift = ok ? offset : 0
             root.laneHover(offset, ok)
         }
-        onReleased: finish(true)
+        onReleased: mouse => finish(mouse.button === Qt.LeftButton)
         onCanceled: finish(false)
         function finish(apply) {
             const dx = root.moveDx

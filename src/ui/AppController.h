@@ -59,6 +59,10 @@ public:
     Q_INVOKABLE void openProjectUrl(const QUrl& url);
     Q_INVOKABLE void dismissBanner();
     Q_INVOKABLE void revealInFinder(const QString& path);
+    /// Opens the folder with lectern.log (Help → Show Logs).
+    Q_INVOKABLE void showLogs();
+    /// Opens the keyboard shortcut reference (docs/v2/SHORTCUTS.pdf when present).
+    Q_INVOKABLE void showShortcuts();
     Q_INVOKABLE QVariant workspaceValue(const QString& key, const QVariant& fallback = {}) const;
     Q_INVOKABLE void setWorkspaceValue(const QString& key, const QVariant& value);
 

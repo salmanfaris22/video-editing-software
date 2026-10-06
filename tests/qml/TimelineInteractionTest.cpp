@@ -368,3 +368,67 @@ TEST(TimelineInteraction, RecordingSegmentsDragTogetherIntoAGap) {
     EXPECT_NEAR(cameraStart - screenStart, cameraOffset, 1e-6);  // tracks stay in sync
     EXPECT_TRUE(t.project.canUndo());
 }
+
+namespace {
+/// Clicks the menu item whose text starts with `prefix` (like choosing it with the mouse).
+bool chooseMenuItem(QObject* menu, const QString& prefix) {
+    int count = menu->property("count").toInt();
+    for (int i = 0; i < count; ++i) {
+        QQuickItem* item = nullptr;
+        QMetaObject::invokeMethod(menu, "itemAt", Q_RETURN_ARG(QQuickItem*, item), Q_ARG(int, i));
+        if (item && item->property("text").toString().startsWith(prefix)) {
+            QMetaObject::invokeMethod(item, "click");
+            test::settle(60);
+            return true;
+        }
+    }
+    return false;
+}
+}  // namespace
+
+TEST(TimelineInteraction, RightClickMenusForClipsLanesAndRuler) {
+    Timeline t;
+    ASSERT_TRUE(t.ui->ok());
+    QObject* clipMenu = t.panel->findChild<QObject*>("clipMenu");
+    QObject* laneMenu = t.panel->findChild<QObject*>("laneMenu");
+    QObject* rulerMenu = t.panel->findChild<QObject*>("rulerMenu");
+    ASSERT_TRUE(clipMenu && laneMenu && rulerMenu);
+
+    // Right-click a clip: it gets selected and the clip menu opens; nothing moves.
+    const QString text = t.clip("Text").value("id").toString();
+    const double start = t.clip("Text").value("start").toDouble();
+    const QPoint at = t.clipCenter(text);
+    QTest::mousePress(&t.ui->window(), Qt::RightButton, {}, at);
+    QTest::mouseMove(&t.ui->window(), at + QPoint(80, 0));
+    QTest::mouseRelease(&t.ui->window(), Qt::RightButton, {}, at + QPoint(80, 0));
+    test::settle(60);
+    EXPECT_EQ(t.project.selectedClip(), text);
+    EXPECT_TRUE(clipMenu->property("visible").toBool());
+    EXPECT_NEAR(t.clip("Text").value("start").toDouble(), start, 1e-9);  // a right-drag never moves
+    ASSERT_TRUE(chooseMenuItem(clipMenu, QStringLiteral("Disable clip")));
+    EXPECT_FALSE(t.clip("Text").value("enabled").toBool());
+    QTest::mouseClick(&t.ui->window(), Qt::RightButton, {}, t.clipCenter(text));
+    test::settle(60);
+    ASSERT_TRUE(chooseMenuItem(clipMenu, QStringLiteral("Enable clip")));
+    EXPECT_TRUE(t.clip("Text").value("enabled").toBool());
+
+    // Right-click an empty lane at 9 s: add a marker there.
+    const int textLane = t.trackIndex("Text");
+    QQuickItem* lanes = t.lanes;
+    const double h = t.panel->property("trackHeight").toDouble();
+    const QPoint lanePoint = QmlHarness::at(lanes, {9.0 * t.pps() - t.contentX(), (textLane + 0.5) * h});
+    QTest::mouseClick(&t.ui->window(), Qt::RightButton, {}, lanePoint);
+    test::settle(60);
+    EXPECT_TRUE(laneMenu->property("visible").toBool());
+    ASSERT_TRUE(chooseMenuItem(laneMenu, QStringLiteral("Add marker here")));
+    ASSERT_EQ(t.project.markers().size(), 1);
+    EXPECT_NEAR(t.project.markers().value(0).toMap().value("time").toDouble(), 9.0, 2.0 / t.pps());
+
+    // Right-click the ruler: its menu, and the playhead does not jump.
+    const double playhead = t.playback->position();
+    QTest::mouseClick(&t.ui->window(), Qt::RightButton, {}, t.onRuler(5.0));
+    test::settle(60);
+    EXPECT_TRUE(rulerMenu->property("visible").toBool());
+    EXPECT_NEAR(t.playback->position(), playhead, 1e-9);
+    QMetaObject::invokeMethod(rulerMenu, "close");
+}

@@ -78,18 +78,18 @@ these. They are the P0 work.
 | # | Feature | AE | PR (Lumetri) | DR | Lectern | P | Notes |
 |---|---|---|---|---|---|---|---|
 | 2.1 | Exposure | ● | ● | ● (Offset/Exposure) | ✅ | – | |
-| 2.2 | Contrast with pivot | ● | ● (no pivot) | ● (pivot) | 🟡 | P1 | No pivot |
-| 2.3 | Highlights / Shadows | ● (Shadow/Highlight) | ● | ● (HDR wheels, Highlights/Shadows sliders) | ⬜ | P1 | Key for screen and webcam footage |
+| 2.2 | Contrast with pivot | ● | ● (no pivot) | ● (pivot) | ✅ (contrast with pivot) | P1 | No pivot |
+| 2.3 | Highlights / Shadows | ● (Shadow/Highlight) | ● | ● (HDR wheels, Highlights/Shadows sliders) | ✅ | P1 | Key for screen and webcam footage |
 | 2.4 | Whites / Blacks | ● (Levels) | ● | ● | ⬜ | P1 | |
 | 2.5 | Temperature / Tint | ● | ● | ● | ✅ | – | |
 | 2.6 | Saturation | ● | ● | ● | ✅ | – | |
-| 2.7 | Vibrance | ● | ● | ◐ (Color Boost) | ⬜ | P1 | Protects skin tones |
+| 2.7 | Vibrance | ● | ● | ◐ (Color Boost) | ✅ (Color Boost) | P1 | Protects skin tones |
 | 2.8 | Brightness | ● | ◐ | ◐ | ✅ | – | |
 | 2.9 | Auto white balance / auto tone | ● (Auto Color/Levels/Contrast) | ● (Auto) | ● (Auto Balance, AI) | ⬜ | P1 | One-click fix for webcams |
 | 2.10 | White-balance picker (eyedropper) | ● | ● | ● | ⬜ | P1 | |
 | 2.11 | Lift / Gamma / Gain wheels | ● (Lumetri, Color Balance) | ● | ● | ✅ | – | |
-| 2.12 | Offset wheel | – | ◐ | ● | ⬜ | P1 | |
-| 2.13 | Shadows / Midtones / Highlights wheels (Lumetri style) | ● | ● | ◐ | 🟡 | P1 | Same math as 2.11; UI preset |
+| 2.12 | Offset wheel | – | ◐ | ● | ✅ (Offset wheel) | P1 | |
+| 2.13 | Shadows / Midtones / Highlights wheels (Lumetri style) | ● | ● | ◐ | ✅ (Color page wheels) | P1 | Same math as 2.11; UI preset |
 | 2.14 | Log wheels (Shadow/Midtone/Highlight with range control) | – | – | ● | ⬜ | P2 | |
 | 2.15 | HDR zone wheels (Black, Dark, Shadow, Light, Highlight, Specular, Global) | – | – | ● | ⬜ | P2 | |
 | 2.16 | Primaries bars (per-channel lift/gamma/gain) | – | – | ● | ⬜ | P2 | |
@@ -162,10 +162,10 @@ these. They are the P0 work.
 
 | # | Feature | AE | PR | DR | Lectern | P | Notes |
 |---|---|---|---|---|---|---|---|
-| 6.1 | Waveform (luma, RGB overlay) | ● | ● | ● | ⬜ | P1 | GPU compute on preview frame |
-| 6.2 | RGB Parade | ● | ● | ● | ⬜ | P1 | |
-| 6.3 | Vectorscope (with skin-tone line, 75%/100% targets) | ● | ● | ● | ⬜ | P1 | |
-| 6.4 | Histogram | ● | ● | ● | ⬜ | P1 | |
+| 6.1 | Waveform (luma, RGB overlay) | ● | ● | ● | ✅ (Color page) | P1 | GPU compute on preview frame |
+| 6.2 | RGB Parade | ● | ● | ● | ✅ | P1 | |
+| 6.3 | Vectorscope (with skin-tone line, 75%/100% targets) | ● | ● | ● | ✅ (with skin-tone line and 75% targets) | P1 | |
+| 6.4 | Histogram | ● | ● | ● | ✅ | P1 | |
 | 6.5 | CIE chromaticity | – | – | ● | ⬜ | P3 | |
 | 6.6 | False color / exposure warnings / clip indicators | ◐ | ◐ | ● | ⬜ | P2 | |
 | 6.7 | Highlight out-of-gamut / broadcast safe | ● | ● | ● | ⬜ | P2 | |
@@ -369,7 +369,7 @@ these. They are the P0 work.
 |---|---|---|---|---|---|---|
 | 19.1 | Effects browser with search, categories, favorites | ● | ● | ● | ⬜ | P1 |
 | 19.2 | Drag an effect onto a clip or adjustment layer | ● | ● | ● | ⬜ | P1 |
-| 19.3 | Effect controls panel: per-parameter keyframe toggles, reset | ● | ● | ● | 🟡 | P1 |
+| 19.3 | Effect controls panel: per-parameter keyframe toggles, reset | ● | ● | ● | 🟡 (Color page fields; per-parameter keyframes pending) | P1 |
 | 19.4 | Copy / paste attributes (choose which) | ● | ● | ● | ⬜ | P1 |
 | 19.5 | Save presets of effects and grades | ● | ● | ● | 🟡 | P1 |
 | 19.6 | Viewer overlays for effect controls (zoom center, mask points, crop) | ● | ● | ● | 🟡 | P1 |
