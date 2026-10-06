@@ -1,0 +1,5 @@
+add_library(lectern_mcp STATIC Server.cpp)
+add_library(Lectern::mcp ALIAS lectern_mcp)
+target_include_directories(lectern_mcp PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(lectern_mcp PUBLIC nlohmann_json::nlohmann_json)
+lectern_configure_target(lectern_mcp)

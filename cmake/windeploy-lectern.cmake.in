@@ -1,0 +1,27 @@
+if(NOT WIN32)
+    return()
+endif()
+
+set(_exe "${CMAKE_INSTALL_PREFIX}/@LECTERN_PRODUCT_NAME@.exe")
+if(NOT EXISTS "${_exe}")
+    message(FATAL_ERROR "windeploy: expected ${_exe}")
+endif()
+
+set(_windeployqt "@WINDEPLOYQT_EXECUTABLE@")
+if(NOT _windeployqt OR NOT EXISTS "${_windeployqt}")
+    message(FATAL_ERROR "windeployqt not found; set Qt6_DIR or add Qt bin to PATH")
+endif()
+
+execute_process(
+    COMMAND "${_windeployqt}"
+            --no-translations
+            --qmldir "@_LECTERN_QML_DIR@"
+            --qmlimport "@_LECTERN_QML_IMPORT@"
+            "${_exe}"
+    RESULT_VARIABLE _rc
+    COMMAND_ECHO STDOUT)
+if(NOT _rc EQUAL 0)
+    message(FATAL_ERROR "windeployqt failed with code ${_rc}")
+endif()
+
+message(STATUS "windeployqt finished for ${_exe}")

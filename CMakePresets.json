@@ -1,0 +1,71 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "dev",
+      "displayName": "Debug (development)",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "release",
+      "displayName": "Release with debug info",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
+    },
+    {
+      "name": "asan",
+      "displayName": "Debug + Address/UB sanitizers",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "LECTERN_ENABLE_ASAN": "ON", "LECTERN_BUILD_APP": "OFF" }
+    },
+    {
+      "name": "tsan",
+      "displayName": "Debug + Thread sanitizer (engine only)",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "LECTERN_ENABLE_TSAN": "ON", "LECTERN_BUILD_APP": "OFF" }
+    },
+    {
+      "name": "engine",
+      "displayName": "Engine only (no Qt): core, media, capture, tools, tests",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "LECTERN_BUILD_APP": "OFF" }
+    },
+    {
+      "name": "win-release",
+      "displayName": "Windows x64 Release (vcpkg + Qt 6.8)",
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows",
+        "LECTERN_BUILD_TESTS": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "asan", "configurePreset": "asan" },
+    { "name": "tsan", "configurePreset": "tsan" },
+    { "name": "engine", "configurePreset": "engine" },
+    { "name": "win-release", "configurePreset": "win-release" }
+  ],
+  "testPresets": [
+    { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true }, "filter": { "exclude": { "label": "long|device" } } },
+    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true }, "filter": { "exclude": { "label": "long|device" } } },
+    { "name": "asan", "configurePreset": "asan", "output": { "outputOnFailure": true }, "filter": { "exclude": { "label": "long|device" } } },
+    { "name": "tsan", "configurePreset": "tsan", "output": { "outputOnFailure": true }, "filter": { "exclude": { "label": "long|device" } } }
+  ]
+}

@@ -1,0 +1,520 @@
+#include "editor/EditorFixture.h"
+#include "editor/RenderPlan.h"
+#include "media/MediaProbe.h"
+#include "project/ProjectStore.h"
+#include "ui/ExportController.h"
+#include "ui/PlaybackController.h"
+#include "ui/ProjectController.h"
+
+#include <QCoreApplication>
+#include <QImage>
+#include <QPainter>
+#include <QUrl>
+
+#include <gtest/gtest.h>
+
+#include <chrono>
+#include <fstream>
+#include <functional>
+#include <thread>
+
+using namespace lectern;
+using namespace lectern::ui;
+
+namespace {
+
+bool waitUntil(const std::function<bool()>& pred, int timeoutMs = 10'000) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+    while (std::chrono::steady_clock::now() < deadline) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        if (pred()) return true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    return pred();
+}
+
+/// A saved recording-like project opened in a ProjectController.
+struct OpenProject {
+    test::EditorFixture fixture;
+    ProjectController controller;
+    explicit OpenProject(const test::EditorFixture::Options& options = {}) : fixture(options) {
+        EXPECT_TRUE(project::ProjectStore::save(fixture.dir.path(), fixture.project));
+        controller.open(QString::fromStdString(fixture.dir.path().string()));
+        EXPECT_TRUE(waitUntil([this] { return controller.loaded(); }));
+    }
+    QVariantMap track(const QString& name) const {
+        for (const QVariant& t : controller.tracks()) {
+            if (t.toMap().value("name").toString() == name) return t.toMap();
+        }
+        return {};
+    }
+    QVariantList clips(const QString& name) const { return track(name).value("clips").toList(); }
+    QString clipId(const QString& trackName, int index = 0) const {
+        return clips(trackName).value(index).toMap().value("id").toString();
+    }
+    /// The project as saved on disk (after the debounced save ran).
+    project::Project saved() {
+        controller.flushSaves();
+        auto loaded = project::ProjectStore::load(fixture.dir.path());
+        EXPECT_TRUE(loaded);
+        return loaded ? loaded->project : project::Project{};
+    }
+};
+
+}  // namespace
+
+TEST(ProjectControllerUi, SplitDeleteUndoRedoAndSave) {
+    OpenProject p;
+    p.controller.setLinkedEditMode(QStringLiteral("allTracks"));  // a recording segment deletes on every track
+    EXPECT_NEAR(p.controller.duration(), 3.0, 1e-6);
+    EXPECT_EQ(p.controller.tracks().size(), 3);  // screen, camera, microphone
+
+    p.controller.splitAt(1.0);
+    EXPECT_EQ(p.clips("Screen").size(), 2);
+    EXPECT_EQ(p.clips("Microphone").size(), 2);
+    EXPECT_TRUE(p.controller.canUndo());
+
+    p.controller.selectClip(p.clipId("Camera", 1));
+    EXPECT_EQ(p.controller.selection().value("role").toString(), "camera");
+    EXPECT_TRUE(p.controller.selection().value("linked").toBool());
+    p.controller.deleteSelected();
+    EXPECT_NEAR(p.controller.duration(), 1.0, 1e-6);  // the right segment went from every track
+    EXPECT_TRUE(p.controller.selectedClip().isEmpty());
+
+    p.controller.undo();
+    EXPECT_NEAR(p.controller.duration(), 3.0, 1e-6);
+    p.controller.undo();
+    EXPECT_EQ(p.clips("Screen").size(), 1);
+    EXPECT_FALSE(p.controller.canUndo());
+    p.controller.redo();
+    EXPECT_EQ(p.clips("Screen").size(), 2);
+
+    // The snapshot follows edits; the saved file matches the document.
+    ASSERT_TRUE(p.controller.snapshot());
+    EXPECT_EQ(p.controller.snapshot()->timeline.tracks.front().clips.size(), 2u);
+    const project::Project onDisk = p.saved();
+    EXPECT_EQ(onDisk.timeline, p.controller.snapshot()->timeline);
+}
+
+TEST(ProjectControllerUi, SliderDragsMergeIntoOneUndoStep) {
+    OpenProject p;
+    for (int i = 1; i <= 20; ++i) p.controller.setStyleValue("screenPadding", i * 0.005);
+    EXPECT_DOUBLE_EQ(p.controller.style().value("screenPadding").toDouble(), 0.1);
+    p.controller.setStyleValue("cameraShape", "circle");
+    p.controller.undo();  // shape
+    p.controller.undo();  // the whole padding drag
+    EXPECT_DOUBLE_EQ(p.controller.style().value("screenPadding").toDouble(), 0.0);
+    EXPECT_FALSE(p.controller.canUndo());
+}
+
+TEST(ProjectControllerUi, TextStyleEffectsColorAndLayout) {
+    OpenProject p;
+    p.controller.addText("Welcome", 0.5, 2.0, "lower-third");
+    ASSERT_EQ(p.controller.selection().value("role").toString(), "text");
+    const QString text = p.controller.selectedClip();
+    p.controller.setText(text, "Welcome back");
+    p.controller.setTextValue(text, "size", 80);
+    p.controller.setTextValue(text, "color", "#FFF5C142");
+    EXPECT_EQ(p.controller.selection().value("text").toString(), "Welcome back");
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("textSize").toDouble(), 80.0);
+    EXPECT_EQ(p.controller.selection().value("textColor").toString(), "#FFF5C142");
+    p.controller.setTextValue(text, "preset", "callout");  // preset resets the look and placement
+    EXPECT_EQ(p.controller.selection().value("preset").toString(), "callout");
+    EXPECT_NE(p.controller.selection().value("textSize").toDouble(), 80.0);
+
+    const QString screen = p.clipId("Screen");
+    p.controller.selectClip(screen);
+    p.controller.setEffectEnabled(screen, "zoom", true);
+    p.controller.setEffectValue(screen, "zoom", "scale", 2.5);
+    p.controller.setEffectEnabled(screen, "blur", true);
+    EXPECT_TRUE(p.controller.selection().value("zoomOn").toBool());
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("zoom").toDouble(), 2.5);
+    EXPECT_TRUE(p.controller.selection().value("blurOn").toBool());
+    p.controller.setEffectEnabled(screen, "blur", false);
+    EXPECT_FALSE(p.controller.selection().value("blurOn").toBool());
+
+    p.controller.setColorValues(screen, {{"saturation", -1.0}, {"contrast", 0.1}});
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("saturation").toDouble(), -1.0);
+    p.controller.resetColor(screen);
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("saturation").toDouble(), 0.0);
+
+    p.controller.setLayoutFrom("camera.only", 1.5);
+    EXPECT_EQ(p.controller.layoutAt(1.0), "pip.bottom-right.rounded");
+    EXPECT_EQ(p.controller.layoutAt(2.0), "camera.only");
+    EXPECT_EQ(p.controller.layoutRegions().size(), 2);
+    const QVariantMap box = p.controller.layerBox(p.clipId("Camera"), 2.0);
+    EXPECT_DOUBLE_EQ(box.value("w").toDouble(), 1.0);  // full canvas in camera.only
+
+    // Everything lands in the saved project.
+    const project::Project onDisk = p.saved();
+    EXPECT_EQ(onDisk.timeline.layout.size(), 2u);
+    bool foundText = false;
+    for (const auto& t : onDisk.timeline.tracks) {
+        for (const auto& c : t.clips) foundText = foundText || (c.text && c.text->text == "Welcome back");
+    }
+    EXPECT_TRUE(foundText);
+}
+
+namespace {
+
+void expectBox(const QVariantMap& box, double x, double y, double w, double h, double tolerance = 1e-9) {
+    ASSERT_FALSE(box.isEmpty());
+    EXPECT_NEAR(box.value("x").toDouble(), x, tolerance);
+    EXPECT_NEAR(box.value("y").toDouble(), y, tolerance);
+    EXPECT_NEAR(box.value("w").toDouble(), w, tolerance);
+    EXPECT_NEAR(box.value("h").toDouble(), h, tolerance);
+}
+
+double center(const QVariantMap& box, const char* axis) {
+    const QString a = QString::fromLatin1(axis);
+    return box.value(a).toDouble() + box.value(a == "x" ? "w" : "h").toDouble() / 2;
+}
+
+}  // namespace
+
+TEST(ProjectControllerUi, PicksMovesAndResizesLayersOnTheCanvas) {
+    OpenProject p;  // 1280×720, camera bottom-right
+    const QString screen = p.clipId("Screen");
+    const QString camera = p.clipId("Camera");
+    const QVariantMap cam = p.controller.layerBox(camera, 1.0);
+    EXPECT_EQ(cam.value("role").toString(), "camera");
+    EXPECT_TRUE(cam.value("edges").toBool());
+    EXPECT_EQ(p.controller.layerAt(center(cam, "x"), center(cam, "y"), 1.0), camera);
+    EXPECT_EQ(p.controller.layerAt(0.2, 0.2, 1.0), screen);
+
+    // A drag is many small moves: the camera follows exactly, as one undo step.
+    const int before = p.controller.canUndo() ? 1 : 0;
+    for (int i = 0; i <= 10; ++i) p.controller.setLayerRect(camera, 1.0, 0.05 + 0.01 * i, 0.1, 0.3, 0.3);
+    expectBox(p.controller.layerBox(camera, 1.0), 0.15, 0.1, 0.3, 0.3);
+    expectBox(p.controller.layerBox(camera, 2.5), 0.15, 0.1, 0.3, 0.3);  // the whole layout, not one moment
+    EXPECT_EQ(before, 0);
+    p.controller.undo();
+    EXPECT_FALSE(p.controller.canUndo());
+    expectBox(p.controller.layerBox(camera, 1.0), cam.value("x").toDouble(), cam.value("y").toDouble(),
+              cam.value("w").toDouble(), cam.value("h").toDouble());
+    p.controller.redo();
+    EXPECT_TRUE(p.controller.layoutCustomized(1.0));
+
+    // While dragging only the preview follows (no undo step, no view rebuild).
+    int projectSignals = 0;
+    QObject::connect(&p.controller, &ProjectController::projectChanged, [&] { ++projectSignals; });
+    p.controller.previewLayerRect(camera, 1.0, 0.4, 0.45, 0.2, 0.2);
+    EXPECT_EQ(projectSignals, 0);
+    const editor::RenderPlan preview = editor::buildRenderPlan(*p.controller.snapshot(), Time::fromSeconds(1));
+    for (const auto& l : preview.layers) {
+        if (l.role == "camera") EXPECT_NEAR(l.box.x, 0.4, 1e-9);
+    }
+    expectBox(p.controller.layerBox(camera, 1.0), 0.15, 0.1, 0.3, 0.3);  // the document did not change
+    p.controller.cancelPreview();
+    EXPECT_EQ(*p.controller.snapshot(), p.saved());
+
+    // On a 9:16 canvas the screen is a thin strip; make it fill the height and
+    // show its left part. Padding is taken into account.
+    p.controller.setStyleValue("screenPadding", 0.03);
+    p.controller.setCanvasAspect("9:16");
+    EXPECT_FALSE(p.controller.layoutCustomized(1.0));  // a new aspect starts from the preset
+    const QVariantMap strip = p.controller.layerBox(screen, 1.0);
+    EXPECT_LT(strip.value("h").toDouble(), 0.35);
+    const double aspect = strip.value("aspect").toDouble();
+    EXPECT_NEAR(aspect, 16.0 / 9.0, 1e-6);
+    const double w = 2.4;
+    const double h = w * p.controller.canvasWidth() / aspect / p.controller.canvasHeight();
+    p.controller.setLayerRect(screen, 1.0, -0.2, 0.5 - h / 2, w, h);
+    expectBox(p.controller.layerBox(screen, 1.0), -0.2, 0.5 - h / 2, w, h, 1e-6);
+    // Back to 16:9: that arrangement is still there, untouched.
+    p.controller.setCanvasAspect("16:9");
+    expectBox(p.controller.layerBox(camera, 1.0), 0.15, 0.1, 0.3, 0.3);
+    p.controller.resetLayoutCustomization(1.0);
+    EXPECT_FALSE(p.controller.layoutCustomized(1.0));
+
+    // Text: moving keeps it centered where dropped; resizing scales the font.
+    p.controller.addText("Hello", 0.0, 3.0, "callout");
+    const QString text = p.controller.selectedClip();
+    p.controller.setTextValue(text, "animationIn", "none");
+    const QVariantMap t0 = p.controller.layerBox(text, 1.0);
+    const double size0 = p.controller.selection().value("textSize").toDouble();
+    p.controller.setLayerRect(text, 1.0, 0.1, 0.4, t0.value("w").toDouble() * 2, t0.value("h").toDouble() * 2);
+    EXPECT_NEAR(p.controller.selection().value("textSize").toDouble(), size0 * 2, 1e-9);
+    const QVariantMap t1 = p.controller.layerBox(text, 1.0);
+    EXPECT_NEAR(center(t1, "x"), 0.1 + t0.value("w").toDouble(), 2e-3);
+    EXPECT_NEAR(center(t1, "y"), 0.4 + t0.value("h").toDouble(), 2e-3);
+    EXPECT_NEAR(t1.value("h").toDouble(), t0.value("h").toDouble() * 2, 3e-3);
+    EXPECT_EQ(p.controller.layerAt(center(t1, "x"), center(t1, "y"), 1.0), text);
+    p.controller.resetLayerRect(text, 1.0);
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("textSize").toDouble(), size0);
+
+    // Subtitles move vertically and change size.
+    p.controller.addSubtitle("Caption line", 0.0, 3.0);
+    QString subtitle;
+    for (const QVariant& v : p.controller.subtitles()) subtitle = v.toMap().value("id").toString();
+    const QVariantMap s0 = p.controller.layerBox(subtitle, 1.0);
+    EXPECT_TRUE(s0.value("vertical").toBool());
+    p.controller.setLayerRect(subtitle, 1.0, s0.value("x").toDouble(), 0.2, s0.value("w").toDouble(),
+                              s0.value("h").toDouble() * 1.5);
+    EXPECT_NEAR(p.controller.style().value("subtitlePosition").toDouble(), 0.2 + s0.value("h").toDouble() * 0.75, 1e-9);
+    EXPECT_NEAR(p.controller.style().value("subtitleSize").toDouble(), 0.045 * 1.5, 1e-9);
+
+    // All of it is saved.
+    p.controller.setLayerRect(camera, 1.0, 0.5, 0.5, 0.25, 0.25);
+    const project::Project onDisk = p.saved();
+    const auto it = onDisk.style.layouts.find("pip.bottom-right.rounded@16:9");
+    ASSERT_NE(it, onDisk.style.layouts.end());
+    ASSERT_TRUE(it->second.camera.has_value());
+    EXPECT_NEAR(it->second.camera->w, 0.25, 1e-9);
+    EXPECT_TRUE(onDisk.style.layouts.contains("screen.only@9:16") || onDisk.style.layouts.contains("pip.bottom-right.rounded@9:16"));
+}
+
+TEST(ProjectControllerUi, TextAnimationsColorWheelsLutsAndBackgroundBlur) {
+    OpenProject p;
+    p.controller.addText("Title", 0.0, 2.0, "lower-third");
+    const QString text = p.controller.selectedClip();
+    EXPECT_EQ(p.controller.selection().value("animationIn").toString(), "slide-right");  // the preset's entrance
+    p.controller.setTextValue(text, "animationIn", "typewriter");
+    p.controller.setTextValue(text, "inDuration", 1.2);
+    p.controller.setTextValue(text, "animationOut", "bogus");  // not an animation: refused
+    EXPECT_EQ(p.controller.selection().value("animationIn").toString(), "typewriter");
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("inDuration").toDouble(), 1.2);
+    EXPECT_EQ(p.controller.selection().value("animationOut").toString(), "fade");
+    EXPECT_GE(p.controller.textAnimations().size(), 10);
+
+    const QString camera = p.clipId("Camera");
+    p.controller.selectClip(camera);
+    p.controller.setColorWheel(camera, "lift", 3.0, 4.0, 0.2);  // outside the wheel: kept on its rim
+    const QVariantMap lift = p.controller.selection().value("lift").toMap();
+    EXPECT_NEAR(lift.value("x").toDouble(), 0.6, 1e-9);
+    EXPECT_NEAR(lift.value("y").toDouble(), 0.8, 1e-9);
+    EXPECT_NEAR(lift.value("master").toDouble(), 0.2, 1e-9);
+    p.controller.setColorLut(camera, "builtin:s-log3");
+    EXPECT_EQ(p.controller.selection().value("lutName").toString(), "Sony S-Log3 / S-Gamut3.Cine → Rec.709");
+    p.controller.setColorValue(camera, "lutAmount", 0.4);
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("lutAmount").toDouble(), 0.4);
+    // A look keeps the LUT and wheels it builds on.
+    p.controller.setColorValues(camera, {{"saturation", 0.3}});
+    EXPECT_EQ(p.controller.selection().value("lut").toString(), "builtin:s-log3");
+    EXPECT_NEAR(p.controller.selection().value("lift").toMap().value("master").toDouble(), 0.2, 1e-9);
+
+    // A .cube file is copied into the project and applied.
+    const auto cubePath = p.fixture.dir / "Teal Orange.cube";
+    {
+        std::ofstream out(cubePath);
+        out << "TITLE \"Teal\"\nLUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1\n";
+    }
+    p.controller.importLut(camera, QUrl::fromLocalFile(QString::fromStdString(cubePath.string())));
+    EXPECT_EQ(p.controller.selection().value("lut").toString(), "media/luts/Teal Orange.cube");
+    EXPECT_EQ(p.controller.selection().value("lutName").toString(), "Teal Orange");
+    EXPECT_TRUE(std::filesystem::exists(p.fixture.dir / "media" / "luts" / "Teal Orange.cube"));
+    {
+        std::ofstream bad(p.fixture.dir / "bad.cube");
+        bad << "hello\n";
+    }
+    p.controller.importLut(camera, QUrl::fromLocalFile(QString::fromStdString((p.fixture.dir / "bad.cube").string())));
+    EXPECT_TRUE(p.controller.message().contains("could not be read"));
+    EXPECT_EQ(p.controller.selection().value("lut").toString(), "media/luts/Teal Orange.cube");
+
+    p.controller.setEffectEnabled(camera, "background-blur", true);
+    EXPECT_TRUE(p.controller.selection().value("backgroundBlurOn").toBool());
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("backgroundBlur").toDouble(), 0.6);
+    p.controller.setEffectValue(camera, "background-blur", "amount", 0.9);
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("backgroundBlur").toDouble(), 0.9);
+
+    const project::Project onDisk = p.saved();
+    const timeline::Clip* cam = onDisk.timeline.findClip(*timeline::ClipId::parse(camera.toStdString()));
+    ASSERT_TRUE(cam);
+    EXPECT_EQ(cam->color.lut, "media/luts/Teal Orange.cube");
+    EXPECT_NEAR(cam->color.lift.x, 0.6, 1e-9);
+    bool animated = false;
+    for (const auto& t : onDisk.timeline.tracks) {
+        for (const auto& c : t.clips) {
+            animated = animated || (c.text && c.text->animation.in == "typewriter" &&
+                                    c.text->animation.inDuration == Time::fromSecondsF(1.2));
+        }
+    }
+    EXPECT_TRUE(animated);
+}
+
+TEST(ProjectControllerUi, AudioMixerSettingsAndInvalidInputIsRejected) {
+    OpenProject p;
+    const QString mic = p.track("Microphone").value("id").toString();
+    p.controller.setTrackValue(mic, "gainDb", -6.0);
+    p.controller.setTrackValue(mic, "solo", true);
+    EXPECT_DOUBLE_EQ(p.track("Microphone").value("gainDb").toDouble(), -6.0);
+    EXPECT_TRUE(p.track("Microphone").value("solo").toBool());
+    const QString micClip = p.clipId("Microphone");
+    p.controller.setClipAudio(micClip, "fadeIn", 0.5);
+    p.controller.setClipAudio(micClip, "fadeOut", 99);  // clamped to half the clip
+    p.controller.selectClip(micClip);
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("fadeIn").toDouble(), 0.5);
+    EXPECT_NEAR(p.controller.selection().value("fadeOut").toDouble(), 1.5, 1e-6);
+    EXPECT_TRUE(p.controller.selection().value("hasAudio").toBool());
+
+    p.controller.setStyleValue("nope", 1);
+    EXPECT_FALSE(p.controller.message().isEmpty());
+    p.controller.setCanvasAspect("7:3");  // ignored
+    EXPECT_EQ(p.controller.aspect(), "16:9");
+    p.controller.setCanvasAspect("9:16");
+    EXPECT_EQ(p.controller.canvasWidth(), 1080);
+    EXPECT_EQ(p.controller.canvasHeight(), 1920);
+}
+
+TEST(ProjectControllerUi, SubtitlesRoundTripThroughSrt) {
+    OpenProject p;
+    p.controller.addSubtitle("Hello", 0.2, 1.0);
+    p.controller.addSubtitle("Second line", 1.5, 1.0);
+    ASSERT_EQ(p.controller.subtitles().size(), 2);
+    EXPECT_EQ(p.controller.selection().value("role").toString(), "subtitle");
+    const auto srt = p.fixture.dir / "subs.srt";
+    ASSERT_TRUE(p.controller.exportSubtitles(QUrl::fromLocalFile(QString::fromStdString(srt.string()))));
+    p.controller.clearSubtitles();
+    EXPECT_EQ(p.controller.subtitles().size(), 0);
+    p.controller.importSubtitles(QUrl::fromLocalFile(QString::fromStdString(srt.string())));
+    ASSERT_EQ(p.controller.subtitles().size(), 2);
+    EXPECT_EQ(p.controller.subtitles()[1].toMap().value("text").toString(), "Second line");
+}
+
+TEST(ProjectControllerUi, ImportsAnOverlayImageAndMusic) {
+    OpenProject p;
+    QImage logo(200, 100, QImage::Format_ARGB32);
+    logo.fill(QColor(240, 80, 40));
+    const auto logoPath = p.fixture.dir / "logo.png";
+    ASSERT_TRUE(logo.save(QString::fromStdString(logoPath.string())));
+    p.controller.importMedia(QUrl::fromLocalFile(QString::fromStdString(logoPath.string())), "overlay", 1.0);
+    ASSERT_TRUE(waitUntil([&] { return !p.controller.busy() && p.controller.selection().value("role") == "overlay"; }));
+    EXPECT_NEAR(p.controller.selection().value("start").toDouble(), 1.0, 1e-6);
+    EXPECT_NEAR(p.controller.selection().value("duration").toDouble(), 2.0, 1e-6);  // up to the video's end
+    EXPECT_NEAR(p.controller.duration(), 3.0, 1e-6);
+    EXPECT_TRUE(std::filesystem::exists(p.fixture.dir / "media" / "imported" / "logo.png"));  // copied in
+
+    ASSERT_TRUE(test::writeTestAudio(p.fixture.dir / "song.mkv", {.seconds = 10.0, .channels = 2}));
+    p.controller.importMedia(QUrl::fromLocalFile(QString::fromStdString((p.fixture.dir / "song.mkv").string())), "music", 0);
+    ASSERT_TRUE(waitUntil([&] { return !p.controller.busy() && p.controller.selection().value("role") == "music"; }));
+    EXPECT_NEAR(p.controller.selection().value("duration").toDouble(), 3.0, 1e-6);  // trimmed to the video
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("gainDb").toDouble(), -14.0);
+    EXPECT_FALSE(p.track("Music").isEmpty());
+}
+
+TEST(ProjectControllerUi, FindsAndRemovesPauses) {
+    OpenProject p({.seconds = 4.0, .micEnvelope = [](double t) { return t >= 1.0 && t < 2.5 ? 0.0f : 1.0f; }});
+    p.controller.findSilences(-42, 0.7, 0.15);
+    ASSERT_TRUE(waitUntil([&] { return !p.controller.busy(); }));
+    ASSERT_EQ(p.controller.silences().size(), 1);
+    EXPECT_NEAR(p.controller.silenceTotal(), 1.2, 0.05);
+    p.controller.removeSilences();
+    EXPECT_NEAR(p.controller.duration(), 4.0 - 1.2, 0.05);
+    EXPECT_EQ(p.controller.silences().size(), 0);
+    p.controller.undo();
+    EXPECT_NEAR(p.controller.duration(), 4.0, 1e-6);
+}
+
+TEST(ProjectControllerUi, ClipKeyframesEvaluateAtPlayhead) {
+    OpenProject p;
+    const QString id = p.clipId("Screen");
+    p.controller.selectClip(id);
+    p.controller.setClipKeyframe(id, QStringLiteral("opacity"), 0.0, 1.0, true);
+    p.controller.setClipKeyframe(id, QStringLiteral("opacity"), 2.0, 0.25, true);
+    const QVariantMap at1 = p.controller.clipTransformAt(id, 1.0);
+    EXPECT_TRUE(at1.value(QStringLiteral("onClip")).toBool());
+    EXPECT_NEAR(at1.value(QStringLiteral("opacity")).toDouble(), 0.625, 1e-3);
+    const QVariantMap at0 = p.controller.clipTransformAt(id, 0.0);
+    EXPECT_NEAR(at0.value(QStringLiteral("opacity")).toDouble(), 1.0, 1e-6);
+    const QVariantList keys = p.controller.clipKeyframeTimes(id, QStringLiteral("opacity"));
+    EXPECT_EQ(keys.size(), 2);
+}
+
+TEST(ProjectControllerUi, LayersSelectAddRenameReorderDeleteAndMoveClips) {
+    OpenProject o;
+    ProjectController& c = o.controller;
+    // Selecting a clip selects its layer; a header click selects a layer alone.
+    c.selectClip(o.clipId("Camera"));
+    EXPECT_EQ(c.selectedTrack(), o.track("Camera").value("id").toString());
+    c.clearSelection();
+    c.selectTrack(o.track("Microphone").value("id").toString());
+    EXPECT_EQ(c.selectedTrack(), o.track("Microphone").value("id").toString());
+
+    // Two text layers: the newest is shown on top.
+    c.addText("Hello", 1.0, 2.0, "title");
+    const QString first = c.addTrack("overlay");
+    ASSERT_FALSE(first.isEmpty());
+    EXPECT_EQ(c.selectedTrack(), first);
+    EXPECT_EQ(c.tracks().value(0).toMap().value("id").toString(), first);
+    c.renameTrack(first, "  Logo  ");
+    EXPECT_EQ(c.tracks().value(0).toMap().value("name").toString(), "Logo");
+    EXPECT_FALSE(c.tracks().value(0).toMap().value("canMoveUp").toBool());
+    EXPECT_TRUE(c.tracks().value(0).toMap().value("canMoveDown").toBool());
+
+    // Move the text clip onto the new layer (one undo step), then back by undo.
+    const QString text = o.clipId("Text");
+    c.moveClipToTrack(text, first, 3.0);
+    EXPECT_EQ(o.clips("Logo").size(), 1);
+    EXPECT_NEAR(o.clips("Logo").value(0).toMap().value("start").toDouble(), 3.0, 1e-6);
+    EXPECT_TRUE(o.clips("Text").isEmpty());
+    c.moveClipToTrack(text, o.track("Microphone").value("id").toString(), 0.0);  // wrong kind: refused
+    EXPECT_EQ(o.clips("Logo").size(), 1);
+    c.undo();
+    EXPECT_EQ(o.clips("Text").size(), 1);
+    EXPECT_TRUE(o.clips("Logo").isEmpty());
+
+    // Reorder: the Logo layer goes below Text (stacking order) and back.
+    c.moveTrack(first, -1);
+    EXPECT_EQ(c.tracks().value(0).toMap().value("name").toString(), "Text");
+    EXPECT_EQ(c.tracks().value(1).toMap().value("name").toString(), "Logo");
+    c.moveTrack(first, -1);  // only video below: overlays stack above video, refused
+    EXPECT_EQ(c.tracks().value(1).toMap().value("name").toString(), "Logo");
+    c.moveTrack(first, 1);
+    EXPECT_EQ(c.tracks().value(0).toMap().value("name").toString(), "Logo");
+
+    // Delete: the layer goes and so does its selection; undo brings it back.
+    c.selectTrack(first);
+    c.selectClip(o.clipId("Text"));  // selecting a clip again follows its layer
+    EXPECT_EQ(c.selectedTrack(), o.track("Text").value("id").toString());
+    c.selectTrack(first);
+    c.setTrackValue(first, "hidden", true);  // an edit keeps the picked layer
+    EXPECT_EQ(c.selectedTrack(), first);
+    c.setTrackValue(first, "hidden", false);
+    const int before = static_cast<int>(c.tracks().size());
+    c.deleteTrack(first);
+    EXPECT_EQ(c.tracks().size(), before - 1);
+    EXPECT_TRUE(c.selectedTrack().isEmpty());
+    c.undo();
+    EXPECT_EQ(c.tracks().size(), before);
+    const project::Project saved = o.saved();
+    EXPECT_TRUE(saved.validate());
+}
+
+TEST(PlaybackControllerUi, PlaysSeeksAndRendersFrames) {
+    OpenProject p;
+    PlaybackController playback(&p.controller, /*silent=*/true);
+    playback.setPreviewSize({320, 180});
+    ASSERT_TRUE(waitUntil([&] { return !playback.frame().isNull(); }));
+    EXPECT_EQ(playback.frame().size(), QSize(320, 180));
+    playback.play();
+    ASSERT_TRUE(waitUntil([&] { return playback.playing(); }));
+    ASSERT_TRUE(waitUntil([&] { return playback.position() > 0.4; }, 3000));
+    playback.pause();
+    ASSERT_TRUE(waitUntil([&] { return !playback.playing(); }));
+    playback.seek(2.0);
+    EXPECT_DOUBLE_EQ(playback.position(), 2.0);
+    playback.step(3);
+    EXPECT_NEAR(playback.position(), 2.1, 1e-9);
+    // Edits reach the running engine: the playhead clamps to a shorter video.
+    p.controller.removeRange(0.0, 2.5);
+    ASSERT_TRUE(waitUntil([&] { return playback.position() <= 0.5 + 1e-9; }));
+}
+
+TEST(ExportControllerUi, ExportsTheProjectInTheBackground) {
+    OpenProject p;
+    ExportController exporter(&p.controller);
+    const QVariantList sizes = exporter.resolutions();
+    ASSERT_EQ(sizes.size(), 4);
+    EXPECT_EQ(sizes[0].toMap().value("width").toInt(), 1280);
+    EXPECT_GT(exporter.estimateMegabytes("720p", 30, "high"), 0.5);
+    const auto out = p.fixture.dir / "out" / "video.mp4";
+    exporter.start("720p", 30, "standard", QUrl::fromLocalFile(QString::fromStdString(out.string())).toString());
+    EXPECT_TRUE(exporter.running());
+    ASSERT_TRUE(waitUntil([&] { return !exporter.running(); }, 60'000));
+    EXPECT_TRUE(exporter.finished()) << exporter.error().toStdString();
+    EXPECT_EQ(exporter.outputPath().toStdString(), out.string());
+    auto info = media::probeMedia(out);
+    ASSERT_TRUE(info) << info.error().toString();
+    EXPECT_NEAR(info->duration.toSecondsF(), 3.0, 0.1);
+    EXPECT_EQ(info->video()->video->width, 1280);
+}

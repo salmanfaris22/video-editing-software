@@ -1,0 +1,2 @@
+// App icon (Explorer, taskbar, Alt-Tab). Generated from assets/brand/lectern-app-icon.svg.
+IDI_APP_ICON ICON "@_lectern_app_dir@/icons/lectern.ico"

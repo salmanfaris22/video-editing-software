@@ -1,0 +1,18 @@
+# Build trees
+/build/
+/out/
+/cmake-build-*/
+/.cache/
+compile_commands.json
+
+# IDEs
+.vscode/
+.idea/
+*.user
+.DS_Store
+
+# vcpkg
+/vcpkg_installed/
+
+# Test artifacts kept with LECTERN_KEEP_TEST_FILES
+/lectern-test-*/

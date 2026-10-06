@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1014">
+<title>Lectern Camera</title>
+<style>
+  :root {
+    --bg: #0e1014; --surface: #16191f; --raised: #1d212a; --stroke: #272c36;
+    --text: #e8eaed; --muted: #9aa3b2; --faint: #6b7383;
+    --accent: #4c8dff; --ok: #35c26a; --warn: #e0a33e; --err: #e05a5a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text); overscroll-behavior: none;
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  header {
+    display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+    border-bottom: 1px solid var(--stroke); font-weight: 600; flex: none;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--faint); flex: none; }
+  .dot.waiting { background: var(--warn); }
+  .dot.live { background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
+  .dot.error { background: var(--err); }
+  @keyframes pulse { 50% { opacity: .35; } }
+  #state { margin-left: auto; font-weight: 400; font-size: 13px; color: var(--muted); }
+
+  main { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 12px 16px 16px; min-height: 0; }
+  .stage {
+    position: relative; background: #000; border: 1px solid var(--stroke);
+    border-radius: 14px; overflow: hidden; flex: 1; min-height: 180px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .stage.idle::after {
+    content: "Camera off"; position: absolute; color: var(--faint); font-size: 13px;
+  }
+  .badge {
+    position: absolute; left: 10px; top: 10px; padding: 3px 8px; border-radius: 999px;
+    background: rgba(0,0,0,.6); font-size: 11px; letter-spacing: .3px; color: var(--muted);
+  }
+  .rec {
+    position: absolute; right: 10px; top: 10px; padding: 3px 9px; border-radius: 999px;
+    background: rgba(224,90,90,.92); font-size: 11px; font-weight: 600; display: none;
+  }
+  .rec.on { display: block; }
+
+  .row { display: flex; gap: 8px; flex: none; }
+  .row > * { flex: 1; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--stroke); border-radius: 10px; overflow: hidden; }
+  .seg button {
+    flex: 1; padding: 11px 4px; background: none; border: 0; color: var(--muted);
+    font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--raised); color: var(--text); font-weight: 600; }
+  button.primary {
+    padding: 14px; border: 0; border-radius: 12px; background: var(--accent); color: #fff;
+    font: inherit; font-weight: 600; cursor: pointer; flex: none;
+  }
+  button.primary.stop { background: var(--err); }
+  button.ghost {
+    padding: 12px; border: 1px solid var(--stroke); border-radius: 12px;
+    background: var(--surface); color: var(--text); font: inherit; cursor: pointer; flex: none;
+  }
+  label.field { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); flex: none; }
+  label.field input[type=range] { flex: 1; accent-color: var(--accent); }
+  .stat { font-size: 12px; color: var(--faint); text-align: center; flex: none; min-height: 16px; }
+  .note { font-size: 12px; color: var(--warn); text-align: center; flex: none; }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot waiting" id="dot"></span>
+  <span>Lectern Camera</span>
+  <span id="state">connecting…</span>
+</header>
+
+<main>
+  <div class="stage idle" id="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <span class="badge" id="badge">idle</span>
+    <span class="rec" id="rec">● REC</span>
+  </div>
+
+  <button class="primary" id="toggle">Start camera</button>
+
+  <div class="row">
+    <div class="seg" id="lens">
+      <button data-v="user" aria-pressed="true">Front</button>
+      <button data-v="environment" aria-pressed="false">Back</button>
+    </div>
+    <div class="seg" id="quality">
+      <button data-q="0.7" aria-pressed="true">Smooth</button>
+      <button data-q="0.85" aria-pressed="false">Sharp</button>
+    </div>
+  </div>
+
+  <label class="field">Rate <input type="range" id="fps" min="5" max="30" step="5" value="30"><span id="fpsv">30 fps</span></label>
+  <label class="field">Size <input type="range" id="width" min="320" max="1280" step="160" value="640"><span id="widthv">640 px</span></label>
+
+  <div class="row">
+    <button class="ghost" id="hq">Record high quality</button>
+  </div>
+
+  <div class="stat" id="stat">—</div>
+  <div class="note" id="note"></div>
+</main>
+
+<script>
+"use strict";
+// The desktop serves this page; location.pathname is the pairing token, so
+// every request carries it and no cookies or CORS preflight are needed.
+const BASE = location.pathname.replace(/\/$/, "");
+const $ = (id) => document.getElementById(id);
+const video = $("video"), stage = $("stage"), toggle = $("toggle");
+const stat = $("stat"), note = $("note"), dot = $("dot"), stateLabel = $("state");
+
+let stream = null, framesSent = 0, dropped = 0;
+let facing = "user", jpegQuality = 0.7, targetFps = 30, targetWidth = 640;
+let recorder = null, chunks = [];
+
+const setState = (cls, label) => { dot.className = "dot " + cls; stateLabel.textContent = label; };
+
+async function post(path, body, headers) {
+  return fetch(BASE + path, { method: "POST", body, headers: headers || {} });
+}
+
+function cameraApi() {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return (c) => navigator.mediaDevices.getUserMedia(c);
+  const legacy = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+  if (!legacy) return null;
+  return (c) => new Promise((ok, err) => legacy.call(navigator, c, ok, err));
+}
+
+async function startCamera() {
+  note.textContent = "";
+  if (!window.isSecureContext) {
+    setState("error", "needs https");
+    note.textContent = "Camera needs a secure link. Copy the https:// address from Lectern (not http://) and open it in Safari or Chrome.";
+    return;
+  }
+  const getUserMedia = cameraApi();
+  if (!getUserMedia) {
+    setState("error", "unsupported");
+    note.textContent = "This browser cannot use the camera. Open the link in Safari (iPhone) or Chrome (Android).";
+    return;
+  }
+  try {
+    setState("waiting", "requesting…");
+    const constraints = {
+      audio: false,
+      video: {
+        facingMode: facing,
+        width: { ideal: targetWidth },
+        height: { ideal: Math.round(targetWidth * 9 / 16) },
+        frameRate: { ideal: 30 }
+      }
+    };
+    stream = await getUserMedia(constraints);
+    video.srcObject = stream;
+    await video.play().catch(() => {});
+    stage.classList.remove("idle");
+    toggle.textContent = "Stop camera";
+    toggle.classList.add("stop");
+    setState("live", "streaming");
+    keepAwake();
+    pump();
+    reportStatus();
+  } catch (e) {
+    setState("error", "denied");
+    const denied = e && (e.name === "NotAllowedError" || e.name === "SecurityError");
+    note.textContent = denied
+      ? "Camera blocked. Allow camera for this site, then reload. If Safari warned about the certificate, tap Advanced → Continue first."
+      : "No camera found: " + (e && e.name ? e.name : e);
+  }
+}
+
+// A dimming phone throttles the camera and the network; hold the screen on.
+let wakeLock = null;
+async function keepAwake() {
+  try { if (navigator.wakeLock && !wakeLock) wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+  if (wakeLock) wakeLock.addEventListener("release", () => { wakeLock = null; });
+}
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+  if (socket) { socket.close(); }
+  video.srcObject = null;
+  stage.classList.add("idle");
+  $("badge").textContent = "idle";
+  toggle.textContent = "Start camera";
+  toggle.classList.remove("stop");
+  setState("waiting", "stopped");
+  stat.textContent = "—";
+}
+
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+
+// Frames travel over one WebSocket: no TLS handshake or HTTP round trip per
+// frame. Each message is an 8-byte capture time (performance.now, ms, little
+// endian) followed by the JPEG, so the desktop stamps the frame with when it
+// was *taken*, not when Wi-Fi delivered it, and it stays in sync with the mic.
+let socket = null, socketOpen = false, socketFailures = 0;
+let encoding = false, httpInFlight = false, lastSent = 0, lastBytes = 64 * 1024;
+let sentThisSecond = 0, sentFps = 0, secondStart = performance.now();
+
+function openSocket() {
+  if (socket || !window.WebSocket || socketFailures >= 3) return;
+  const s = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + BASE + "/ws");
+  s.binaryType = "arraybuffer";
+  socket = s;
+  s.onopen = () => { socketOpen = true; socketFailures = 0; };
+  s.onclose = () => {
+    if (!socketOpen) socketFailures++;   // never opened: after 3 tries fall back to HTTP
+    socket = null; socketOpen = false;
+    if (stream) setTimeout(openSocket, 400);
+  };
+  s.onerror = () => {};
+}
+setInterval(() => { if (socketOpen) socket.send("hb"); }, 2000);
+
+function sendFrame(blob, captureMs) {
+  const header = new ArrayBuffer(8);
+  new DataView(header).setFloat64(0, captureMs, true);
+  if (socketOpen) {
+    socket.send(new Blob([header, blob]));
+    return Promise.resolve();
+  }
+  // Fallback: keep-alive POST, one at a time.
+  httpInFlight = true;
+  return post("/frame?t=" + captureMs.toFixed(3), blob, { "Content-Type": "image/jpeg" })
+    .catch(() => { dropped++; })
+    .finally(() => { httpInFlight = false; });
+}
+
+// Never queue: if the previous frame has not left the phone yet, skip this
+// one. Latency stays at one frame instead of growing with every hiccup.
+function backlogged() {
+  if (socketOpen) return socket.bufferedAmount > lastBytes;
+  return httpInFlight;
+}
+
+function pump() {
+  if (!stream) return;
+  openSocket();
+  const step = (now, meta) => {
+    if (!stream) return;
+    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(step);
+    else setTimeout(step, 1000 / Math.max(targetFps, 30));
+
+    const t = performance.now();
+    if (t - secondStart >= 1000) { sentFps = sentThisSecond; sentThisSecond = 0; secondStart = t; showStats(); }
+    if (encoding || video.videoWidth === 0) return;
+    if (t - lastSent < 1000 / targetFps - 4) return;
+    if (backlogged()) { dropped++; return; }
+
+    // Camera capture time when the browser knows it, else "now".
+    const captureMs = meta && meta.captureTime ? meta.captureTime : t;
+    lastSent = t;
+    encoding = true;
+    const w = Math.min(targetWidth, video.videoWidth);
+    const h = Math.round(w * video.videoHeight / video.videoWidth);
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    ctx.drawImage(video, 0, 0, w, h);
+    canvas.toBlob((blob) => {
+      encoding = false;
+      if (!blob || !stream) return;
+      lastBytes = Math.max(32 * 1024, blob.size);
+      sendFrame(blob, captureMs);
+      framesSent++;
+      sentThisSecond++;
+    }, "image/jpeg", jpegQuality);
+  };
+  step(performance.now(), null);
+}
+
+function showStats() {
+  if (!stream) return;
+  const link = socketOpen ? "live link" : "http fallback";
+  stat.textContent = `${canvas.width}×${canvas.height} · ${sentFps} fps · ${link}` + (dropped ? ` · ${dropped} skipped` : "");
+  $("badge").textContent = `${canvas.width}×${canvas.height} · ${sentFps} fps`;
+}
+
+function reportStatus() {
+  const track = stream && stream.getVideoTracks()[0];
+  const s = track && track.getSettings ? track.getSettings() : {};
+  let extra = "";
+  if (navigator.getBattery) {
+    navigator.getBattery().then((b) => {
+      $("badge").title = `battery ${Math.round(b.level * 100)}%${b.charging ? " (charging)" : ""}`;
+      post("/ctl?op=status&battery=" + Math.round(b.level * 100) + "&charging=" + (b.charging ? 1 : 0));
+    }).catch(() => {});
+  }
+  post("/ctl?op=hello&facing=" + facing + "&w=" + (s.width || 0) + "&h=" + (s.height || 0) +
+       "&fps=" + Math.round(s.frameRate || targetFps) + "&model=" + encodeURIComponent(navigator.userAgent.slice(0, 80)));
+}
+
+// High quality: the phone records locally and uploads afterwards, so Wi-Fi
+// quality never limits the final file (protocol §9).
+$("hq").addEventListener("click", async () => {
+  if (recorder && recorder.state === "recording") {
+    recorder.stop();
+    return;
+  }
+  if (!stream) { note.textContent = "Start the camera first."; return; }
+  if (!window.MediaRecorder) { note.textContent = "This browser cannot record locally."; return; }
+  const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]
+    .find((m) => MediaRecorder.isTypeSupported(m));
+  try {
+    chunks = [];
+    recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 12e6 } : undefined);
+    recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop = async () => {
+      $("rec").classList.remove("on");
+      $("hq").textContent = "Record high quality";
+      const blob = new Blob(chunks, { type: "video/webm" });
+      stat.textContent = `uploading ${(blob.size / 1048576).toFixed(1)} MB high quality…`;
+      try {
+        const r = await post("/hq?name=phone.webm", blob, { "Content-Type": "video/webm" });
+        stat.textContent = r.ok ? "high quality clip sent to Lectern" : "high quality upload rejected";
+      } catch (e) {
+        stat.textContent = "high quality upload failed — is Lectern still running?";
+      }
+    };
+    recorder.start(1000);
+    $("rec").classList.add("on");
+    $("hq").textContent = "Stop high quality";
+  } catch (e) {
+    note.textContent = "Could not start local recording: " + (e && e.name ? e.name : e);
+  }
+});
+
+toggle.addEventListener("click", () => (stream ? stopCamera() : startCamera()));
+
+$("lens").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  facing = b.dataset.v;
+  [...$("lens").children].forEach((c) => c.setAttribute("aria-pressed", String(c === b)));
+  if (stream) { stopCamera(); startCamera(); }   // the lens is fixed per capture session
+});
+
+$("quality").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  jpegQuality = parseFloat(b.dataset.q);
+  [...$("quality").children].forEach((c) => c.setAttribute("aria-pressed", String(c === b)));
+});
+
+$("fps").addEventListener("input", (e) => {
+  targetFps = +e.target.value; $("fpsv").textContent = targetFps + " fps";
+});
+$("width").addEventListener("input", (e) => {
+  targetWidth = +e.target.value; $("widthv").textContent = targetWidth + " px";
+});
+
+// A phone that sleeps stops producing frames; retry on wake.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (stream) keepAwake();
+  if (stream && video.videoWidth === 0) startCamera();
+});
+window.addEventListener("pagehide", stopCamera);
+setState("waiting", "ready");
+if (!window.isSecureContext) {
+  note.textContent = "Open the https:// link from Lectern in Safari or Chrome. The first visit may ask you to trust Lectern’s certificate — tap Continue.";
+}
+</script>
+</body>
+</html>

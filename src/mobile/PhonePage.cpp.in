@@ -1,0 +1,9 @@
+// Generated from phone_page.html at configure time. Keeps the page editable and
+// lintable as real HTML instead of a string buried in C++.
+#include "mobile/PhonePage.h"
+
+namespace lectern::mobile {
+
+const char* phonePageHtml() noexcept { return R"html(@LECTERN_PHONE_PAGE@)html"; }
+
+}  // namespace lectern::mobile

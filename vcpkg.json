@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "lectern",
+  "version": "0.1.0",
+  "description": "Native screen recorder and non-linear editor (Windows/Linux dependency manifest; macOS development uses Homebrew).",
+  "dependencies": [
+    {
+      "name": "ffmpeg",
+      "default-features": false,
+      "features": ["avcodec", "avformat", "avfilter", "swresample", "swscale", "nvcodec", "qsv", "amf"],
+      "platform": "windows"
+    },
+    {
+      "name": "ffmpeg",
+      "default-features": false,
+      "features": ["avcodec", "avformat", "avfilter", "swresample", "swscale", "vaapi"],
+      "platform": "linux"
+    },
+    "nlohmann-json",
+    "openssl",
+    "gtest"
+  ]
+}
