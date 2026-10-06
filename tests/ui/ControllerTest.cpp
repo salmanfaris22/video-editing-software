@@ -3,6 +3,7 @@
 #include "media/MediaProbe.h"
 #include "project/ProjectStore.h"
 #include "ui/ExportController.h"
+#include "ui/LookPreviews.h"
 #include "ui/PlaybackController.h"
 #include "ui/ProjectController.h"
 
@@ -206,7 +207,13 @@ TEST(ProjectControllerUi, PicksMovesAndResizesLayersOnTheCanvas) {
     }
     expectBox(p.controller.layerBox(camera, 1.0), 0.15, 0.1, 0.3, 0.3);  // the document did not change
     p.controller.cancelPreview();
-    EXPECT_EQ(*p.controller.snapshot(), p.saved());
+    {
+        // Saving stamps modifiedAt with the current second; everything else must match.
+        project::Project shown = *p.controller.snapshot();
+        const project::Project onDisk = p.saved();
+        shown.modifiedAt = onDisk.modifiedAt;
+        EXPECT_EQ(shown, onDisk);
+    }
 
     // On a 9:16 canvas the screen is a thin strip; make it fill the height and
     // show its left part. Padding is taken into account.
@@ -498,6 +505,204 @@ TEST(ProjectControllerUi, AutoBalanceRecoversAKnownCast) {
     EXPECT_NEAR(c.selection().value("temperature").toDouble(), 0.4, 1e-9);
 }
 
+TEST(ProjectControllerUi, LooksApplyMixUndoAndApplyToAll) {
+    OpenProject o;
+    ProjectController& c = o.controller;
+    const QString screen = o.clipId("Screen");
+    const QString camera = o.clipId("Camera");
+    QStringList ids;
+    for (const QVariant& v : c.looks()) ids << v.toMap().value("id").toString();
+    EXPECT_GE(ids.size(), 16);
+    EXPECT_TRUE(ids.contains("oppenheimer"));
+    EXPECT_TRUE(ids.contains("dark-green"));
+
+    c.applyLook(screen, "dark-green", 0.8);
+    c.selectClip(screen);
+    EXPECT_EQ(c.selection().value("look").toString(), "dark-green");
+    EXPECT_EQ(c.selection().value("lookName").toString(), "Dark Green");
+    EXPECT_NEAR(c.selection().value("lookAmount").toDouble(), 0.8, 1e-9);
+    EXPECT_EQ(c.undoLabel(), "Look: Dark Green");
+    // The look reaches the renderers on top of the (neutral) correction.
+    for (const auto& l : editor::buildRenderPlan(*c.snapshot(), Time::fromSeconds(1)).layers) {
+        if (l.role == "screen") EXPECT_NEAR(l.color.tint, -0.35 * 0.8, 1e-9);
+    }
+    // Amount drags merge into one undo step.
+    for (int i = 1; i <= 10; ++i) c.setLookAmount(screen, i * 0.05);
+    c.selectClip(screen);
+    EXPECT_NEAR(c.selection().value("lookAmount").toDouble(), 0.5, 1e-9);
+    c.undo();
+    c.selectClip(screen);
+    EXPECT_NEAR(c.selection().value("lookAmount").toDouble(), 0.8, 1e-9);
+
+    c.applyLookToAll(screen);
+    c.selectClip(camera);
+    EXPECT_EQ(c.selection().value("look").toString(), "dark-green");
+    c.undo();
+    c.selectClip(camera);
+    EXPECT_EQ(c.selection().value("look").toString(), "");
+
+    // An unknown look changes nothing; removing the look keeps the correction.
+    c.setColorValue(screen, "exposure", 0.3);
+    c.applyLook(screen, "no-such-look", 1.0);
+    c.selectClip(screen);
+    EXPECT_EQ(c.selection().value("look").toString(), "dark-green");
+    c.removeLook(screen);
+    c.selectClip(screen);
+    EXPECT_EQ(c.selection().value("look").toString(), "");
+    EXPECT_DOUBLE_EQ(c.selection().value("exposure").toDouble(), 0.3);
+
+    // Hover preview: only the shown snapshot changes, never the document.
+    c.previewLook(screen, "noir");
+    for (const auto& l : editor::buildRenderPlan(*c.snapshot(), Time::fromSeconds(1)).layers) {
+        if (l.role == "screen") EXPECT_DOUBLE_EQ(l.color.saturation, -1.0);
+    }
+    c.selectClip(screen);
+    EXPECT_EQ(c.selection().value("look").toString(), "");
+    c.cancelPreview();
+    for (const auto& l : editor::buildRenderPlan(*c.snapshot(), Time::fromSeconds(1)).layers) {
+        if (l.role == "screen") EXPECT_DOUBLE_EQ(l.color.saturation, 0.0);
+    }
+}
+
+TEST(ProjectControllerUi, SavedLooksPersistAcrossControllersAndDelete) {
+    OpenProject o;
+    ProjectController& c = o.controller;
+    const QString screen = o.clipId("Screen");
+    c.setColorValue(screen, "temperature", 0.25);
+    c.setColorWheel(screen, "gain", 0.1, -0.05, 0.0);
+    c.applyLook(screen, "warm-film", 0.5);
+    int changes = 0;
+    QObject::connect(&c, &ProjectController::looksChanged, [&] { ++changes; });
+    EXPECT_TRUE(c.saveLook(screen, "   ").isEmpty());  // a name is required
+    const QString id = c.saveLook(screen, "My Warm Day");
+    ASSERT_TRUE(id.startsWith("custom-")) << id.toStdString();
+    EXPECT_EQ(changes, 1);
+
+    // A second controller (another project window, a restart) sees it under My Looks.
+    ProjectController other;
+    QVariantMap saved;
+    for (const QVariant& v : other.looks()) {
+        if (v.toMap().value("id").toString() == id) saved = v.toMap();
+    }
+    EXPECT_EQ(saved.value("name").toString(), "My Warm Day");
+    EXPECT_EQ(saved.value("category").toString(), "My Looks");
+    EXPECT_TRUE(saved.value("custom").toBool());
+
+    // Applying it on another clip reproduces the whole grade (correction + look).
+    const QString camera = o.clipId("Camera");
+    c.applyLook(camera, id, 1.0);
+    editor::ColorParams screenGrade;
+    editor::ColorParams cameraGrade;
+    for (const auto& l : editor::buildRenderPlan(*c.snapshot(), Time::fromSeconds(1)).layers) {
+        if (l.role == "screen") screenGrade = l.color;
+        if (l.role == "camera") cameraGrade = l.color;
+    }
+    EXPECT_NEAR(cameraGrade.temperature, screenGrade.temperature, 1e-9);
+    EXPECT_NEAR(cameraGrade.gain.x, screenGrade.gain.x, 1e-9);
+    EXPECT_NEAR(cameraGrade.contrast, screenGrade.contrast, 1e-9);
+
+    c.deleteLook("oppenheimer");  // built-in looks stay
+    c.deleteLook(id);
+    EXPECT_EQ(changes, 2);
+    ProjectController third;
+    for (const QVariant& v : third.looks()) EXPECT_NE(v.toMap().value("id").toString(), id);
+    // Projects keep a look's settings, so the clip still shows it.
+    c.selectClip(camera);
+    EXPECT_EQ(c.selection().value("look").toString(), id);
+}
+
+TEST(ProjectControllerUi, CopyPasteAndSpreadGrades) {
+    test::EditorFixture::Options options;
+    OpenProject o(options);
+    ProjectController& c = o.controller;
+    const QString screen = o.clipId("Screen");
+    const QString camera = o.clipId("Camera");
+    c.splitAt(1.5);  // two screen and two camera clips
+    const QStringList order = c.gradableClips();
+    ASSERT_EQ(order.size(), 4) << order.join(",").toStdString();
+    const QString first = order[0];
+
+    c.setColorValue(first, "exposure", 0.4);
+    c.setCurve(first, "y", QVariantList{QVariantMap{{"x", 0.0}, {"y", 0.1}}, QVariantMap{{"x", 1.0}, {"y", 0.9}}});
+    c.applyLook(first, "teal-orange", 0.7);
+    c.setInputColorSpace(order[3], "rec2020");
+
+    EXPECT_FALSE(c.hasCopiedGrade());
+    c.pasteGrade({order[1]});  // nothing copied yet
+    c.selectClip(order[1]);
+    EXPECT_DOUBLE_EQ(c.selection().value("exposure").toDouble(), 0.0);
+
+    c.copyGrade(first);
+    EXPECT_TRUE(c.hasCopiedGrade());
+    c.pasteGrade({order[2], order[3]});
+    EXPECT_EQ(c.undoLabel(), "Paste grade to 2 clips");
+    for (const QString& id : {order[2], order[3]}) {
+        c.selectClip(id);
+        EXPECT_DOUBLE_EQ(c.selection().value("exposure").toDouble(), 0.4);
+        EXPECT_EQ(c.selection().value("look").toString(), "teal-orange");
+        EXPECT_EQ(c.selection().value("curveY").toList().size(), 2);
+    }
+    c.selectClip(order[3]);
+    EXPECT_EQ(c.selection().value("inputColorSpace").toString(), "rec2020");  // the clip's own setting stays
+    c.undo();
+    c.selectClip(order[2]);
+    EXPECT_DOUBLE_EQ(c.selection().value("exposure").toDouble(), 0.0);
+
+    c.applyGradeToNext(first);
+    c.selectClip(order[1]);
+    EXPECT_DOUBLE_EQ(c.selection().value("exposure").toDouble(), 0.4);
+    c.applyGradeToNext(order[3]);  // the last clip has no next one
+    EXPECT_FALSE(c.message().isEmpty());
+
+    c.applyPreviousGrade(order[2]);  // takes order[1]'s (= first's) grade
+    c.selectClip(order[2]);
+    EXPECT_EQ(c.selection().value("look").toString(), "teal-orange");
+    c.applyPreviousGrade(first);  // nothing before the first clip
+    c.selectClip(first);
+    EXPECT_DOUBLE_EQ(c.selection().value("exposure").toDouble(), 0.4);
+
+    c.resetColor(order[3]);
+    c.selectClip(order[3]);
+    EXPECT_EQ(c.selection().value("inputColorSpace").toString(), "rec2020");  // reset keeps how the source is read
+    c.applyGradeToAll(first);
+    EXPECT_EQ(c.undoLabel(), "Grade to all clips");
+    for (const QString& id : order) {
+        c.selectClip(id);
+        EXPECT_DOUBLE_EQ(c.selection().value("exposure").toDouble(), 0.4) << id.toStdString();
+    }
+    (void)screen;
+    (void)camera;
+}
+
+TEST(ProjectControllerUi, LookThumbnailsRenderInTheBackground) {
+    OpenProject o;
+    ProjectController& c = o.controller;
+    const QString screen = o.clipId("Screen");
+    c.setColorValue(screen, "exposure", 0.2);
+    const int before = c.lookPreviewRevision();
+    c.refreshLookPreviews(screen, 1.0);
+    ASSERT_TRUE(waitUntil([&] { return c.lookPreviewRevision() > before; }));
+    const QImage none = lookpreviews::image("none");
+    const QImage noir = lookpreviews::image("noir");
+    const QImage green = lookpreviews::image("dark-green");
+    ASSERT_FALSE(none.isNull());
+    ASSERT_FALSE(noir.isNull());
+    EXPECT_EQ(none.height(), 135);
+    // Noir is gray; Dark Green is greener than the clip without a look.
+    double gray = 0, greenGain = 0;
+    for (int y = 0; y < none.height(); y += 4) {
+        for (int x = 0; x < none.width(); x += 4) {
+            const QColor n = noir.pixelColor(x, y);
+            gray += std::abs(n.red() - n.green()) + std::abs(n.green() - n.blue());
+            const QColor a = none.pixelColor(x, y);
+            const QColor g = green.pixelColor(x, y);
+            greenGain += (g.green() - (g.red() + g.blue()) / 2.0) - (a.green() - (a.red() + a.blue()) / 2.0);
+        }
+    }
+    EXPECT_LT(gray / (none.width() * none.height() / 16.0), 2.0);
+    EXPECT_GT(greenGain / (none.width() * none.height() / 16.0), 5.0);
+}
+
 TEST(PlaybackControllerUi, PlaysSeeksAndRendersFrames) {
     OpenProject p;
     PlaybackController playback(&p.controller, /*silent=*/true);
@@ -516,6 +721,54 @@ TEST(PlaybackControllerUi, PlaysSeeksAndRendersFrames) {
     // Edits reach the running engine: the playhead clamps to a shorter video.
     p.controller.removeRange(0.0, 2.5);
     ASSERT_TRUE(waitUntil([&] { return playback.position() <= 0.5 + 1e-9; }));
+}
+
+TEST(PlaybackControllerUi, ComparesGradedAndUngraded) {
+    OpenProject p;
+    const QString screen = p.clipId("Screen");
+    PlaybackController playback(&p.controller, /*silent=*/true);
+    playback.setPreviewSize({320, 180});
+    playback.seek(1.0);
+    ASSERT_TRUE(waitUntil([&] { return !playback.frame().isNull(); }));
+    // The frame after a change: wait until it differs from `old`, then until
+    // two frames in a row agree (the engine finished re-rendering).
+    auto next = [&](const QImage& old) {
+        waitUntil([&] { return playback.frame() != old; }, 3000);
+        QImage last = playback.frame();
+        for (int i = 0; i < 40; ++i) {
+            waitUntil([] { return false; }, 25);
+            const QImage now = playback.frame();
+            if (now == last) break;
+            last = now;
+        }
+        return last;
+    };
+    const QImage plain = next(QImage());
+    p.controller.applyLook(screen, "noir", 1.0);
+    const QImage graded = next(plain);
+    ASSERT_NE(graded, plain);
+
+    playback.setCompareMode("bypass");
+    EXPECT_EQ(playback.compareMode(), "bypass");
+    const QImage bypass = next(graded);
+    EXPECT_EQ(bypass, plain);  // every grade off
+
+    playback.setCompareMode("wipe");
+    playback.setCompareSplit(0.5);
+    EXPECT_DOUBLE_EQ(playback.compareSplit(), 0.5);
+    const QImage wipe = next(bypass);
+    // Ungraded left of the middle, graded right of it.
+    EXPECT_EQ(wipe.copy(0, 0, 150, 180), plain.copy(0, 0, 150, 180));
+    EXPECT_EQ(wipe.copy(170, 0, 150, 180), graded.copy(170, 0, 150, 180));
+
+    playback.setCompareMode("side");
+    const QImage side = next(wipe);
+    EXPECT_EQ(side.pixelColor(80, 10), QColor(Qt::black));  // letterbox above the halves
+    EXPECT_NE(side.copy(0, 45, 160, 90), side.copy(160, 45, 160, 90));
+
+    playback.setCompareMode("nonsense");
+    EXPECT_EQ(playback.compareMode(), "off");
+    EXPECT_EQ(next(side), graded);
 }
 
 TEST(ExportControllerUi, ExportsTheProjectInTheBackground) {

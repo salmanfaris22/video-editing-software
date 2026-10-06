@@ -10,6 +10,7 @@
 #include "platform/PlatformBackends.h"
 #include "ui/AppController.h"
 #include "ui/IconProvider.h"
+#include "ui/LookPreviewProvider.h"
 #include "ui/ThumbnailProvider.h"
 #include "ui/WaveformProvider.h"
 
@@ -93,6 +94,7 @@ int main(int argc, char** argv) {
     engine.addImageProvider(QStringLiteral("thumbnail"), new ui::ThumbnailProvider());
     engine.addImageProvider(QStringLiteral("icon"), new ui::IconProvider());
     engine.addImageProvider(QStringLiteral("waveform"), new ui::WaveformProvider());
+    engine.addImageProvider(QStringLiteral("look"), new ui::LookPreviewProvider());
     engine.setInitialProperties({{QStringLiteral("app"), QVariant::fromValue(&controller)}});
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); },
                      Qt::QueuedConnection);

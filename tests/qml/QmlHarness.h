@@ -5,6 +5,7 @@
 // app ships, not a copy of its logic.
 
 #include "ui/IconProvider.h"
+#include "ui/LookPreviewProvider.h"
 
 #include <QCoreApplication>
 #include <QQmlComponent>
@@ -45,6 +46,7 @@ class QmlHarness {
 public:
     QmlHarness(const QByteArray& qml, const QVariantMap& properties, QSize size = {1100, 700}) {
         engine_.addImageProvider(QStringLiteral("icon"), new ui::IconProvider);
+        engine_.addImageProvider(QStringLiteral("look"), new ui::LookPreviewProvider);
         QQmlComponent component(&engine_);
         component.setData(qml, QUrl(QStringLiteral("qrc:/lectern-test/Harness.qml")));
         if (component.isError()) {

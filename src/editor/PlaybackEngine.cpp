@@ -8,6 +8,8 @@
 #include "editor/FrameProvider.h"
 #include "editor/RenderPlan.h"
 
+#include <QPainter>
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -266,6 +268,34 @@ void PlaybackEngine::audioLoop(std::stop_token stop) {
     }
 }
 
+void PlaybackEngine::setCompare(Compare mode, double split) {
+    {
+        std::lock_guard lock(mutex_);
+        split = std::clamp(split, 0.0, 1.0);
+        if (compare_ == mode && compareSplit_ == split) return;
+        compare_ = mode;
+        compareSplit_ = split;
+        renderRequested_ = true;
+    }
+    videoCv_.notify_all();
+}
+
+void PlaybackEngine::composeComparison(QImage& out, const QImage& before, const QImage& after, Compare mode, double split) {
+    QPainter p(&out);
+    if (mode == Compare::Wipe) {
+        const int x = std::clamp(static_cast<int>(std::lround(split * out.width())), 0, out.width());
+        p.drawImage(QRect(0, 0, x, out.height()), before, QRect(0, 0, x, before.height()));
+        p.drawImage(QRect(x, 0, out.width() - x, out.height()), after, QRect(x, 0, after.width() - x, after.height()));
+        return;
+    }
+    out.fill(Qt::black);  // side by side: two half-size pictures, centered vertically
+    const int w = out.width() / 2;
+    const int h = out.height() / 2;
+    const int y = (out.height() - h) / 2;
+    p.drawImage(QRect(0, y, w, h), before);
+    p.drawImage(QRect(out.width() - w, y, w, h), after);
+}
+
 void PlaybackEngine::videoLoop(std::stop_token stop) {
     setCurrentThreadName("lectern.playback.video");
     FrameProvider frames(dir_, true);
@@ -280,6 +310,8 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
         QSize size;
         bool requested = false;
         bool ended = false;
+        Compare compare = Compare::Off;
+        double split = 0.5;
         Time t;
         {
             std::unique_lock lock(mutex_);
@@ -290,6 +322,8 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
             if (stop.stop_requested()) break;
             project = project_;
             size = previewSize_;
+            compare = compare_;
+            split = compareSplit_;
             requested = renderRequested_;
             renderRequested_ = false;
             t = positionLocked();
@@ -318,8 +352,20 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
         // Exact frame times, like the exporter, so preview and export agree.
         const Time frameTime = std::min(rate.frameStart(index), std::max(Time::zero(), project->timeline.duration()));
         QImage image(size, QImage::Format_RGB32);
-        renderer->render(buildRenderPlan(*project, frameTime), image,
-                          [&frames](const VisualLayer& l, QSizeF box) { return frames.image(l, box); });
+        const RenderPlan plan = buildRenderPlan(*project, frameTime);
+        const auto source = [&frames](const VisualLayer& l, QSizeF box) { return frames.image(l, box); };
+        if (compare == Compare::Off) {
+            renderer->render(plan, image, source);
+        } else if (compare == Compare::Bypass) {
+            renderer->render(ungraded(plan), image, source);
+        } else {
+            const QSize part = compare == Compare::SideBySide ? QSize(std::max(2, size.width() / 2), std::max(2, size.height() / 2)) : size;
+            QImage before(part, QImage::Format_RGB32);
+            QImage after(part, QImage::Format_RGB32);
+            renderer->render(ungraded(plan), before, source);
+            renderer->render(plan, after, source);
+            composeComparison(image, before, after, compare, split);
+        }
         framesRendered_.fetch_add(1, std::memory_order_relaxed);
         listener_.onFrame(image, t);
     }

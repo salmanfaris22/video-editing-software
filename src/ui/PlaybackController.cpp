@@ -47,6 +47,7 @@ void PlaybackController::follow() {
         editor::PlaybackEngine::Listener& listener = *this;
         engine_ = std::make_unique<editor::PlaybackEngine>(dir_, std::move(output), listener);
         engine_->setPreviewSize(previewSize_);
+        applyCompare();
         position_ = 0;
         emit positionChanged();
     }
@@ -56,6 +57,34 @@ void PlaybackController::follow() {
         position_ = end;
         emit positionChanged();
     }
+}
+
+void PlaybackController::setCompareMode(const QString& mode) {
+    static const QStringList kModes{QStringLiteral("off"), QStringLiteral("bypass"), QStringLiteral("wipe"), QStringLiteral("side")};
+    const QString next = kModes.contains(mode) ? mode : QStringLiteral("off");
+    if (next == compareMode_) return;
+    compareMode_ = next;
+    LEC_INFO("playback", "compare view: {}", compareMode_.toStdString());
+    applyCompare();
+    emit compareChanged();
+}
+
+void PlaybackController::setCompareSplit(double split) {
+    split = std::clamp(split, 0.0, 1.0);
+    if (split == compareSplit_) return;
+    compareSplit_ = split;
+    applyCompare();
+    emit compareChanged();
+}
+
+void PlaybackController::applyCompare() {
+    if (!engine_) return;
+    using Compare = editor::PlaybackEngine::Compare;
+    const Compare mode = compareMode_ == QLatin1String("bypass") ? Compare::Bypass
+                         : compareMode_ == QLatin1String("wipe") ? Compare::Wipe
+                         : compareMode_ == QLatin1String("side") ? Compare::SideBySide
+                                                                  : Compare::Off;
+    engine_->setCompare(mode, compareSplit_);
 }
 
 void PlaybackController::play() {

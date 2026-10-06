@@ -262,6 +262,35 @@ void registerMcpTools(Server& server, ProjectController* p) {
              p->setColorLut(str(a, "clipId"), str(a, "lut"));
              if (a.contains("amount")) p->setColorValue(str(a, "clipId"), QStringLiteral("lutAmount"), a["amount"]);
          });
+    add("list_looks",
+        "Read the cinematic looks (built-in and the user's saved looks): id, name, category, description. "
+        "Apply one with apply_look; a look sits on top of the clip's own correction.",
+        object(), Access::Read, [p](const Json&, const Context&) { return Server::result(Json{{"looks", json(p->looks())}}); });
+    edit("apply_look",
+         "Put a cinematic look (from list_looks, e.g. oppenheimer, dark-green, teal-orange) on top of the clips' "
+         "correction at amount 0..1 (1 = full look). look \"none\" removes the look.",
+         object({{"clipIds", ids()}, {"look", text(64)}, {"amount", number(0, 1)}}, {"clipIds", "look"}),
+         [p](const Json& a) {
+             const QString look = str(a, "look");
+             bool known = look == QLatin1String("none");
+             for (const QVariant& v : p->looks()) known = known || v.toMap().value("id").toString() == look;
+             if (!known) throw std::runtime_error("Unknown look; use list_looks for identifiers");
+             const double amount = a.value("amount", 1.0);
+             for (const auto& id : a["clipIds"]) p->applyLook(QString::fromStdString(id.get<std::string>()), look, amount);
+         });
+    edit("copy_grade",
+         "Copy one clip's whole grade (correction, curves, LUT and look) onto other clips, like copying a grade "
+         "between shots in DaVinci Resolve. The target clips keep how their source colors are read.",
+         object({{"fromClipId", text(64)}, {"toClipIds", ids()}}, {"fromClipId", "toClipIds"}),
+         [p](const Json& a) {
+             requireClip(p, str(a, "fromClipId"));
+             QStringList targets;
+             for (const auto& id : a["toClipIds"]) {
+                 targets << QString::fromStdString(id.get<std::string>());
+                 requireClip(p, targets.back());
+             }
+             p->copyGradeTo(str(a, "fromClipId"), targets);
+         });
     edit("set_clip_color_space",
          "Set how a clip's source colors are read: auto (from the file), rec709, srgb, display-p3, rec2020, "
          "rec2020-hlg or rec2020-pq (HDR sources are tone-mapped to SDR).",

@@ -81,14 +81,15 @@ qt_add_qml_module(lectern_ui
         AppController.h AppController.cpp
         RecorderController.h RecorderController.cpp
         ProjectController.h ProjectController.cpp ProjectEdits.cpp ProjectLooks.cpp ProjectColor.cpp ProjectCanvas.cpp
-        ProjectClipKeyframes.cpp ProjectTracks.cpp
+        ProjectClipKeyframes.cpp ProjectTracks.cpp ProjectGrades.cpp
         ProjectAssistant.cpp
         McpController.h McpController.cpp McpTools.cpp
         PlaybackController.h PlaybackController.cpp
         EditorPreviewItem.h EditorPreviewItem.cpp
         ExportController.h ExportController.cpp
         VideoPreviewItem.h VideoPreviewItem.cpp
-        ThumbnailProvider.h ThumbnailProvider.cpp
+        ThumbnailProvider.h ThumbnailProvider.cpp FrameGrab.h FrameGrab.cpp
+        LookPreviews.h LookPreviews.cpp LookPreviewProvider.h LookPreviewProvider.cpp
         WaveformProvider.h WaveformProvider.cpp
         ScopeItem.h ScopeItem.cpp
         IconProvider.h IconProvider.cpp

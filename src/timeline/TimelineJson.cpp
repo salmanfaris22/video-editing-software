@@ -164,6 +164,30 @@ ColorAdjustments::Wheel wheelFrom(const Json& j) {
     return w;
 }
 
+constexpr const char* kCurveKeys[4] = {"curveY", "curveR", "curveG", "curveB"};
+
+/// Custom curves as "curveY": [[in, out], …] (absent = no curve).
+void writeCurves(Json& j, const std::array<std::vector<Vec2>, 4>& curves) {
+    for (std::size_t i = 0; i < 4; ++i) {
+        if (curves[i].empty()) continue;
+        Json pts = Json::array();
+        for (const Vec2& p : curves[i]) pts.push_back(Json::array({p.x, p.y}));
+        j[kCurveKeys[i]] = pts;
+    }
+}
+
+void readCurves(const Json& j, std::array<std::vector<Vec2>, 4>& curves) {
+    for (std::size_t i = 0; i < 4; ++i) {
+        const auto it = j.find(kCurveKeys[i]);
+        if (it == j.end() || !it->is_array()) continue;
+        for (const Json& p : *it) {
+            if (p.is_array() && p.size() == 2 && p[0].is_number() && p[1].is_number())
+                curves[i].push_back({std::clamp(p[0].get<double>(), 0.0, 1.0), std::clamp(p[1].get<double>(), 0.0, 1.0)});
+        }
+        std::sort(curves[i].begin(), curves[i].end(), [](const Vec2& a, const Vec2& b) { return a.x < b.x; });
+    }
+}
+
 Json colorJson(const ColorAdjustments& c) {
     Json j{{"exposure", animatedJson(c.exposure)},     {"brightness", animatedJson(c.brightness)},
            {"contrast", animatedJson(c.contrast)},     {"highlights", animatedJson(c.highlights)},
@@ -178,18 +202,13 @@ Json colorJson(const ColorAdjustments& c) {
     if (c.pivot != 0.5) j["pivot"] = c.pivot;
     if (c.colorBoost.value != 0.0 || !c.colorBoost.keys.empty()) j["colorBoost"] = animatedJson(c.colorBoost);
     if (c.hue.value != 0.0 || !c.hue.keys.empty()) j["hue"] = animatedJson(c.hue);
-    static constexpr const char* kCurveKeys[4] = {"curveY", "curveR", "curveG", "curveB"};
-    for (std::size_t i = 0; i < 4; ++i) {
-        if (c.curves[i].empty()) continue;
-        Json pts = Json::array();
-        for (const Vec2& p : c.curves[i]) pts.push_back(Json::array({p.x, p.y}));
-        j[kCurveKeys[i]] = pts;
-    }
+    writeCurves(j, c.curves);
     if (!c.lut.empty()) {
         j["lut"] = c.lut;
         j["lutAmount"] = c.lutAmount;
     }
     if (c.inputColorSpace != "auto") j["inputColorSpace"] = c.inputColorSpace;
+    if (!c.look.isNone()) j["look"] = toJson(c.look);
     return j;
 }
 
@@ -213,19 +232,11 @@ Result<ColorAdjustments> colorFrom(const Json& j, const std::string& path) {
     c.pivot = std::clamp(j.value("pivot", 0.5), 0.0, 1.0);
     if (j.contains("colorBoost")) { LEC_READ_ANIM(double, c.colorBoost, j, "colorBoost", path) }
     if (j.contains("hue")) { LEC_READ_ANIM(double, c.hue, j, "hue", path) }
-    static constexpr const char* kCurveKeys[4] = {"curveY", "curveR", "curveG", "curveB"};
-    for (std::size_t i = 0; i < 4; ++i) {
-        const auto it = j.find(kCurveKeys[i]);
-        if (it == j.end() || !it->is_array()) continue;
-        for (const Json& p : *it) {
-            if (p.is_array() && p.size() == 2 && p[0].is_number() && p[1].is_number())
-                c.curves[i].push_back({std::clamp(p[0].get<double>(), 0.0, 1.0), std::clamp(p[1].get<double>(), 0.0, 1.0)});
-        }
-        std::sort(c.curves[i].begin(), c.curves[i].end(), [](const Vec2& a, const Vec2& b) { return a.x < b.x; });
-    }
+    readCurves(j, c.curves);
     c.lut = j.value("lut", "");
     c.lutAmount = std::clamp(j.value("lutAmount", 1.0), 0.0, 1.0);
     c.inputColorSpace = j.value("inputColorSpace", "auto");
+    if (const auto it = j.find("look"); it != j.end()) c.look = lookFromJson(*it);
     return c;
 }
 
@@ -523,6 +534,63 @@ Result<Timeline> timelineFromJson(const Json& j, const std::string& path) {
         }
     }
     return tl;
+}
+
+json::Json toJson(const ColorAdjustments::Look& l) {
+    Json j{{"id", l.id}, {"name", l.name}, {"amount", l.amount}};
+    const auto put = [&j](const char* key, double v, double neutral) {
+        if (v != neutral) j[key] = v;
+    };
+    put("exposure", l.exposure, 0.0);
+    put("brightness", l.brightness, 0.0);
+    put("contrast", l.contrast, 0.0);
+    put("pivot", l.pivot, 0.5);
+    put("shadows", l.shadows, 0.0);
+    put("highlights", l.highlights, 0.0);
+    put("saturation", l.saturation, 0.0);
+    put("colorBoost", l.colorBoost, 0.0);
+    put("hue", l.hue, 0.0);
+    put("temperature", l.temperature, 0.0);
+    put("tint", l.tint, 0.0);
+    if (!l.lift.isIdentity()) j["lift"] = wheelJson(l.lift);
+    if (!l.gammaWheel.isIdentity()) j["gammaWheel"] = wheelJson(l.gammaWheel);
+    if (!l.gain.isIdentity()) j["gain"] = wheelJson(l.gain);
+    if (!l.offset.isIdentity()) j["offset"] = wheelJson(l.offset);
+    writeCurves(j, l.curves);
+    return j;
+}
+
+ColorAdjustments::Look lookFromJson(const Json& j) {
+    ColorAdjustments::Look l;
+    if (!j.is_object()) return l;
+    const auto text = [&j](const char* key) {
+        const auto it = j.find(key);
+        return it != j.end() && it->is_string() ? it->get<std::string>() : std::string();
+    };
+    const auto number = [&j](const char* key, double neutral, double lo, double hi) {
+        const auto it = j.find(key);
+        return it != j.end() && it->is_number() ? std::clamp(it->get<double>(), lo, hi) : neutral;
+    };
+    l.id = text("id");
+    l.name = text("name");
+    l.amount = number("amount", 1.0, 0.0, 1.0);
+    l.exposure = number("exposure", 0.0, -2.0, 2.0);
+    l.brightness = number("brightness", 0.0, -1.0, 1.0);
+    l.contrast = number("contrast", 0.0, -1.0, 1.0);
+    l.pivot = number("pivot", 0.5, 0.0, 1.0);
+    l.shadows = number("shadows", 0.0, -1.0, 1.0);
+    l.highlights = number("highlights", 0.0, -1.0, 1.0);
+    l.saturation = number("saturation", 0.0, -1.0, 1.0);
+    l.colorBoost = number("colorBoost", 0.0, -1.0, 1.0);
+    l.hue = number("hue", 0.0, -1.0, 1.0);
+    l.temperature = number("temperature", 0.0, -1.0, 1.0);
+    l.tint = number("tint", 0.0, -1.0, 1.0);
+    if (const auto it = j.find("lift"); it != j.end()) l.lift = wheelFrom(*it);
+    if (const auto it = j.find("gammaWheel"); it != j.end()) l.gammaWheel = wheelFrom(*it);
+    if (const auto it = j.find("gain"); it != j.end()) l.gain = wheelFrom(*it);
+    if (const auto it = j.find("offset"); it != j.end()) l.offset = wheelFrom(*it);
+    readCurves(j, l.curves);
+    return l;
 }
 
 }  // namespace lectern::timeline

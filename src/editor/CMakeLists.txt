@@ -11,6 +11,7 @@ add_library(lectern_editor STATIC
     FrameProvider.cpp
     Compositor.cpp
     FrameRenderer.cpp
+    Looks.cpp
     Exporter.cpp
     PlaybackEngine.cpp
 )

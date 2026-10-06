@@ -75,6 +75,7 @@ if(TARGET lectern_editor)
         editor/CompositorTest.cpp
         editor/CanvasGeometryTest.cpp
         editor/ColorGradingTest.cpp
+        editor/LooksTest.cpp
         editor/ExportTest.cpp
         editor/PlaybackTest.cpp)
     target_link_libraries(lectern_editor_tests PRIVATE lectern_editor lectern_test_support GTest::gtest)
@@ -99,7 +100,8 @@ if(TARGET lectern_editor AND TARGET Qt6::Qml)
         ${LECTERN_UI_DIR}/ProjectEdits.cpp ${LECTERN_UI_DIR}/ProjectLooks.cpp
         ${LECTERN_UI_DIR}/ProjectColor.cpp ${LECTERN_UI_DIR}/ProjectCanvas.cpp
         ${LECTERN_UI_DIR}/ProjectClipKeyframes.cpp
-        ${LECTERN_UI_DIR}/ProjectTracks.cpp
+        ${LECTERN_UI_DIR}/ProjectTracks.cpp ${LECTERN_UI_DIR}/ProjectGrades.cpp
+        ${LECTERN_UI_DIR}/FrameGrab.cpp ${LECTERN_UI_DIR}/LookPreviews.cpp
         ${LECTERN_UI_DIR}/ProjectAssistant.cpp
         ${LECTERN_UI_DIR}/McpController.h ${LECTERN_UI_DIR}/McpController.cpp ${LECTERN_UI_DIR}/McpTools.cpp
         ${LECTERN_UI_DIR}/PlaybackController.h ${LECTERN_UI_DIR}/PlaybackController.cpp

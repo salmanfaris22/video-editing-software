@@ -295,3 +295,40 @@ TEST(McpUi, SetCurveShapesTheGradeAndValidatesPoints) {
     p.controller.selectClip(QString::fromStdString(clip));
     EXPECT_TRUE(p.controller.selection().value("curveY").toList().isEmpty());
 }
+
+TEST(McpUi, LooksAndCopyGradeThroughTools) {
+    Project p;
+    const auto& tracks = p.controller.snapshot()->timeline.tracks;
+    std::vector<std::string> clips;
+    for (const auto& t : tracks) {
+        if (t.kind != timeline::TrackKind::Video && t.kind != timeline::TrackKind::Overlay) continue;
+        for (const auto& c : t.clips) clips.push_back(c.id.toString());
+    }
+    ASSERT_GE(clips.size(), 2u);
+    const auto list = p.call("list_looks", Json::object());
+    ASSERT_FALSE(list["result"]["isError"].get<bool>()) << list;
+    const auto& looks = list["result"]["structuredContent"]["looks"];
+    ASSERT_GE(looks.size(), 16u) << list;
+
+    auto r = p.call("apply_look", {{"clipIds", {clips[0]}}, {"look", "oppenheimer"}, {"amount", 0.6}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clips[0]));
+    EXPECT_EQ(p.controller.selection().value("look").toString(), "oppenheimer");
+    EXPECT_NEAR(p.controller.selection().value("lookAmount").toDouble(), 0.6, 1e-9);
+    EXPECT_TRUE(p.call("apply_look", {{"clipIds", {clips[0]}}, {"look", "nope"}})["result"]["isError"].get<bool>());
+
+    r = p.call("set_color", {{"clipId", clips[0]}, {"values", {{"exposure", 0.35}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    r = p.call("copy_grade", {{"fromClipId", clips[0]}, {"toClipIds", {clips[1]}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clips[1]));
+    EXPECT_EQ(p.controller.selection().value("look").toString(), "oppenheimer");
+    EXPECT_DOUBLE_EQ(p.controller.selection().value("exposure").toDouble(), 0.35);
+    EXPECT_FALSE(p.controller.hasCopiedGrade());  // the user's copied grade is untouched
+    EXPECT_TRUE(p.call("copy_grade", {{"fromClipId", clips[0]}, {"toClipIds", {"00000000-0000-0000-0000-000000000000"}}})["result"]["isError"].get<bool>());
+
+    r = p.call("apply_look", {{"clipIds", {clips[0], clips[1]}}, {"look", "none"}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clips[1]));
+    EXPECT_EQ(p.controller.selection().value("look").toString(), "");
+}

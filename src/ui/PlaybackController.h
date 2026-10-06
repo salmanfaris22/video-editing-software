@@ -28,6 +28,10 @@ class PlaybackController : public QObject, private editor::PlaybackEngine::Liste
     Q_PROPERTY(double levelLeft READ levelLeft NOTIFY levelsChanged)
     Q_PROPERTY(double levelRight READ levelRight NOTIFY levelsChanged)
     Q_PROPERTY(QString outputName READ outputName NOTIFY outputChanged)
+    /// Before / after view of the grade: "off", "bypass", "wipe", "side".
+    Q_PROPERTY(QString compareMode READ compareMode WRITE setCompareMode NOTIFY compareChanged)
+    /// Wipe position, 0…1 of the picture width (ungraded to the left).
+    Q_PROPERTY(double compareSplit READ compareSplit WRITE setCompareSplit NOTIFY compareChanged)
 
 public:
     /// `silent` uses no audio device (synthetic sessions, automated runs).
@@ -46,6 +50,10 @@ public:
     [[nodiscard]] double levelLeft() const { return levels_[0]; }
     [[nodiscard]] double levelRight() const { return levels_[1]; }
     [[nodiscard]] QString outputName() const { return outputName_; }
+    [[nodiscard]] QString compareMode() const { return compareMode_; }
+    void setCompareMode(const QString& mode);
+    [[nodiscard]] double compareSplit() const { return compareSplit_; }
+    void setCompareSplit(double split);
 
     /// Latest rendered canvas (any thread).
     [[nodiscard]] QImage frame() const;
@@ -58,12 +66,14 @@ signals:
     void levelsChanged();
     void outputChanged();
     void frameReady();
+    void compareChanged();
 
 private:
     void onFrame(const QImage& frame, Time time) override;
     void onPlayingChanged(bool playing) override;
     void follow();
     void tick();
+    void applyCompare();
 
     ProjectController* project_;
     bool silent_;
@@ -77,6 +87,8 @@ private:
     double position_ = 0;
     double levels_[2] = {0, 0};
     QString outputName_;
+    QString compareMode_ = QStringLiteral("off");
+    double compareSplit_ = 0.5;
 };
 
 }  // namespace lectern::ui

@@ -66,7 +66,10 @@ void ProjectController::resetColor(const QString& clipId) {
     mutate(QStringLiteral("Reset color"), [&](project::Project& p) -> Status {
         timeline::Clip* c = clipById(p, *id);
         if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        // The grade resets; how the source is read (its color space) is a clip setting and stays.
+        const std::string input = c->color.inputColorSpace;
         c->color = {};
+        c->color.inputColorSpace = input;
         return ok();
     });
 }

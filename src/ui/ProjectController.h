@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace lectern::ui {
@@ -27,7 +28,8 @@ namespace lectern::ui {
 /// transactionally on a worker thread shortly after. QML only reads the view
 /// properties and calls these methods. Implementation is split by concern:
 /// ProjectController.cpp (document, views), ProjectEdits.cpp (timeline),
-/// ProjectLooks.cpp (setup, layout, style, text, effects, audio, imports).
+/// ProjectLooks.cpp (setup, layout, style, text, effects, audio, imports),
+/// ProjectColor.cpp and ProjectGrades.cpp (color grading, looks).
 class ProjectController : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -66,6 +68,9 @@ class ProjectController : public QObject {
     Q_PROPERTY(QString cameraMedia READ cameraMedia NOTIFY projectChanged)
     Q_PROPERTY(QVariantList textAnimations READ textAnimations CONSTANT)
     Q_PROPERTY(QVariantList builtinLuts READ builtinLuts CONSTANT)
+    Q_PROPERTY(QVariantList looks READ looks NOTIFY looksChanged)
+    Q_PROPERTY(int lookPreviewRevision READ lookPreviewRevision NOTIFY lookPreviewsChanged)
+    Q_PROPERTY(bool hasCopiedGrade READ hasCopiedGrade NOTIFY copiedGradeChanged)
     /// Background blur can separate people from their background on this system.
     Q_PROPERTY(bool segmentationAvailable READ segmentationAvailable CONSTANT)
 
@@ -216,6 +221,48 @@ public:
     /// Copies a .cube file into the project (media/luts) and applies it.
     Q_INVOKABLE void importLut(const QString& clipId, const QUrl& file);
 
+    // ---- Looks, grade copy / paste (ProjectGrades.cpp) -------------------------
+    /// Built-in cinematic looks and the user's saved looks ("My Looks"):
+    /// [{id, name, category, description, custom}].
+    [[nodiscard]] QVariantList looks() const;
+    /// A look on top of the clip's correction at `amount` (0…1); "" removes it.
+    Q_INVOKABLE void applyLook(const QString& clipId, const QString& lookId, double amount = 1.0);
+    /// Look strength; drags merge into one undo step.
+    Q_INVOKABLE void setLookAmount(const QString& clipId, double amount);
+    Q_INVOKABLE void removeLook(const QString& clipId);
+    /// The clip's look (with its amount) on every picture clip, as one step.
+    Q_INVOKABLE void applyLookToAll(const QString& clipId);
+    /// Saves the clip's whole grade (correction + look) to "My Looks" in the
+    /// app data folder, so every project can use it; returns the new look id.
+    Q_INVOKABLE QString saveLook(const QString& clipId, const QString& name);
+    /// Deletes a saved look (built-in looks cannot be deleted).
+    Q_INVOKABLE void deleteLook(const QString& lookId);
+    /// Shows `lookId` on the clip in the viewer without an edit (hover
+    /// preview); "" previews the clip without its look. cancelPreview() ends it.
+    Q_INVOKABLE void previewLook(const QString& clipId, const QString& lookId);
+    /// Renders one thumbnail per look from the clip's frame at timeline time
+    /// `seconds`, on a worker thread; lookPreviewRevision bumps when done
+    /// (QML: image://look/<look id>?r=<revision>).
+    Q_INVOKABLE void refreshLookPreviews(const QString& clipId, double seconds);
+    [[nodiscard]] int lookPreviewRevision() const { return lookPreviewRevision_; }
+
+    /// Remembers the clip's grade (correction, curves, LUT, look) for pasting.
+    Q_INVOKABLE void copyGrade(const QString& clipId);
+    /// The copied grade onto each clip, as one step (the clips keep their input color space).
+    Q_INVOKABLE void pasteGrade(const QStringList& clipIds);
+    [[nodiscard]] bool hasCopiedGrade() const { return copiedGrade_.has_value(); }
+    /// One clip's grade onto other clips without touching the copied grade, as one step.
+    Q_INVOKABLE void copyGradeTo(const QString& fromClipId, const QStringList& toClipIds);
+    /// The grade of the picture clip before `clipId` (timeline order) onto it (Resolve "=").
+    Q_INVOKABLE void applyPreviousGrade(const QString& clipId);
+    /// The clip's grade onto the next picture clip.
+    Q_INVOKABLE void applyGradeToNext(const QString& clipId);
+    /// The clip's grade onto every picture clip, as one step.
+    Q_INVOKABLE void applyGradeToAll(const QString& clipId);
+    /// Picture clips (video and images on picture tracks) in timeline order:
+    /// what "previous", "next" and "all" refer to.
+    Q_INVOKABLE QStringList gradableClips() const;
+
     // ---- Canvas (ProjectCanvas.cpp) --------------------------------------------
     /// The topmost visible layer under a canvas point (fractions) at `seconds`: its clip id, or "".
     Q_INVOKABLE QString layerAt(double x, double y, double seconds) const;
@@ -325,6 +372,9 @@ signals:
     void silencesChanged();
     /// A new immutable document snapshot is available.
     void snapshotChanged();
+    void looksChanged();
+    void lookPreviewsChanged();
+    void copiedGradeChanged();
 
 private:
     using Mutation = std::function<Status(project::Project&)>;
@@ -389,6 +439,14 @@ private:
     std::shared_ptr<std::atomic<bool>> jobCancel_;
     bool assistantEditing_ = false;
     QString assistantError_;
+    // Looks and grade clipboard (ProjectGrades.cpp)
+    void loadSavedLooks() const;
+    [[nodiscard]] const timeline::ColorAdjustments::Look* findLook(const QString& id) const;
+    mutable bool savedLooksLoaded_ = false;
+    mutable std::vector<timeline::ColorAdjustments::Look> savedLooks_;
+    std::optional<timeline::ColorAdjustments> copiedGrade_;
+    int lookPreviewRevision_ = 0;
+    int lookPreviewJob_ = 0;
 };
 
 }  // namespace lectern::ui

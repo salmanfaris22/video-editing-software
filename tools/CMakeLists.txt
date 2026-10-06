@@ -23,6 +23,8 @@ if(TARGET lectern_editor AND TARGET Qt6::Qml)
         ${LECTERN_CONTROLLER_DIR}/ProjectEdits.cpp ${LECTERN_CONTROLLER_DIR}/ProjectLooks.cpp
         ${LECTERN_CONTROLLER_DIR}/ProjectColor.cpp ${LECTERN_CONTROLLER_DIR}/ProjectCanvas.cpp
         ${LECTERN_CONTROLLER_DIR}/ProjectClipKeyframes.cpp ${LECTERN_CONTROLLER_DIR}/ProjectTracks.cpp
+        ${LECTERN_CONTROLLER_DIR}/ProjectGrades.cpp ${LECTERN_CONTROLLER_DIR}/FrameGrab.cpp
+        ${LECTERN_CONTROLLER_DIR}/LookPreviews.cpp
         ${LECTERN_CONTROLLER_DIR}/ProjectAssistant.cpp
         ${LECTERN_CONTROLLER_DIR}/McpController.h ${LECTERN_CONTROLLER_DIR}/McpController.cpp
         ${LECTERN_CONTROLLER_DIR}/McpTools.cpp)

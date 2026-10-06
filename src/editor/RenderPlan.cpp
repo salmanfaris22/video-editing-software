@@ -1,5 +1,6 @@
 #include "editor/RenderPlan.h"
 
+#include "editor/Looks.h"
 #include "timeline/EditOps.h"
 
 #include <algorithm>
@@ -33,36 +34,6 @@ void applyTransformKeys(VisualLayer& l, const Clip& c, Time local) {
 InputColor inputColorOf(const timeline::ColorAdjustments& c, const project::MediaSource* m) {
     const auto* v = m && m->info.video ? &*m->info.video : nullptr;
     return resolveInputColor(c.inputColorSpace, v ? v->colorTransfer : std::string_view{}, v ? v->colorPrimaries : std::string_view{});
-}
-
-ColorParams colorAt(const timeline::ColorAdjustments& c, Time local) {
-    ColorParams p;
-    p.exposure = std::clamp(c.exposure.evaluate(local), -2.0, 2.0);
-    p.brightness = std::clamp(c.brightness.evaluate(local), -1.0, 1.0);
-    p.contrast = std::clamp(c.contrast.evaluate(local), -1.0, 1.0);
-    p.saturation = std::clamp(c.saturation.evaluate(local), -1.0, 1.0);
-    p.temperature = std::clamp(c.temperature.evaluate(local), -1.0, 1.0);
-    p.tint = std::clamp(c.tint.evaluate(local), -1.0, 1.0);
-    p.lift = c.lift;
-    p.gamma = c.gammaWheel;
-    p.gain = c.gain;
-    p.offset = c.offset;
-    p.pivot = std::clamp(c.pivot, 0.0, 1.0);
-    p.shadows = std::clamp(c.shadows.evaluate(local), -1.0, 1.0);
-    p.highlights = std::clamp(c.highlights.evaluate(local), -1.0, 1.0);
-    p.colorBoost = std::clamp(c.colorBoost.evaluate(local), -1.0, 1.0);
-    p.hue = std::clamp(c.hue.evaluate(local), -1.0, 1.0);
-    for (std::size_t i = 0; i < 4; ++i) {
-        // The diagonal (or a single point) is no curve at all.
-        const auto& pts = c.curves[i];
-        const bool identity = pts.size() < 2 || std::all_of(pts.begin(), pts.end(), [](const timeline::Vec2& v) {
-                                  return std::abs(v.x - v.y) < 1e-6;
-                              });
-        if (!identity) p.curves[i] = pts;
-    }
-    p.lut = c.lut;
-    p.lutAmount = std::clamp(c.lutAmount, 0.0, 1.0);
-    return p;
 }
 
 void applyEffects(VisualLayer& l, const Clip& c, Time local) {
@@ -224,6 +195,41 @@ TextPresetDefaults textPresetDefaults(std::string_view preset) {
     return {0.5, 0.5, s, animation("zoom", 0.5, "fade", 0.35)};
 }
 
+ColorParams gradeAt(const timeline::ColorAdjustments& c, Time local, bool withLook) {
+    ColorParams p;
+    p.exposure = std::clamp(c.exposure.evaluate(local), -2.0, 2.0);
+    p.brightness = std::clamp(c.brightness.evaluate(local), -1.0, 1.0);
+    p.contrast = std::clamp(c.contrast.evaluate(local), -1.0, 1.0);
+    p.saturation = std::clamp(c.saturation.evaluate(local), -1.0, 1.0);
+    p.temperature = std::clamp(c.temperature.evaluate(local), -1.0, 1.0);
+    p.tint = std::clamp(c.tint.evaluate(local), -1.0, 1.0);
+    p.lift = c.lift;
+    p.gamma = c.gammaWheel;
+    p.gain = c.gain;
+    p.offset = c.offset;
+    p.pivot = std::clamp(c.pivot, 0.0, 1.0);
+    p.shadows = std::clamp(c.shadows.evaluate(local), -1.0, 1.0);
+    p.highlights = std::clamp(c.highlights.evaluate(local), -1.0, 1.0);
+    p.colorBoost = std::clamp(c.colorBoost.evaluate(local), -1.0, 1.0);
+    p.hue = std::clamp(c.hue.evaluate(local), -1.0, 1.0);
+    for (std::size_t i = 0; i < 4; ++i) {
+        // The diagonal (or a single point) is no curve at all.
+        const auto& pts = c.curves[i];
+        const bool identity = pts.size() < 2 || std::all_of(pts.begin(), pts.end(), [](const timeline::Vec2& v) {
+                                  return std::abs(v.x - v.y) < 1e-6;
+                              });
+        if (!identity) p.curves[i] = pts;
+    }
+    p.lut = c.lut;
+    p.lutAmount = std::clamp(c.lutAmount, 0.0, 1.0);
+    return withLook ? applyLook(p, c.look) : p;
+}
+
+RenderPlan ungraded(RenderPlan plan) {
+    for (auto& l : plan.layers) l.color = ColorParams{};
+    return plan;
+}
+
 RenderPlan buildRenderPlan(const project::Project& p, Time t) {
     RenderPlan plan;
     plan.width = std::max(16, p.canvas.width);
@@ -270,7 +276,7 @@ RenderPlan buildRenderPlan(const project::Project& p, Time t) {
         l.mediaKind = a.media->kind;
         l.sourceTime = a.clip->sourceTimeAt(t);
         l.opacity = std::clamp(a.clip->opacity.evaluate(local), 0.0, 1.0);
-        l.color = colorAt(a.clip->color, local);
+        l.color = gradeAt(a.clip->color, local);
         l.input = inputColorOf(a.clip->color, a.media);
         applyTransformKeys(l, *a.clip, local);
         if (a.media->info.video && a.media->info.video->width > 0 && a.media->info.video->height > 0) {
@@ -337,7 +343,7 @@ RenderPlan buildRenderPlan(const project::Project& p, Time t) {
             l.mediaKind = m->kind;
             l.sourceTime = c->sourceTimeAt(t);
             l.opacity = std::clamp(c->opacity.evaluate(local), 0.0, 1.0);
-            l.color = colorAt(c->color, local);
+            l.color = gradeAt(c->color, local);
             l.input = inputColorOf(c->color, m);
             applyEffects(l, *c, local);
             applyTransformKeys(l, *c, local);

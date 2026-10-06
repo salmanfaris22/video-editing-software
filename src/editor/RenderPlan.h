@@ -126,6 +126,12 @@ struct RenderPlan {
 
 /// The plan for timeline time `t`.
 [[nodiscard]] RenderPlan buildRenderPlan(const project::Project& project, Time t);
+/// The plan with every grade removed (before/after compare): layers keep
+/// their input color conversion, effects and placement.
+[[nodiscard]] RenderPlan ungraded(RenderPlan plan);
+/// A clip's grade at clip-local time `local` as renderer parameters: the
+/// correction, then (unless `withLook` is false) its creative look on top.
+[[nodiscard]] ColorParams gradeAt(const timeline::ColorAdjustments& color, Time local, bool withLook = true);
 
 /// Effect type ids understood by the compositor (clip.effects[].type).
 inline constexpr const char* kEffectBlur = "lectern.blur";          ///< params: amount

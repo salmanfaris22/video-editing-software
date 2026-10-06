@@ -83,6 +83,34 @@ struct ColorAdjustments {
     /// How to read the source's colors: "auto" (from the file's tags), "rec709",
     /// "srgb", "display-p3", "rec2020", "rec2020-hlg", "rec2020-pq".
     std::string inputColorSpace = "auto";
+    /// A creative look on top of the correction above (Lumetri's "Creative"
+    /// section, a second node in Resolve): its own primaries and curves, mixed
+    /// in by `amount`. The settings are stored in the project, so a project
+    /// shows its looks on any machine. Empty `id` = no look.
+    struct Look {
+        std::string id;       ///< preset id ("oppenheimer", "custom-…")
+        std::string name;     ///< shown in the UI
+        double amount = 1.0;  ///< 0…1
+        double exposure = 0;
+        double brightness = 0;
+        double contrast = 0;
+        double pivot = 0.5;
+        double shadows = 0;
+        double highlights = 0;
+        double saturation = 0;
+        double colorBoost = 0;
+        double hue = 0;
+        double temperature = 0;
+        double tint = 0;
+        Wheel lift;
+        Wheel gammaWheel;
+        Wheel gain;
+        Wheel offset;
+        std::array<std::vector<Vec2>, 4> curves;  ///< Y, R, G, B
+        [[nodiscard]] bool isNone() const noexcept { return id.empty(); }
+        friend bool operator==(const Look&, const Look&) = default;
+    };
+    Look look;
     friend bool operator==(const ColorAdjustments&, const ColorAdjustments&) = default;
 };
 

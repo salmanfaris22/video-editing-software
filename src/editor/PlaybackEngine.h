@@ -53,6 +53,16 @@ public:
     /// Re-renders the current frame (e.g. after the canvas became visible).
     void refresh();
 
+    /// Before / after view of the grade (Color page). Bypass shows every clip
+    /// ungraded (input color management stays); Wipe shows the ungraded
+    /// picture left of `split` (0…1 of the width) and the graded one right of
+    /// it; SideBySide shows ungraded left and graded right at half size.
+    enum class Compare { Off, Bypass, Wipe, SideBySide };
+    void setCompare(Compare mode, double split = 0.5);
+    /// Puts `before` and `after` (rendered at the canvas size for Wipe, half
+    /// size for SideBySide) into `out` for `mode`.
+    static void composeComparison(QImage& out, const QImage& before, const QImage& after, Compare mode, double split);
+
     [[nodiscard]] bool playing() const;
     [[nodiscard]] Time position() const;
     [[nodiscard]] Time duration() const;
@@ -80,6 +90,8 @@ private:
     std::unique_ptr<audio::IAudioOutput> output_;  // guarded (start/stop)
     std::shared_ptr<const project::Project> project_;
     QSize previewSize_{960, 540};
+    Compare compare_ = Compare::Off;
+    double compareSplit_ = 0.5;
     bool playing_ = false;
     bool deviceRunning_ = false;
     bool renderRequested_ = true;

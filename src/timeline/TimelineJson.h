@@ -14,4 +14,9 @@ namespace lectern::timeline {
 [[nodiscard]] json::Json toJson(const Clip& clip);
 [[nodiscard]] Result<Clip> clipFromJson(const json::Json& value, const std::string& path);
 
+/// A clip's creative look (also the format of saved looks). Reading is
+/// lenient: unknown or out-of-range values fall back to neutral.
+[[nodiscard]] json::Json toJson(const ColorAdjustments::Look& look);
+[[nodiscard]] ColorAdjustments::Look lookFromJson(const json::Json& value);
+
 }  // namespace lectern::timeline
