@@ -7,6 +7,7 @@
 #include "editor/LayoutPresets.h"
 #include "project/Project.h"
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -107,9 +108,19 @@ struct VisualLayer {
     double vignette = 0;   ///< 0…1
     double backgroundBlur = 0;  ///< 0…1: blur behind the person (needs a segmenter)
     double sourceAspect = 0;    ///< media width / height (0 = unknown)
+    // Film and lens effects, after the grade (docs/v2/COLOR_GRADING_COMPARISON.md §2.11).
+    double glow = 0;             ///< 0…1 bloom around bright areas
+    double glowThreshold = 0.75; ///< luma where the glow starts
+    double glowRadius = 0.5;     ///< 0…1 → spread
+    double halation = 0;         ///< 0…1 red-orange film halo around highlights
+    double halationThreshold = 0.8;
+    double halationRadius = 0.4;
+    double grain = 0;            ///< 0…1 film grain
+    double grainSize = 1;        ///< grain size (1 = fine 35 mm at 1080p)
+    std::uint32_t grainSeed = 0; ///< changes 24 times a second (the grain moves)
     ColorParams color;
     InputColor input;  ///< how to read the source's colors
-    std::vector<NodeParams> nodes;  ///< after `color`, in order (at most ColorAdjustments::kMaxNodes)
+    std::vector<NodeParams> nodes;  ///< after `color`, in order (the clip's nodes, then film emulation)
     int highlightNode = -1;         ///< ≥ 0: show that node's selection in color over gray (Color page)
 
     // Text / subtitle
@@ -156,6 +167,12 @@ inline constexpr const char* kEffectBlur = "lectern.blur";          ///< params:
 inline constexpr const char* kEffectVignette = "lectern.vignette";  ///< params: amount
 inline constexpr const char* kEffectZoom = "lectern.zoom";          ///< params: scale, x, y
 inline constexpr const char* kEffectBackgroundBlur = "lectern.background-blur";  ///< params: amount
+/// Film and lens effects of the Color page (applied after the grade and nodes).
+inline constexpr const char* kEffectFilmGrain = "lectern.film-grain";  ///< params: amount, size (0.5…4)
+inline constexpr const char* kEffectGlow = "lectern.glow";             ///< params: amount, threshold, radius
+inline constexpr const char* kEffectHalation = "lectern.halation";     ///< params: amount, threshold, radius
+/// A film print stage after the nodes; params: amount, stock (filmStocks() index).
+inline constexpr const char* kEffectFilmEmulation = "lectern.film-emulation";
 
 /// Layout slots for `preset` with the project's hand-placed slots for the
 /// canvas aspect applied (RenderPlan and the canvas tools share this).

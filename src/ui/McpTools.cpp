@@ -20,6 +20,7 @@
 #include <cmath>
 #include <map>
 #include <mutex>
+#include <set>
 #include <stdexcept>
 #include <thread>
 
@@ -375,14 +376,29 @@ void registerMcpTools(Server& server, ProjectController* p) {
          object({{"clipId", text(64)}, {"space", choice({"auto", "rec709", "srgb", "display-p3", "rec2020", "rec2020-hlg", "rec2020-pq"})}},
                 {"clipId", "space"}),
          [p](const Json& a) { p->setInputColorSpace(str(a, "clipId"), str(a, "space")); });
-    edit("set_effect", "Enable/disable a built-in effect and set its parameters. Zoom uses scale/x/y; other effects use amount.",
-         object({{"clipId", text(64)}, {"type", choice({"blur", "vignette", "zoom", "background-blur"})}, {"enabled", boolean()},
-                 {"params", object({{"amount", number(0, 1)}, {"scale", number(1, 8)}, {"x", number(0, 1)}, {"y", number(0, 1)}})}}, {"clipId", "type", "enabled"}),
+    edit("set_effect",
+         "Enable/disable a built-in effect and set its parameters. zoom: scale, x, y. blur, vignette, background-blur: "
+         "amount. film-grain: amount, size (0.5..4). glow and halation (red film halo around highlights): amount, "
+         "threshold (luma where it starts), radius. film-emulation (print stage after the grade): amount, stock "
+         "(0 warm print, 1 cool print, 2 soft negative).",
+         object({{"clipId", text(64)},
+                 {"type", choice({"blur", "vignette", "zoom", "background-blur", "film-grain", "glow", "halation", "film-emulation"})},
+                 {"enabled", boolean()},
+                 {"params", object({{"amount", number(0, 1)}, {"scale", number(1, 8)}, {"x", number(0, 1)}, {"y", number(0, 1)},
+                                    {"size", number(0.5, 4)}, {"threshold", number(0, 0.98)}, {"radius", number(0, 1)},
+                                    {"stock", number(0, 2)}})}},
+                {"clipId", "type", "enabled"}),
          [p](const Json& a) {
              const auto params = a.value("params", Json::object());
+             static const std::map<std::string, std::set<std::string>> kParams{
+                 {"zoom", {"scale", "x", "y"}},         {"blur", {"amount"}},
+                 {"vignette", {"amount"}},              {"background-blur", {"amount"}},
+                 {"film-grain", {"amount", "size"}},    {"glow", {"amount", "threshold", "radius"}},
+                 {"halation", {"amount", "threshold", "radius"}}, {"film-emulation", {"amount", "stock"}}};
+             const auto& allowed = kParams.at(a["type"].get<std::string>());
              for (const auto& [key, value] : params.items()) {
                  (void)value;
-                 if ((a["type"] == "zoom") == (key == "amount")) throw std::runtime_error("Parameter does not belong to this effect");
+                 if (!allowed.contains(key)) throw std::runtime_error("Parameter does not belong to this effect");
              }
              if (!a["enabled"].get<bool>() && !params.empty()) throw std::runtime_error("Cannot set parameters while disabling the effect");
              p->setEffectEnabled(str(a, "clipId"), str(a, "type"), a["enabled"]);

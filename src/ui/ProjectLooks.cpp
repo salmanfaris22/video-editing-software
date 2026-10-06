@@ -30,6 +30,10 @@ const char* effectType(const QString& type) {
     if (type == QLatin1String("vignette")) return editor::kEffectVignette;
     if (type == QLatin1String("zoom")) return editor::kEffectZoom;
     if (type == QLatin1String("background-blur")) return editor::kEffectBackgroundBlur;
+    if (type == QLatin1String("film-grain")) return editor::kEffectFilmGrain;
+    if (type == QLatin1String("glow")) return editor::kEffectGlow;
+    if (type == QLatin1String("halation")) return editor::kEffectHalation;
+    if (type == QLatin1String("film-emulation")) return editor::kEffectFilmEmulation;
     return nullptr;
 }
 
@@ -319,6 +323,20 @@ void ProjectController::setEffectEnabled(const QString& clipId, const QString& t
                 e.params["scale"] = 1.5;
                 e.params["x"] = 0.5;
                 e.params["y"] = 0.5;
+            } else if (type == QLatin1String("film-grain")) {
+                e.params["amount"] = 0.35;
+                e.params["size"] = 1.0;
+            } else if (type == QLatin1String("glow")) {
+                e.params["amount"] = 0.4;
+                e.params["threshold"] = 0.75;
+                e.params["radius"] = 0.5;
+            } else if (type == QLatin1String("halation")) {
+                e.params["amount"] = 0.5;
+                e.params["threshold"] = 0.8;
+                e.params["radius"] = 0.4;
+            } else if (type == QLatin1String("film-emulation")) {
+                e.params["amount"] = 1.0;
+                e.params["stock"] = 0.0;
             } else {
                 e.params["amount"] = type == QLatin1String("background-blur") ? 0.6 : 0.5;
             }

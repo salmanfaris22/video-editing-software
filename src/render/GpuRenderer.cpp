@@ -46,12 +46,14 @@ struct Uniforms {
     float gamut1[4];
     float gamut2[4];
     float grade2[4];
+    float fx[4];         // grain amount, grain size (px), grain seed; threshold modes: threshold
     float nodeInfo[4];   // node count, source aspect, person mask bound, highlighted node
-    float nodes[56][4];  // 7 per node (layer.frag "Nodes")
+    float nodes[70][4];  // 7 per node (layer.frag "Nodes")
 };
-static_assert(sizeof(Uniforms) == 1216);
+static_assert(sizeof(Uniforms) == 1456);
 constexpr std::size_t kNodeVecs = 7;
-constexpr int kCurveRows = 1 + static_cast<int>(timeline::ColorAdjustments::kMaxNodes);
+constexpr std::size_t kMaxRenderNodes = 10;  ///< a clip's 8 nodes, film emulation, one spare
+constexpr int kCurveRows = 1 + static_cast<int>(kMaxRenderNodes);
 
 enum Mode {
     kGradient = 0,
@@ -63,7 +65,9 @@ enum Mode {
     kBlur = 6,
     kMaskMix = 7,
     kNv12Y = 8,
-    kNv12Uv = 9
+    kNv12Uv = 9,
+    kThreshold = 10,
+    kAdd = 11
 };
 
 void set4(float* dst, double a, double b, double c, double d) {
@@ -426,7 +430,7 @@ private:
 
     /// Packs a layer's nodes into the uniforms (layer.frag "Nodes").
     static void setNodes(Uniforms& u, const VisualLayer& l, double aspect, bool hasMask) {
-        const std::size_t count = std::min(l.nodes.size(), timeline::ColorAdjustments::kMaxNodes);
+        const std::size_t count = std::min(l.nodes.size(), kMaxRenderNodes);
         set4(u.nodeInfo, static_cast<double>(count), aspect, hasMask ? 1 : 0, l.highlightNode);
         constexpr double kPi = 3.14159265358979323846;
         for (std::size_t n = 0; n < count; ++n) {
@@ -674,7 +678,7 @@ private:
             model.translate(-size.width() / 2.0f, -size.height() / 2.0f);
         }
 
-        const bool prepare = l.blur > 0 || mask;
+        const bool prepare = l.blur > 0 || mask || l.glow > 0 || l.halation > 0;
         if (prepare) {
             // Grade into a layer-sized image, then soften it on the GPU.
             const QMatrix4x4 proj = projection(size);
@@ -685,6 +689,30 @@ private:
             d.blend = false;
             passes.push_back({graded, Qt::transparent, {d}});
             QRhiTexture* current = graded->texture.get();
+            // Glow and halation: bright parts, blurred, tinted, added (editor::addGlow).
+            auto glowPass = [&](double amount, double threshold, double radiusPx, const std::array<double, 3>& tint) {
+                Target* bright = acquire(size);
+                Draw t = draw(proj, QRectF(QPointF(0, 0), QSizeF(size)), kThreshold);
+                set4(t.u.shape, size.width(), size.height(), 0, 0);
+                set4(t.u.fx, std::clamp(threshold, 0.0, 0.98), 0, 0, 0);
+                t.tex = current;
+                t.blend = false;
+                passes.push_back({bright, Qt::transparent, {t}});
+                Target* soft = blur(passes, bright->texture.get(), size, radiusPx);
+                Target* sum = acquire(size);
+                Draw a = draw(proj, QRectF(QPointF(0, 0), QSizeF(size)), kAdd);
+                set4(a.u.shape, size.width(), size.height(), 0, 0);
+                set4(a.u.color0, tint[0] * amount, tint[1] * amount, tint[2] * amount, 1);
+                a.tex = current;
+                a.aux = soft->texture.get();
+                a.blend = false;
+                passes.push_back({sum, Qt::transparent, {a}});
+                current = sum->texture.get();
+            };
+            if (l.glow > 0) glowPass(l.glow, l.glowThreshold, editor::glowRadiusPixels(l.glowRadius, H), editor::kGlowTint);
+            if (l.halation > 0) {
+                glowPass(l.halation, l.halationThreshold, editor::halationRadiusPixels(l.halationRadius, H), editor::kHalationTint);
+            }
             if (mask) {
                 Target* soft = blur(passes, current, size, std::clamp(l.backgroundBlur, 0.0, 1.0) * 0.045 * size.height());
                 Target* mixed = acquire(size);
@@ -727,6 +755,7 @@ private:
         set4(layer.u.quad, -pad, -pad, size.width() + 2 * pad, size.height() + 2 * pad);
         set4(layer.u.shape, size.width(), size.height(), l.radius * H, l.circle ? 1 : 0);
         set4(layer.u.look, l.opacity, border, std::clamp(l.vignette, 0.0, 1.0), kMedia);
+        if (l.grain > 0) set4(layer.u.fx, l.grain, editor::grainSizePixels(l.grainSize, H), l.grainSeed & 0xFFFFFFu, 0);
         if (prepare) {  // already converted, graded and mirrored
             set4(layer.u.grade, 1, 0, 0, 0);
             set4(layer.u.grade2, 0, 0, 0, 0);

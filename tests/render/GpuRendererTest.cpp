@@ -573,3 +573,26 @@ TEST_F(GpuRenderer, PersonAndBackgroundNodesMatchTheCpu) {
     // As with the background blur: the GPU segments the source, the CPU the layer.
     EXPECT_CLOSE(d, 3.0, 0.01);
 }
+
+TEST_F(GpuRenderer, FilmGrainGlowHalationAndPrintMatchTheCpu) {
+    test::EditorFixture f;
+    useDetailImage(f);
+    Both r(f);
+    r.at(f.project, 0.5);
+    const QImage plain = r.cpuImage;
+    auto& camera = clipOf(f, "Camera");
+    // Grain alone: the same hashed noise on both renderers.
+    camera.effects.push_back(effect(kEffectFilmGrain, {{"amount", 0.6}, {"size", 1.5}}));
+    Difference d = r.at(f.project, 0.5);
+    EXPECT_GT(compare(plain, r.cpuImage).mean, 1.0);
+    EXPECT_CLOSE(d, 1.0, 0.003);
+    // Glow, halation and the print stage, with a vignette and grain on top.
+    camera.effects.push_back(effect(kEffectGlow, {{"amount", 0.5}, {"threshold", 0.7}, {"radius", 0.5}}));
+    camera.effects.push_back(effect(kEffectHalation, {{"amount", 0.7}, {"threshold", 0.75}, {"radius", 0.6}}));
+    camera.effects.push_back(effect(kEffectFilmEmulation, {{"amount", 1.0}, {"stock", 0}}));
+    camera.effects.push_back(effect(kEffectVignette, {{"amount", 0.5}}));
+    d = r.at(f.project, 0.5);
+    EXPECT_GT(compare(plain, r.cpuImage).mean, 4.0);
+    // Blurs differ slightly (three box passes vs a Gaussian), as for the blur effect.
+    EXPECT_CLOSE(d, 2.0, 0.01);
+}

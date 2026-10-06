@@ -44,6 +44,15 @@ struct LookPreset {
 /// A node's or a look's grade on its own.
 [[nodiscard]] ColorParams paramsOf(const timeline::ColorAdjustments::Grade& grade);
 
+/// Film print stocks for the Film Emulation effect: a print-like tone curve
+/// (soft toe and shoulder), cross-processing of the channels and saturation.
+struct FilmStock {
+    std::string id;
+    std::string name;
+    timeline::ColorAdjustments::Grade grade;
+};
+[[nodiscard]] const std::vector<FilmStock>& filmStocks();
+
 /// A grade's settings as a look, to save a clip's grade for reuse. The LUT
 /// and the input color space are not part of a look.
 [[nodiscard]] LookSettings lookFromGrade(const ColorParams& grade);

@@ -14,6 +14,8 @@
 #include <QSizeF>
 #include <QStringList>
 
+#include <array>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <map>
@@ -94,6 +96,22 @@ private:
 
 /// Blurs in place (≈ Gaussian with the given radius in pixels; large radii run at reduced resolution).
 void blurImage(QImage& image, double radiusPixels);
+
+// ---- Film and lens effects (the GPU shader mirrors them) ---------------------
+/// Adds a blurred copy of the picture's bright parts (luma above `threshold`,
+/// soft over 0.25), tinted: glow (white) and halation (red-orange).
+void addGlow(QImage& image, double amount, double threshold, double radiusPixels, const std::array<double, 3>& tint);
+/// Film grain value (−1…1) at image point (x, y): value noise on a lattice of
+/// `sizePixels`, from an integer hash so the GPU computes the same pattern.
+[[nodiscard]] double grainNoise(double x, double y, double sizePixels, std::uint32_t seed);
+/// Adds monochrome grain, strongest in the midtones.
+void addGrain(QImage& image, double amount, double sizePixels, std::uint32_t seed);
+/// Pixel sizes of the effects for a canvas `height` pixels high (shared with the GPU renderer).
+[[nodiscard]] double glowRadiusPixels(double radius, double height);
+[[nodiscard]] double halationRadiusPixels(double radius, double height);
+[[nodiscard]] double grainSizePixels(double size, double height);
+inline constexpr std::array<double, 3> kGlowTint{0.85, 0.85, 0.85};
+inline constexpr std::array<double, 3> kHalationTint{1.0, 0.3, 0.1};
 /// Outline of a media layer's shape (rectangle, rounded rectangle or circle).
 [[nodiscard]] QPainterPath layerShape(const QRectF& rect, const VisualLayer& layer, double canvasHeight);
 

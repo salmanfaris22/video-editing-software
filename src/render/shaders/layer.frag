@@ -23,8 +23,9 @@ layout(std140, binding = 0) uniform Params {
     vec4 gamut1;
     vec4 gamut2;
     vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians)
+    vec4 fx;         // x: grain amount, y: grain size (px), z: grain seed; threshold/add modes: x threshold
     vec4 nodeInfo;   // x: node count, y: source aspect (w/h), z: person mask bound (0/1), w: highlighted node (-1 none)
-    vec4 nodes[56];  // 7 per node: grade, window0, window1, qual0, qual1, qual2, misc (see layer.frag)
+    vec4 nodes[70];  // 7 per node (up to 10): grade, window0, window1, qual0, qual1, qual2, misc (see layer.frag)
 };
 
 layout(binding = 1) uniform sampler2D tex;      // source (premultiplied)
@@ -43,6 +44,45 @@ const int MODE_BLUR = 6;
 const int MODE_MASK_MIX = 7;
 const int MODE_NV12_Y = 8;
 const int MODE_NV12_UV = 9;
+const int MODE_THRESHOLD = 10;
+const int MODE_ADD = 11;
+
+// Film grain (mirrors editor::grainNoise / addGrain): value noise from an
+// integer hash, so the CPU and the GPU draw the same grain.
+uint hash32(uint x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352du;
+    x ^= x >> 15;
+    x *= 0x846ca68bu;
+    x ^= x >> 16;
+    return x;
+}
+float lattice(int ix, int iy, uint seed)
+{
+    uint h = hash32(uint(ix) * 0x8da6b343u ^ hash32(uint(iy) * 0xd8163841u ^ seed));
+    return float(h & 0xFFFFFFu) / 16777215.0;
+}
+float grainNoise(vec2 p, float size, uint seed)
+{
+    vec2 f = p / size;
+    vec2 i = floor(f);
+    vec2 t = f - i;
+    int ix = int(i.x);
+    int iy = int(i.y);
+    float top = mix(lattice(ix, iy, seed), lattice(ix + 1, iy, seed), t.x);
+    float bottom = mix(lattice(ix, iy + 1, seed), lattice(ix + 1, iy + 1, seed), t.x);
+    return clamp((mix(top, bottom, t.y) - 0.5) * 3.4, -1.0, 1.0);
+}
+vec4 addGrain(vec4 c, vec2 p)
+{
+    if (fx.x <= 0.0 || c.a <= 0.0)
+        return c;
+    float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722)) / c.a;
+    float w = 0.4 + 2.4 * l * (1.0 - l);
+    float d = grainNoise(p, fx.y, uint(fx.z + 0.5)) * fx.x * 0.12 * w * c.a;
+    return vec4(clamp(c.rgb + vec3(d), 0.0, 1.0), c.a);
+}
 
 float sdRoundBox(vec2 p, vec2 halfSize, float r)
 {
@@ -351,6 +391,20 @@ void main()
         fragColor = sum / total;
         return;
     }
+    if (mode == MODE_THRESHOLD) {
+        // The bright parts (glow, halation): luma above fx.x, soft over 0.25.
+        vec4 c = texture(tex, p / shape.xy);
+        float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+        fragColor = c * smoothstep(fx.x, min(1.0, fx.x + 0.25), l);
+        return;
+    }
+    if (mode == MODE_ADD) {
+        // The picture plus a tinted, blurred glow: color0.rgb = tint * amount.
+        vec2 uv = p / shape.xy;
+        vec4 c = texture(tex, uv);
+        fragColor = vec4(clamp(c.rgb + texture(aux, uv).rgb * color0.rgb, 0.0, 1.0), c.a);
+        return;
+    }
     if (mode == MODE_MASK_MIX) {
         // out = person * sharp + (1 - person) * blurred
         vec2 uv = p / shape.xy;
@@ -394,6 +448,7 @@ void main()
         c = vec4(color0.rgb * color0.a, color0.a) * coverage;
     } else {  // MODE_MEDIA
         c = (uvMap.z == 0.0 && uvMap.w == 0.0) ? vec4(0.0) : gradedSource(sourceUv(p));
+        c = addGrain(c, p);
         if (look.z > 0.0) {
             float r = length(p - shape.xy * 0.5) / (length(shape.xy) * 0.5);
             float v = clamp((r - 0.5) / 0.5, 0.0, 1.0) * (230.0 / 255.0) * look.z;

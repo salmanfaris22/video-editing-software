@@ -69,6 +69,8 @@ class ProjectController : public QObject {
     Q_PROPERTY(QVariantList textAnimations READ textAnimations CONSTANT)
     Q_PROPERTY(QVariantList builtinLuts READ builtinLuts CONSTANT)
     Q_PROPERTY(QVariantList looks READ looks NOTIFY looksChanged)
+    /// Film Emulation stocks: [{index, id, name}].
+    Q_PROPERTY(QVariantList filmStocks READ filmStocks CONSTANT)
     Q_PROPERTY(int lookPreviewRevision READ lookPreviewRevision NOTIFY lookPreviewsChanged)
     Q_PROPERTY(bool hasCopiedGrade READ hasCopiedGrade NOTIFY copiedGradeChanged)
     /// Background blur can separate people from their background on this system.
@@ -225,6 +227,7 @@ public:
     /// Built-in cinematic looks and the user's saved looks ("My Looks"):
     /// [{id, name, category, description, custom}].
     [[nodiscard]] QVariantList looks() const;
+    [[nodiscard]] QVariantList filmStocks() const;
     /// A look on top of the clip's correction at `amount` (0…1); "" removes it.
     Q_INVOKABLE void applyLook(const QString& clipId, const QString& lookId, double amount = 1.0);
     /// Look strength; drags merge into one undo step.

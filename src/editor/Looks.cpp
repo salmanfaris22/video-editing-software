@@ -226,6 +226,35 @@ Curve compose(const Curve& first, const Curve& then) {
 
 }  // namespace
 
+const std::vector<FilmStock>& filmStocks() {
+    static const std::vector<FilmStock> stocks = [] {
+        std::vector<FilmStock> v;
+        FilmStock warm{"warm-print", "Warm Print", {}};
+        warm.grade.curves[0] = curve({{0, 0.03}, {0.2, 0.15}, {0.5, 0.52}, {0.8, 0.86}, {1, 0.97}});
+        warm.grade.curves[1] = curve({{0, 0}, {0.5, 0.51}, {1, 1}});
+        warm.grade.curves[2] = curve({{0, 0.012}, {0.5, 0.5}, {1, 0.985}});
+        warm.grade.curves[3] = curve({{0, 0.02}, {0.5, 0.48}, {1, 0.94}});  // cyan shadows, warm highlights
+        warm.grade.saturation = -0.04;
+        warm.grade.colorBoost = 0.08;
+        v.push_back(warm);
+        FilmStock cool{"cool-print", "Cool Print", {}};
+        cool.grade.curves[0] = curve({{0, 0.025}, {0.25, 0.21}, {0.75, 0.8}, {1, 0.975}});
+        cool.grade.curves[1] = curve({{0, 0}, {0.5, 0.485}, {1, 0.97}});
+        cool.grade.curves[2] = curve({{0, 0.015}, {0.5, 0.515}, {1, 1}});
+        cool.grade.curves[3] = curve({{0, 0.03}, {0.5, 0.52}, {1, 1}});
+        cool.grade.saturation = -0.08;
+        v.push_back(cool);
+        FilmStock soft{"soft-negative", "Soft Negative", {}};
+        soft.grade.curves[0] = curve({{0, 0.06}, {0.5, 0.53}, {1, 0.93}});
+        soft.grade.saturation = -0.18;
+        soft.grade.temperature = 0.05;
+        soft.grade.colorBoost = 0.05;
+        v.push_back(soft);
+        return v;
+    }();
+    return stocks;
+}
+
 const std::vector<LookPreset>& builtinLooks() {
     static const std::vector<LookPreset> looks = makeLooks();
     return looks;

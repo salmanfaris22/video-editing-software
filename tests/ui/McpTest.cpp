@@ -381,3 +381,26 @@ TEST(McpUi, NodesGradePartsOfAClipThroughTools) {
     p.controller.selectClip(QString::fromStdString(clip));
     EXPECT_EQ(p.controller.selection().value("nodes").toList().size(), static_cast<int>(before) - 1);
 }
+
+TEST(McpUi, FilmEffectsThroughSetEffect) {
+    Project p;
+    const auto clip = p.clip();
+    auto r = p.call("set_effect", {{"clipId", clip}, {"type", "film-grain"}, {"enabled", true}, {"params", {{"amount", 0.6}, {"size", 2}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    r = p.call("set_effect", {{"clipId", clip}, {"type", "halation"}, {"enabled", true}, {"params", {{"amount", 0.7}, {"radius", 0.3}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    r = p.call("set_effect", {{"clipId", clip}, {"type", "film-emulation"}, {"enabled", true}, {"params", {{"stock", 2}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    const QVariantMap s = p.controller.selection();
+    EXPECT_TRUE(s.value("grainOn").toBool());
+    EXPECT_DOUBLE_EQ(s.value("grain").toDouble(), 0.6);
+    EXPECT_DOUBLE_EQ(s.value("grainSize").toDouble(), 2.0);
+    EXPECT_DOUBLE_EQ(s.value("halationRadius").toDouble(), 0.3);
+    EXPECT_DOUBLE_EQ(s.value("halationThreshold").toDouble(), 0.8);  // the default stays
+    EXPECT_DOUBLE_EQ(s.value("filmStock").toDouble(), 2.0);
+    EXPECT_FALSE(s.value("glowOn").toBool());
+    // A parameter of another effect is refused.
+    EXPECT_TRUE(p.call("set_effect", {{"clipId", clip}, {"type", "film-grain"}, {"enabled", true}, {"params", {{"threshold", 0.5}}}})["result"]["isError"].get<bool>());
+    EXPECT_EQ(p.controller.filmStocks().size(), 3);
+}

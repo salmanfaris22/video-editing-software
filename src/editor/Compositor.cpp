@@ -220,6 +220,97 @@ void blurImage(QImage& img, double radius) {
     img = work.convertToFormat(img.format());
 }
 
+double glowRadiusPixels(double radius, double height) { return (0.004 + std::clamp(radius, 0.0, 1.0) * 0.05) * height; }
+double halationRadiusPixels(double radius, double height) { return (0.002 + std::clamp(radius, 0.0, 1.0) * 0.025) * height; }
+double grainSizePixels(double size, double height) { return std::max(0.75, std::clamp(size, 0.5, 4.0) * height / 1080.0 * 1.5); }
+
+void addGlow(QImage& img, double amount, double threshold, double radius, const std::array<double, 3>& tint) {
+    if (amount <= 0 || img.isNull()) return;
+    if (img.format() != QImage::Format_RGB32 && img.format() != QImage::Format_ARGB32_Premultiplied) {
+        img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
+    const double t0 = std::clamp(threshold, 0.0, 0.98);
+    const double t1 = std::min(1.0, t0 + 0.25);
+    QImage bright(img.size(), QImage::Format_ARGB32_Premultiplied);
+    for (int y = 0; y < img.height(); ++y) {
+        const auto* in = reinterpret_cast<const std::uint32_t*>(img.constScanLine(y));
+        auto* out = reinterpret_cast<std::uint32_t*>(bright.scanLine(y));
+        for (int x = 0; x < img.width(); ++x) {
+            const std::uint32_t p = in[x];
+            const double r = (p >> 16) & 0xFF, g = (p >> 8) & 0xFF, b = p & 0xFF, a = p >> 24;
+            const double l = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0;
+            const double e = std::clamp((l - t0) / (t1 - t0), 0.0, 1.0);
+            const double w = e * e * (3.0 - 2.0 * e);  // smoothstep, as in the shader
+            auto c = [w](double v) { return static_cast<std::uint32_t>(std::lround(v * w)); };
+            out[x] = (c(a) << 24) | (c(r) << 16) | (c(g) << 8) | c(b);
+        }
+    }
+    blurImage(bright, radius);
+    for (int y = 0; y < img.height(); ++y) {
+        auto* px = reinterpret_cast<std::uint32_t*>(img.scanLine(y));
+        const auto* add = reinterpret_cast<const std::uint32_t*>(bright.constScanLine(y));
+        for (int x = 0; x < img.width(); ++x) {
+            const std::uint32_t p = px[x];
+            const std::uint32_t q = add[x];
+            auto mix = [&](int shift, double k) {
+                const double v = ((p >> shift) & 0xFF) + ((q >> shift) & 0xFF) * k * amount;
+                return static_cast<std::uint32_t>(std::clamp(std::lround(v), 0L, 255L)) << shift;
+            };
+            px[x] = (p & 0xFF000000u) | mix(16, tint[0]) | mix(8, tint[1]) | mix(0, tint[2]);
+        }
+    }
+}
+
+namespace {
+std::uint32_t hash32(std::uint32_t x) {  // lowbias32; the shader has the same function
+    x ^= x >> 16;
+    x *= 0x7feb352dU;
+    x ^= x >> 15;
+    x *= 0x846ca68bU;
+    x ^= x >> 16;
+    return x;
+}
+double lattice(std::int64_t ix, std::int64_t iy, std::uint32_t seed) {
+    const std::uint32_t h = hash32(static_cast<std::uint32_t>(ix) * 0x8da6b343U ^ hash32(static_cast<std::uint32_t>(iy) * 0xd8163841U ^ seed));
+    return static_cast<double>(h & 0xFFFFFFU) / 16777215.0;
+}
+}  // namespace
+
+double grainNoise(double x, double y, double size, std::uint32_t seed) {
+    const double fx = x / size;
+    const double fy = y / size;
+    const double ix = std::floor(fx);
+    const double iy = std::floor(fy);
+    const double tx = fx - ix;
+    const double ty = fy - iy;
+    const auto i = static_cast<std::int64_t>(ix);
+    const auto j = static_cast<std::int64_t>(iy);
+    const double top = lattice(i, j, seed) + (lattice(i + 1, j, seed) - lattice(i, j, seed)) * tx;
+    const double bottom = lattice(i, j + 1, seed) + (lattice(i + 1, j + 1, seed) - lattice(i, j + 1, seed)) * tx;
+    return std::clamp((top + (bottom - top) * ty - 0.5) * 3.4, -1.0, 1.0);
+}
+
+void addGrain(QImage& img, double amount, double size, std::uint32_t seed) {
+    if (amount <= 0 || img.isNull()) return;
+    if (img.format() != QImage::Format_RGB32 && img.format() != QImage::Format_ARGB32_Premultiplied) {
+        img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
+    for (int y = 0; y < img.height(); ++y) {
+        auto* px = reinterpret_cast<std::uint32_t*>(img.scanLine(y));
+        for (int x = 0; x < img.width(); ++x) {
+            const std::uint32_t p = px[x];
+            const std::uint32_t a = p >> 24;
+            if (a == 0) continue;
+            const double r = (p >> 16) & 0xFF, g = (p >> 8) & 0xFF, b = p & 0xFF;
+            const double l = (0.2126 * r + 0.7152 * g + 0.0722 * b) / std::max(1.0, static_cast<double>(a));
+            const double w = 0.4 + 2.4 * l * (1.0 - l);  // strongest in the midtones
+            const double d = grainNoise(x + 0.5, y + 0.5, size, seed) * amount * 0.12 * w * a;
+            auto c = [d](double v) { return static_cast<std::uint32_t>(std::clamp(std::lround(v + d), 0L, 255L)); };
+            px[x] = (a << 24) | (c(r) << 16) | (c(g) << 8) | c(b);
+        }
+    }
+}
+
 QPainterPath layerShape(const QRectF& rect, const VisualLayer& layer, double canvasHeight) {
     QPainterPath path;
     if (layer.circle) {
@@ -390,8 +481,11 @@ void Compositor::drawMedia(QPainter& p, const VisualLayer& l, double W, double H
         const QImage mask = subjects ? personMask(layer, l) : QImage();
         applyNodes(layer, l.nodes, map, mask.isNull() ? nullptr : &mask, l.highlightNode);
     }
+    if (l.glow > 0) addGlow(layer, l.glow, l.glowThreshold, glowRadiusPixels(l.glowRadius, H), kGlowTint);
+    if (l.halation > 0) addGlow(layer, l.halation, l.halationThreshold, halationRadiusPixels(l.halationRadius, H), kHalationTint);
     if (l.backgroundBlur > 0) blurBackground(layer, l, H);
     if (l.blur > 0) blurImage(layer, l.blur * 0.03 * H);
+    if (l.grain > 0) addGrain(layer, l.grain, grainSizePixels(l.grainSize, H), l.grainSeed);
     // Whole-pixel placement keeps blits exact (no resampling on draw).
     const QRect destPixels(QPoint(static_cast<int>(std::lround(dest.center().x() - size.width() / 2.0)),
                                   static_cast<int>(std::lround(dest.center().y() - size.height() / 2.0))),

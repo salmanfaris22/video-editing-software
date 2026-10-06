@@ -49,6 +49,31 @@ void applyEffects(VisualLayer& l, const Clip& c, Time local) {
             l.zoomY = std::clamp(param(e, "y", 0.5, local), 0.0, 1.0);
         } else if (e.type == kEffectBackgroundBlur) {
             l.backgroundBlur = std::clamp(param(e, "amount", 0.6, local), 0.0, 1.0);
+        } else if (e.type == kEffectFilmGrain) {
+            l.grain = std::clamp(param(e, "amount", 0.35, local), 0.0, 1.0);
+            l.grainSize = std::clamp(param(e, "size", 1.0, local), 0.5, 4.0);
+            const double t = (c.range.start + local).toSecondsF();
+            l.grainSeed = static_cast<std::uint32_t>(static_cast<std::int64_t>(std::floor(t * 24.0)) & 0xFFFFFF);
+        } else if (e.type == kEffectGlow) {
+            l.glow = std::clamp(param(e, "amount", 0.4, local), 0.0, 1.0);
+            l.glowThreshold = std::clamp(param(e, "threshold", 0.75, local), 0.0, 0.98);
+            l.glowRadius = std::clamp(param(e, "radius", 0.5, local), 0.0, 1.0);
+        } else if (e.type == kEffectHalation) {
+            l.halation = std::clamp(param(e, "amount", 0.5, local), 0.0, 1.0);
+            l.halationThreshold = std::clamp(param(e, "threshold", 0.8, local), 0.0, 0.98);
+            l.halationRadius = std::clamp(param(e, "radius", 0.4, local), 0.0, 1.0);
+        } else if (e.type == kEffectFilmEmulation) {
+            const double amount = std::clamp(param(e, "amount", 1.0, local), 0.0, 1.0);
+            const auto& stocks = filmStocks();
+            const auto index = static_cast<std::size_t>(std::clamp(std::lround(param(e, "stock", 0.0, local)), 0L,
+                                                                   static_cast<long>(stocks.size()) - 1));
+            if (amount > 0) {  // the print stage: a whole-picture node after the clip's own nodes
+                LookSettings stock;
+                static_cast<timeline::ColorAdjustments::Grade&>(stock) = stocks[index].grade;
+                NodeParams print;
+                print.grade = paramsOf(scaleLook(stock, amount));
+                l.nodes.push_back(std::move(print));
+            }
         }
     }
 }

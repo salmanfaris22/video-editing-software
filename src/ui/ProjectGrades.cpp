@@ -129,6 +129,15 @@ QVariantList ProjectController::looks() const {
     return out;
 }
 
+QVariantList ProjectController::filmStocks() const {
+    QVariantList out;
+    int index = 0;
+    for (const auto& s : editor::filmStocks()) {
+        out.append(QVariantMap{{"index", index++}, {"id", qs(s.id)}, {"name", qs(s.name)}});
+    }
+    return out;
+}
+
 void ProjectController::applyLook(const QString& clipId, const QString& lookId, double amount) {
     if (lookId.isEmpty() || lookId == QLatin1String("none")) {
         removeLook(clipId);

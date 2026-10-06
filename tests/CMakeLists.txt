@@ -77,6 +77,7 @@ if(TARGET lectern_editor)
         editor/ColorGradingTest.cpp
         editor/LooksTest.cpp
         editor/NodesTest.cpp
+        editor/FilmEffectsTest.cpp
         editor/ExportTest.cpp
         editor/PlaybackTest.cpp)
     target_link_libraries(lectern_editor_tests PRIVATE lectern_editor lectern_test_support GTest::gtest)
