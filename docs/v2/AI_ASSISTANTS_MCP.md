@@ -148,6 +148,7 @@ each, labelled "Assistant: …" in the undo history.
 | `set_color` | `clipId` or `role`, values (exposure, contrast, saturation, temperature, tint, wheels) | `setColorValues`, `setColorWheel`, `applyToRole` |
 | `apply_lut` | `clipId`, `lut`, `amount` | `setColorLut` |
 | `list_looks` / `apply_look` | `clipIds`, `look` (oppenheimer, dark-green, teal-orange …, or "none"), `amount` | `looks`, `applyLook` — a look on top of the clip's correction |
+| `set_hsl_curve` | `clipId`, `nodeId?`, `curve` (hueVsHue, hueVsSat, hueVsLum, lumVsSat, satVsSat, satVsLum), `points` | `setHslCurve`, `setNodeHslCurve` — e.g. calm the greens |
 | `copy_grade` | `fromClipId`, `toClipIds` | `copyGradeTo` (the user's copied grade is untouched) |
 | `add_node` | `clipId`, `select` (whole, person, background, circle, rectangle, gradient, color), `window?`, `qualifier?`, `pick? {x, y, time}`, `grade?`, `invert?` → `nodeId` | `addNode`, `setNodeWindow`, `setNodeQualifier`, `pickNodeColor`, `setNodeValue` — grade only part of the picture |
 | `set_node` / `remove_node` | `clipId`, `nodeId`, any of the above, `enabled`, `label` | node setters, `removeNode` |

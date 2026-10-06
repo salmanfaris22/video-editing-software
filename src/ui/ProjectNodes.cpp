@@ -157,6 +157,12 @@ QVariantList ProjectController::nodesView(const timeline::ColorAdjustments& c) {
             {"curveR", curveView(g.curves[1])},
             {"curveG", curveView(g.curves[2])},
             {"curveB", curveView(g.curves[3])},
+            {"hueVsHue", curveView(g.hslCurves[timeline::kHueVsHue])},
+            {"hueVsSat", curveView(g.hslCurves[timeline::kHueVsSat])},
+            {"hueVsLum", curveView(g.hslCurves[timeline::kHueVsLum])},
+            {"lumVsSat", curveView(g.hslCurves[timeline::kLumVsSat])},
+            {"satVsSat", curveView(g.hslCurves[timeline::kSatVsSat])},
+            {"satVsLum", curveView(g.hslCurves[timeline::kSatVsLum])},
         });
     }
     return out;
@@ -419,16 +425,16 @@ QVariantMap ProjectController::sourceFrame(const QString& clipId, double seconds
     return {};
 }
 
-bool ProjectController::pickNodeColor(const QString& clipId, const QString& nodeId, double x, double y, double seconds) {
+std::optional<std::array<double, 3>> ProjectController::pictureColorAt(const QString& clipId, double x, double y, double seconds,
+                                                                       int nodes, bool withoutHsl) const {
     const auto id = clipIdFrom(clipId);
-    if (!id || !project_) return false;
+    if (!id || !project_) return std::nullopt;
     const editor::RenderPlan plan = editor::buildRenderPlan(*project_, Time::fromSecondsF(seconds));
     const editor::VisualLayer* layer = nullptr;
     for (const auto& l : plan.layers) {
         if (l.kind == editor::LayerKind::Media && l.clip == *id) layer = &l;
     }
-    const timeline::Clip* clip = project_->timeline.findClip(*id);
-    if (!layer || !clip) return false;
+    if (!layer) return std::nullopt;
     // Canvas point → source point (undo the layer's rotation about its box center).
     const double W = plan.width;
     const double H = plan.height;
@@ -447,21 +453,22 @@ bool ProjectController::pickNodeColor(const QString& clipId, const QString& node
     double u = (px / W - full.x) / full.w;
     const double v = (py / H - full.y) / full.h;
     if (layer->mirror) u = 1.0 - u;
-    if (u < 0 || u > 1 || v < 0 || v > 1) return false;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return std::nullopt;
 
-    // The picture this node receives there: source → input color → primary → earlier nodes.
+    // Source → input color → the clip's grade → the first `nodes` nodes.
     const project::MediaSource* m = project_->findMedia(layer->media);
-    if (!m) return false;
+    if (!m) return std::nullopt;
     QImage frame = grabFrame(qs((dir_ / m->path).string()), layer->sourceTime.toSecondsF(), 360);
-    if (frame.isNull()) return false;
+    if (frame.isNull()) return std::nullopt;
     frame = frame.convertToFormat(QImage::Format_RGB32);
     editor::applyInputColor(frame, layer->input);
     static editor::LutCache luts;
     const auto lut = layer->color.lut.empty() ? nullptr : luts.get(layer->color.lut, dir_);
-    editor::applyColor(frame, layer->color, lut.get());
-    const int index = editor::enabledNodeIndex(clip->color, nodeId.toStdString());
-    if (index > 0) {
-        std::vector<editor::NodeParams> before(layer->nodes.begin(), layer->nodes.begin() + std::min<std::size_t>(index, layer->nodes.size()));
+    editor::ColorParams grade = layer->color;
+    if (withoutHsl) grade.hsl = {};
+    editor::applyColor(frame, grade, lut.get());
+    if (nodes > 0 && !layer->nodes.empty()) {
+        std::vector<editor::NodeParams> before(layer->nodes.begin(), layer->nodes.begin() + std::min<std::size_t>(nodes, layer->nodes.size()));
         editor::SourceMap map;
         map.du = 1.0 / frame.width();
         map.dv = 1.0 / frame.height();
@@ -474,15 +481,38 @@ bool ProjectController::pickNodeColor(const QString& clipId, const QString& node
     int count = 0;
     for (int yy = std::max(0, fy - 2); yy <= std::min(frame.height() - 1, fy + 2); ++yy) {
         for (int xx = std::max(0, fx - 2); xx <= std::min(frame.width() - 1, fx + 2); ++xx) {
-            const QRgb px2 = frame.pixel(xx, yy);
-            r += qRed(px2);
-            g += qGreen(px2);
-            b += qBlue(px2);
+            const QRgb c = frame.pixel(xx, yy);
+            r += qRed(c);
+            g += qGreen(c);
+            b += qBlue(c);
             ++count;
         }
     }
-    const auto q = editor::qualifierAround(r / count / 255.0, g / count / 255.0, b / count / 255.0);
-    LEC_INFO("color", "picked rgb({:.0f}, {:.0f}, {:.0f}) for node {}", r / count, g / count, b / count, nodeId.toStdString());
+    return std::array<double, 3>{r / count / 255.0, g / count / 255.0, b / count / 255.0};
+}
+
+QVariantMap ProjectController::colorAt(const QString& clipId, double x, double y, double seconds, const QString& nodeId) const {
+    const auto id = clipIdFrom(clipId);
+    const timeline::Clip* clip = id && project_ ? project_->timeline.findClip(*id) : nullptr;
+    if (!clip) return {};
+    const int nodes = nodeId.isEmpty() ? 0 : std::max(0, editor::enabledNodeIndex(clip->color, nodeId.toStdString()));
+    const auto rgb = pictureColorAt(clipId, x, y, seconds, nodes, true);
+    if (!rgb) return {};
+    const auto [hue, sat, lum] = editor::qualifierAxes((*rgb)[0], (*rgb)[1], (*rgb)[2]);
+    return {{"r", (*rgb)[0]}, {"g", (*rgb)[1]}, {"b", (*rgb)[2]}, {"hue", hue}, {"sat", sat}, {"lum", lum}};
+}
+
+bool ProjectController::pickNodeColor(const QString& clipId, const QString& nodeId, double x, double y, double seconds) {
+    const auto id = clipIdFrom(clipId);
+    const timeline::Clip* clip = id && project_ ? project_->timeline.findClip(*id) : nullptr;
+    if (!clip) return false;
+    // The picture this node receives there: the clip's grade and the nodes before it.
+    const int index = std::max(0, editor::enabledNodeIndex(clip->color, nodeId.toStdString()));
+    const auto rgb = pictureColorAt(clipId, x, y, seconds, index, false);
+    if (!rgb) return false;
+    const auto q = editor::qualifierAround((*rgb)[0], (*rgb)[1], (*rgb)[2]);
+    LEC_INFO("color", "picked rgb({:.0f}, {:.0f}, {:.0f}) for node {}", (*rgb)[0] * 255, (*rgb)[1] * 255, (*rgb)[2] * 255,
+             nodeId.toStdString());
     return mutate(QStringLiteral("Pick color"), [&](project::Project& p) -> Status {
         timeline::Clip* c = clipById(p, *id);
         Node* n = c ? nodeById(*c, nodeId) : nullptr;
@@ -492,6 +522,78 @@ bool ProjectController::pickNodeColor(const QString& clipId, const QString& node
         n->qualifier.invert = inverted;
         return ok();
     });
+}
+
+// ---- HSL curves --------------------------------------------------------------------
+
+namespace {
+int hslIndex(const QString& curve) {
+    static const QStringList kNames{QStringLiteral("hueVsHue"), QStringLiteral("hueVsSat"), QStringLiteral("hueVsLum"),
+                                    QStringLiteral("lumVsSat"), QStringLiteral("satVsSat"), QStringLiteral("satVsLum")};
+    return static_cast<int>(kNames.indexOf(curve));
+}
+
+/// HSL curve points: sorted, clamped, merged when closer than 1 % in x; fewer
+/// than two points is no curve. A flat line stays (the editor is adding points);
+/// the renderers ignore it.
+std::vector<timeline::Vec2> hslPoints(const QVariantList& list) {
+    std::vector<timeline::Vec2> pts;
+    for (const QVariant& v : list) {
+        const QVariantMap m = v.toMap();
+        const double x = m.contains("x") ? m.value("x").toDouble() : v.toList().value(0).toDouble();
+        const double y = m.contains("y") ? m.value("y").toDouble() : v.toList().value(1).toDouble();
+        if (std::isfinite(x) && std::isfinite(y)) pts.push_back({std::clamp(x, 0.0, 1.0), std::clamp(y, 0.0, 1.0)});
+    }
+    std::sort(pts.begin(), pts.end(), [](const auto& a, const auto& b) { return a.x < b.x; });
+    std::vector<timeline::Vec2> out;
+    for (const auto& p : pts) {
+        if (!out.empty() && p.x - out.back().x < 0.01) out.back() = p;
+        else out.push_back(p);
+    }
+    if (out.size() < 2) out.clear();
+    return out;
+}
+}  // namespace
+
+void ProjectController::setHslCurve(const QString& clipId, const QString& curve, const QVariantList& points) {
+    const auto id = clipIdFrom(clipId);
+    const int index = hslIndex(curve);
+    if (!id || index < 0) return;
+    const auto pts = hslPoints(points);
+    mutate(QStringLiteral("HSL curve"), [&](project::Project& p) -> Status {
+        timeline::Clip* c = clipById(p, *id);
+        if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        c->color.hslCurves[static_cast<std::size_t>(index)] = pts;
+        return ok();
+    }, QStringLiteral("hsl:") + curve + clipId);
+}
+
+void ProjectController::setNodeHslCurve(const QString& clipId, const QString& nodeId, const QString& curve, const QVariantList& points) {
+    const auto id = clipIdFrom(clipId);
+    const int index = hslIndex(curve);
+    if (!id || index < 0) return;
+    const auto pts = hslPoints(points);
+    mutate(QStringLiteral("Node HSL curve"), [&](project::Project& p) -> Status {
+        timeline::Clip* c = clipById(p, *id);
+        Node* n = c ? nodeById(*c, nodeId) : nullptr;
+        if (!n) return fail(ErrorCode::NotFound, "node not found");
+        n->grade.hslCurves[static_cast<std::size_t>(index)] = pts;
+        return ok();
+    }, QStringLiteral("nodehsl:") + nodeId + curve + clipId);
+}
+
+QVariantList ProjectController::hslCurveSamples(const QVariantList& points, const QString& curve, int count) const {
+    std::vector<timeline::Vec2> pts;
+    for (const QVariant& v : points) {
+        const QVariantMap m = v.toMap();
+        pts.push_back({std::clamp(m.value("x").toDouble(), 0.0, 1.0), std::clamp(m.value("y").toDouble(), 0.0, 1.0)});
+    }
+    std::sort(pts.begin(), pts.end(), [](const auto& a, const auto& b) { return a.x < b.x; });
+    const bool periodic = hslIndex(curve) >= 0 && hslIndex(curve) <= timeline::kHueVsLum;
+    QVariantList out;
+    count = std::clamp(count, 2, 1024);
+    for (int i = 0; i < count; ++i) out.append(editor::evaluateHslCurve(pts, static_cast<double>(i) / (count - 1), periodic));
+    return out;
 }
 
 }  // namespace lectern::ui

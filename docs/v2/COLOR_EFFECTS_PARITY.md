@@ -111,14 +111,14 @@ these. They are the P0 work.
 |---|---|---|---|---|---|---|---|
 | 3.1 | RGB / Luma custom curves (spline points) | ● (Curves) | ● (RGB Curves) | ● (Custom) | ✅ (Curves – Custom) | P1 | |
 | 3.2 | Per-channel R, G, B curves | ● | ● | ● | ✅ | P1 | |
-| 3.3 | Luma vs. Saturation | – | ● | ● | ⬜ | P2 | |
-| 3.4 | Hue vs. Hue | – | ● | ● | ⬜ | P1 | |
-| 3.5 | Hue vs. Saturation | – | ● | ● | ⬜ | P1 | |
-| 3.6 | Hue vs. Luma | – | ● | ● | ⬜ | P1 | |
-| 3.7 | Saturation vs. Saturation | – | ● | ● | ⬜ | P2 | |
-| 3.8 | Saturation vs. Luma | – | – | ● | ⬜ | P2 | |
+| 3.3 | Luma vs. Saturation | – | ● | ● | ✅ | – | Curves palette → Lum vs Sat (8-bit tables shared by CPU and GPU) |
+| 3.4 | Hue vs. Hue | – | ● | ● | ✅ | – | Hue vs Hue, wraps around red; six-vector points |
+| 3.5 | Hue vs. Saturation | – | ● | ● | ✅ | – | Hue vs Sat; grays stay gray |
+| 3.6 | Hue vs. Luma | – | ● | ● | ✅ | – | Hue vs Lum, weighted by saturation |
+| 3.7 | Saturation vs. Saturation | – | ● | ● | ✅ | – | Sat vs Sat |
+| 3.8 | Saturation vs. Luma | – | – | ● | ✅ | – | Sat vs Lum |
 | 3.9 | Soft clip (highs/lows) | – | – | ● | ⬜ | P2 | |
-| 3.10 | Curve eyedropper (pick a color in the viewer to add points) | – | ● | ● | ⬜ | P2 | |
+| 3.10 | Curve eyedropper (pick a color in the viewer to add points) | – | ● | ● | ✅ | – | Pick: click the viewer to add a point at that color's hue / lum / sat |
 
 ## 4. Color — secondaries (qualifiers, windows, tracking)
 

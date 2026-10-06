@@ -108,7 +108,7 @@ highlighted with a red underline.
 | 4.4 | 4 | HDR Wheels (zones) | ⬜ | P2 |
 | 4.5 | 5 | RGB Mixer | ⬜ | P2 |
 | 4.6 | 6 | Motion Effects (temporal/spatial NR, motion blur) | ⬜ | P1 |
-| 4.7 | 7 | Curves (Custom, Hue vs Hue/Sat/Lum, Lum vs Sat, Sat vs Sat, Sat vs Lum) | 🟡 (Custom YRGB; hue/sat curves next) | P1 |
+| 4.7 | 7 | Curves (Custom, Hue vs Hue/Sat/Lum, Lum vs Sat, Sat vs Sat, Sat vs Lum) | ✅ (Custom YRGB + all six HSL curves) | – |
 | 4.8 | 8 | Color Slice (Resolve 20+; drop icon) — verify name in 21 | ⬜ | P2 |
 | 4.9 | 9 | Color Warper (hue-sat, chroma-luma mesh) | ⬜ | P3 |
 | 4.10 | 10 | Qualifier (HSL, RGB, Luma, 3D) | ✅ | – |

@@ -254,6 +254,30 @@ void registerMcpTools(Server& server, ProjectController* p) {
              for (const auto& pt : a["points"]) pts.append(QVariant(QVariantList{pt[0].get<double>(), pt[1].get<double>()}));
              p->setCurve(str(a, "clipId"), str(a, "channel"), pts);
          });
+    edit("set_hsl_curve",
+         "Set an HSL curve (Resolve Curves - Hue vs Hue / Hue vs Sat / Hue vs Lum / Lum vs Sat / Sat vs Sat / Sat vs Lum) "
+         "on a clip's correction, or on a node with nodeId. points are [[x, y], ...] in 0..1 where y 0.5 = no change: "
+         "hue shift (y 0..1 = -180..+180 degrees), saturation gain (y 0..1 = x0..x2) or luminance (y 0..1 = -0.5..+0.5). "
+         "x is hue (0 red, 0.333 green, 0.667 blue; hue curves wrap), luminance or saturation. Fewer than 2 points removes it. "
+         "Example, desaturate greens: curve hueVsSat, points [[0.2,0.5],[0.333,0.15],[0.46,0.5]].",
+         object({{"clipId", text(64)}, {"nodeId", text(16)},
+                 {"curve", choice({"hueVsHue", "hueVsSat", "hueVsLum", "lumVsSat", "satVsSat", "satVsLum"})},
+                 {"points", {{"type", "array"}, {"maxItems", 32},
+                             {"items", {{"type", "array"}, {"minItems", 2}, {"maxItems", 2}, {"items", number(0, 1)}}}}}},
+                {"clipId", "curve", "points"}),
+         [p](const Json& a) {
+             QVariantList pts;
+             for (const auto& pt : a["points"]) pts.append(QVariant(QVariantList{pt[0].get<double>(), pt[1].get<double>()}));
+             if (a.contains("nodeId")) {
+                 bool found = false;
+                 p->selectClip(str(a, "clipId"));
+                 for (const QVariant& n : p->selection().value(QStringLiteral("nodes")).toList()) found = found || n.toMap().value("id").toString() == str(a, "nodeId");
+                 if (!found) throw std::runtime_error("Unknown nodeId for this clip");
+                 p->setNodeHslCurve(str(a, "clipId"), str(a, "nodeId"), str(a, "curve"), pts);
+             } else {
+                 p->setHslCurve(str(a, "clipId"), str(a, "curve"), pts);
+             }
+         });
     edit("reset_color", "Reset a clip's current color adjustments.", object({{"clipId", text(64)}}, {"clipId"}),
          [p](const Json& a) { p->resetColor(str(a, "clipId")); });
     edit("apply_lut", "Apply a built-in LUT from list_presets. File-based LUT imports are not exposed.",

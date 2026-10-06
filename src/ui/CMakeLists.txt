@@ -69,6 +69,7 @@ qt_add_qml_module(lectern_ui
         qml/editor/ColorPage.qml
         qml/editor/color/ColorWheel.qml
         qml/editor/color/CurveEditor.qml
+        qml/editor/color/HslCurveEditor.qml
         qml/editor/color/RangeBar.qml
         qml/editor/color/PaletteButton.qml
         qml/editor/color/QualifierPalette.qml

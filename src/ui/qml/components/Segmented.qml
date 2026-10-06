@@ -61,7 +61,7 @@ Rectangle {
                     Icon {
                         visible: root.iconMode && segment.modelData.icon !== undefined
                         anchors.centerIn: parent
-                        name: segment.modelData.icon
+                        name: segment.modelData.icon || ""
                         size: 16
                         color: segment.checkedState ? Theme.text : Theme.textMuted
                     }

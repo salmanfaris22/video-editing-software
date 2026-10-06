@@ -124,7 +124,7 @@ stable). Steps 2.1–2.2 wrap the features that already exist today.
 - **Tests:** scope data matches a CPU computation on test images.
 - **Done when:** scopes update in real time during playback.
 
-### 1.6 Curves — **S** · ~2.5M Claude tokens
+### 1.6 Curves — **S** · ~2.5M Claude tokens · ✅ done 2026-10-07 (custom YRGB, six HSL curves, picker; soft clip next)
 - **Ships:** Custom YRGB curves (ganged/unganged, soft clip), Hue vs Hue,
   Hue vs Sat, Hue vs Lum, Lum vs Sat, Sat vs Sat; picker adds points from
   the viewer.

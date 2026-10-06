@@ -404,3 +404,20 @@ TEST(McpUi, FilmEffectsThroughSetEffect) {
     EXPECT_TRUE(p.call("set_effect", {{"clipId", clip}, {"type", "film-grain"}, {"enabled", true}, {"params", {{"threshold", 0.5}}}})["result"]["isError"].get<bool>());
     EXPECT_EQ(p.controller.filmStocks().size(), 3);
 }
+
+TEST(McpUi, HslCurveThroughTools) {
+    Project p;
+    const auto clip = p.clip();
+    auto r = p.call("set_hsl_curve", {{"clipId", clip}, {"curve", "hueVsSat"}, {"points", {{0.2, 0.5}, {0.333, 0.15}, {0.46, 0.5}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    EXPECT_EQ(p.controller.selection().value("hueVsSat").toList().size(), 3);
+    r = p.call("add_node", {{"clipId", clip}, {"select", "person"}});
+    const std::string node = r["result"]["structuredContent"]["nodeId"];
+    r = p.call("set_hsl_curve", {{"clipId", clip}, {"nodeId", node}, {"curve", "hueVsHue"}, {"points", {{0.0, 0.55}, {0.15, 0.5}, {0.85, 0.5}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    EXPECT_EQ(p.controller.selection().value("nodes").toList()[0].toMap().value("hueVsHue").toList().size(), 3);
+    EXPECT_TRUE(p.call("set_hsl_curve", {{"clipId", clip}, {"nodeId", "n77"}, {"curve", "hueVsHue"}, {"points", Json::array()}})["result"]["isError"].get<bool>());
+    EXPECT_EQ(p.call("set_hsl_curve", {{"clipId", clip}, {"curve", "hueVsRed"}, {"points", Json::array()}})["error"]["code"], -32602);
+}

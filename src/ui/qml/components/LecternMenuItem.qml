@@ -10,7 +10,7 @@ MenuItem {
     property bool iconOnly: false
 
     implicitHeight: iconOnly ? 36 : 34
-    implicitWidth: iconOnly ? 40 : undefined
+    implicitWidth: iconOnly ? 40 : Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding)
     padding: 0
     leftPadding: iconOnly ? 0 : 8
     rightPadding: iconOnly ? 0 : 10
@@ -26,7 +26,7 @@ MenuItem {
 
     contentItem: RowLayout {
         spacing: 8
-        Layout.preferredWidth: item.iconOnly ? 40 : undefined
+        Layout.preferredWidth: item.iconOnly ? 40 : -1  // -1 = the layout's default
         Icon {
             Layout.alignment: Qt.AlignHCenter
             visible: item.iconName.length > 0

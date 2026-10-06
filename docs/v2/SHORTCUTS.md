@@ -81,6 +81,8 @@ version.
 | Double-click a still | Apply its grade to the clip |
 | Window on the viewer | Drag inside to move, edge handles to resize, the top dot to rotate (⇧ fine) |
 | Qualifier → Pick | Click a color in the viewer to key it (e.g. only the pen) |
+| Curves → Hue vs … → Pick | Click a color in the viewer to add its point on the HSL curve |
+| Timeline ⌥-drag | Move only that clip of a recording (it leaves the recording's link) |
 | Right-click a clip / node | Grade copy, previous / next / all, grab still · enable, reset, invert, reorder, delete |
 
 ---

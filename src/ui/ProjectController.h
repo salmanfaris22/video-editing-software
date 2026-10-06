@@ -11,6 +11,7 @@
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
+#include <array>
 #include <atomic>
 #include <filesystem>
 #include <functional>
@@ -321,6 +322,16 @@ public:
     Q_INVOKABLE void setNodeSubject(const QString& clipId, const QString& nodeId, const QString& subject);
     /// Grade everything except the selection (Resolve's outside node).
     Q_INVOKABLE void setNodeInvert(const QString& clipId, const QString& nodeId, bool invert);
+    /// An HSL curve of the clip's correction — "hueVsHue", "hueVsSat", "hueVsLum",
+    /// "lumVsSat", "satVsSat", "satVsLum" — as points [{x, y}], 0.5 = no change
+    /// (hue curves wrap around red). Drags merge into one undo step.
+    Q_INVOKABLE void setHslCurve(const QString& clipId, const QString& curve, const QVariantList& points);
+    Q_INVOKABLE void setNodeHslCurve(const QString& clipId, const QString& nodeId, const QString& curve, const QVariantList& points);
+    /// `count` samples of an HSL curve through `points`, exactly as rendered.
+    Q_INVOKABLE QVariantList hslCurveSamples(const QVariantList& points, const QString& curve, int count = 128) const;
+    /// The color the HSL curves see at canvas point (x, y): the clip's grade
+    /// without its HSL curves and the nodes before `nodeId`. {r, g, b, hue, sat, lum} (0…1), or {} off the clip.
+    Q_INVOKABLE QVariantMap colorAt(const QString& clipId, double x, double y, double seconds, const QString& nodeId = {}) const;
     /// Keys the node on the color at canvas point (x, y) (fractions) at `seconds`
     /// — the picture as the node receives it there. False outside the clip.
     Q_INVOKABLE bool pickNodeColor(const QString& clipId, const QString& nodeId, double x, double y, double seconds);
@@ -518,6 +529,9 @@ private:
     std::shared_ptr<std::atomic<bool>> jobCancel_;
     bool assistantEditing_ = false;
     QString assistantError_;
+    /// The clip's picture at a canvas point after its grade and `nodes` nodes (ProjectNodes.cpp).
+    [[nodiscard]] std::optional<std::array<double, 3>> pictureColorAt(const QString& clipId, double x, double y, double seconds,
+                                                                     int nodes, bool withoutHsl) const;
     /// The selection's view of a clip's nodes (ProjectNodes.cpp).
     [[nodiscard]] static QVariantList nodesView(const timeline::ColorAdjustments& color);
     // Looks and grade clipboard (ProjectGrades.cpp)

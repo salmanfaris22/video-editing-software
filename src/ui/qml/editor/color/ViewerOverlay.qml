@@ -16,7 +16,10 @@ Item {
     property var node: null
     property bool showWindow: false
     property bool picking: false
+    /// "key": the click keys the node on that color; "curve": it reports the point (pickedAt) for an HSL curve.
+    property string pickMode: "key"
     signal picked()
+    signal pickedAt(real x, real y)
 
     // Where the clip's whole source frame lies on the canvas (fractions).
     property var frame: ({})
@@ -281,8 +284,12 @@ Item {
         visible: root.picking
         cursorShape: Qt.CrossCursor
         onClicked: mouse => {
-            if (root.node && root.project.pickNodeColor(root.clipId, root.node.id, mouse.x / width, mouse.y / height, root.playback.position))
+            if (root.pickMode === "curve") {
+                root.pickedAt(mouse.x / width, mouse.y / height)
                 root.picked()
+            } else if (root.node && root.project.pickNodeColor(root.clipId, root.node.id, mouse.x / width, mouse.y / height, root.playback.position)) {
+                root.picked()
+            }
         }
     }
     Rectangle {
@@ -293,6 +300,6 @@ Item {
         height: 22
         radius: 11
         color: "#CC0B0C10"
-        Label { id: pickHint; anchors.centerIn: parent; text: "Click the color to select"; color: Theme.text; font.pixelSize: 11 }
+        Label { id: pickHint; anchors.centerIn: parent; text: root.pickMode === "curve" ? "Click a color to add its point" : "Click the color to select"; color: Theme.knob; font.pixelSize: 11 }
     }
 }

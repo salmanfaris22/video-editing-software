@@ -831,6 +831,59 @@ TEST(ProjectControllerUi, PickingAColorKeysTheNodeOnThatColor) {
     EXPECT_FALSE(c.pickNodeColor(camera, camKey, 0.01, 0.99, 1.0));
 }
 
+TEST(ProjectControllerUi, HslCurvesOnTheCorrectionAndOnNodes) {
+    OpenProject o;
+    ProjectController& c = o.controller;
+    const QString screen = o.clipId("Screen");
+    const QVariantList greens{QVariantMap{{"x", 0.2}, {"y", 0.5}}, QVariantMap{{"x", 0.333}, {"y", 0.1}},
+                              QVariantMap{{"x", 0.46}, {"y", 0.5}}};
+    c.setHslCurve(screen, "hueVsSat", greens);
+    c.selectClip(screen);
+    EXPECT_EQ(c.selection().value("hueVsSat").toList().size(), 3);
+    EXPECT_TRUE(c.selection().value("hueVsHue").toList().isEmpty());
+    for (const auto& l : editor::buildRenderPlan(*c.snapshot(), Time::fromSeconds(1)).layers) {
+        if (l.role == "screen") EXPECT_EQ(l.color.hsl[timeline::kHueVsSat].size(), 3u);
+    }
+    // Drags merge into one step (another edit in between starts a new gesture);
+    // unknown curves are ignored; one point is no curve.
+    c.setColorValue(screen, "exposure", 0.1);
+    for (int i = 0; i < 5; ++i) c.setHslCurve(screen, "hueVsSat", {greens[0], QVariantMap{{"x", 0.333}, {"y", 0.1 + i * 0.02}}, greens[2]});
+    c.setHslCurve(screen, "hueVsBanana", greens);
+    c.undo();
+    c.selectClip(screen);
+    const QVariantList afterUndo = c.selection().value("hueVsSat").toList();
+    ASSERT_EQ(afterUndo.size(), 3);
+    EXPECT_NEAR(afterUndo[1].toMap().value("y").toDouble(), 0.1, 1e-9);
+    c.setHslCurve(screen, "lumVsSat", {QVariantMap{{"x", 0.5}, {"y", 0.2}}});
+    c.selectClip(screen);
+    EXPECT_TRUE(c.selection().value("lumVsSat").toList().isEmpty());
+    // A flat line is kept while editing but renders as nothing.
+    c.setHslCurve(screen, "satVsLum", {QVariantMap{{"x", 0.0}, {"y", 0.5}}, QVariantMap{{"x", 1.0}, {"y", 0.5}}});
+    for (const auto& l : editor::buildRenderPlan(*c.snapshot(), Time::fromSeconds(1)).layers) {
+        if (l.role == "screen") EXPECT_TRUE(l.color.hsl[timeline::kSatVsLum].empty());
+    }
+    // Samples wrap for hue curves.
+    const QVariantList samples = c.hslCurveSamples(greens, "hueVsSat", 7);
+    ASSERT_EQ(samples.size(), 7);
+    EXPECT_NEAR(samples[2].toDouble(), 0.1, 0.03);  // x = 1/3
+    EXPECT_NEAR(samples[0].toDouble(), 0.5, 1e-9);
+    // Nodes have their own HSL curves.
+    const QString node = c.addNode(screen, "circle");
+    c.setNodeHslCurve(screen, node, "hueVsHue", greens);
+    c.selectClip(screen);
+    const QVariantList nodes = c.selection().value("nodes").toList();
+    ASSERT_EQ(nodes.size(), 1);
+    EXPECT_EQ(nodes[0].toMap().value("hueVsHue").toList().size(), 3);
+    // The picker reads the picture there (the screen is one flat color).
+    const QVariantMap frame = c.sourceFrame(screen, 1.0);
+    const QVariantMap color = c.colorAt(screen, frame.value("x").toDouble() + frame.value("w").toDouble() * 0.4,
+                                        frame.value("y").toDouble() + frame.value("h").toDouble() * 0.4, 1.0);
+    ASSERT_TRUE(color.contains("hue"));
+    EXPECT_GE(color.value("hue").toDouble(), 0.0);
+    EXPECT_LE(color.value("hue").toDouble(), 1.0);
+    EXPECT_TRUE(c.colorAt(o.clipId("Camera"), 0.01, 0.99, 1.0).isEmpty());  // not on the camera there
+}
+
 TEST(PlaybackControllerUi, PlaysSeeksAndRendersFrames) {
     OpenProject p;
     PlaybackController playback(&p.controller, /*silent=*/true);

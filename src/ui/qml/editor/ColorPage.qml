@@ -41,7 +41,8 @@ Item {
     // The center palette, remembered in the workspace (read once, written on change).
     property string centerPalette: "curves"
     onCenterPaletteChanged: if (root.editor && root.editor.colorPalette !== centerPalette) root.editor.colorPalette = centerPalette
-    property bool picking: false
+    property bool picking: false        // the qualifier picker
+    property bool curvePicking: false   // the HSL curve picker
     property bool highlight: false
     property string compare: "off"  // off · wipe · side
     property bool bypass: false
@@ -66,6 +67,7 @@ Item {
     }
     onNodeIdChanged: {
         root.picking = false
+        root.curvePicking = false
         if (root.highlight) root.setHighlight(root.nodeId.length > 0)
     }
 
@@ -83,6 +85,11 @@ Item {
         if (!root.gradable) return
         if (root.node) root.project.setNodeCurve(root.clipId, root.nodeId, channel, pts)
         else root.project.setCurve(root.clipId, channel, pts)
+    }
+    function setHsl(curve, pts) {
+        if (!root.gradable) return
+        if (root.node) root.project.setNodeHslCurve(root.clipId, root.nodeId, curve, pts)
+        else root.project.setHslCurve(root.clipId, curve, pts)
     }
     function resetGrade() {
         if (root.node) root.project.resetNode(root.clipId, root.nodeId)
@@ -261,8 +268,13 @@ Item {
                             clipId: root.clipId
                             node: root.node
                             showWindow: root.centerPalette === "window" || root.node !== null && (root.node.window.shape || "").length > 0 && root.centerPalette !== "qualifier"
-                            picking: root.picking
-                            onPicked: root.picking = false
+                            picking: root.picking || root.curvePicking
+                            pickMode: root.curvePicking ? "curve" : "key"
+                            onPickedAt: (x, y) => curvesPalette.addPicked(root.project.colorAt(root.clipId, x, y, root.playback.position, root.nodeId))
+                            onPicked: {
+                                root.picking = false
+                                root.curvePicking = false
+                            }
                         }
                     }
                 }
@@ -432,11 +444,18 @@ Item {
                         Layout.minimumWidth: 340
                         currentIndex: ["curves", "qualifier", "window", "mask"].indexOf(root.centerPalette)
                         CurvesPalette {
+                            id: curvesPalette
                             project: root.project
                             playback: root.playback
                             grade: root.grade
                             editable: root.gradable
+                            picking: root.curvePicking
                             onCurveEdited: (channel, pts) => root.setCurve(channel, pts)
+                            onHslEdited: (curve, pts) => root.setHsl(curve, pts)
+                            onPickRequested: {
+                                root.picking = false
+                                root.curvePicking = !root.curvePicking
+                            }
                         }
                         QualifierPalette {
                             project: root.project
@@ -445,7 +464,10 @@ Item {
                             node: root.node
                             picking: root.picking
                             highlight: root.highlight
-                            onPickRequested: root.picking = !root.picking
+                            onPickRequested: {
+                                root.curvePicking = false
+                                root.picking = !root.picking
+                            }
                             onNodeCreated: id => root.nodeId = id
                         }
                         WindowPalette {

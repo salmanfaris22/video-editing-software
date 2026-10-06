@@ -419,3 +419,41 @@ TEST(ColorPage, DumpScreens) {
     p.ui->click(p.center("fx-film-switch"));
     shot("color-wipe-effects");
 }
+
+TEST(ColorPage, HslCurvesAddDragSixVectorsAndPick) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    QQuickItem* palette = p.ui->find("curvesPalette");
+    ASSERT_TRUE(palette);
+    palette->setProperty("mode", QStringLiteral("hueVsSat"));
+    test::settle(60);
+    QQuickItem* editor = p.ui->find("hslCurveEditor");
+    ASSERT_TRUE(editor && editor->isVisible());
+    const double w = editor->width() - 20, h = editor->height() - 32;  // 10 px sides and top, 22 px for the axis band
+    auto at = [&](double x, double y) { return QmlHarness::at(editor, {10 + x * w, 10 + (1 - y) * h}); };
+    // Click the neutral line at green and drag down: greens lose saturation.
+    p.ui->drag(at(0.333, 0.5), at(0.333, 0.15));
+    if (const char* dump = std::getenv("LECTERN_DUMP_DIR")) p.ui->window().grabWindow().save(QString::fromLocal8Bit(dump) + "/hsl.png");
+    QVariantList pts = p.project.selection().value("hueVsSat").toList();
+    ASSERT_EQ(pts.size(), 3) << "a point and two anchors";
+    double lowest = 1;
+    for (const QVariant& v : pts) lowest = std::min(lowest, v.toMap().value("y").toDouble());
+    EXPECT_LT(lowest, 0.25);
+    // Six vectors adds points at the six hues it does not have yet.
+    p.ui->click(p.center("sixVectors"));
+    pts = p.project.selection().value("hueVsSat").toList();
+    EXPECT_GE(pts.size(), 8);
+    // Pick: a click on the picture adds a point at its hue.
+    p.ui->click(p.center("resetHsl"));
+    EXPECT_TRUE(p.project.selection().value("hueVsSat").toList().isEmpty());
+    p.ui->click(p.center("pickCurveColor"));
+    QQuickItem* pick = p.ui->find("pickArea");
+    ASSERT_TRUE(pick && pick->isVisible());
+    p.ui->click(QmlHarness::at(pick, {pick->width() * 0.35, pick->height() * 0.4}));
+    EXPECT_EQ(p.project.selection().value("hueVsSat").toList().size(), 3);
+    EXPECT_FALSE(pick->isVisible());
+    // Back to the custom curves.
+    palette->setProperty("mode", QStringLiteral("custom"));
+    test::settle(30);
+    EXPECT_TRUE(p.ui->find("curveEditor")->isVisible());
+}

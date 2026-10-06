@@ -50,10 +50,10 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | # | Gap | P |
 |---|---|---|
 | 1 | Float, scene-linear, managed pipeline (ACES / RCM working space, HDR output) | P0 |
-| 2 | HSL curves: Hue vs Hue / Sat / Lum, Lum vs Sat, Sat vs Sat | P1 |
+| 2 | Sharpen and noise reduction (temporal + spatial) | P1 |
 | 3 | Tracking, so windows follow the subject | P1 |
 | 4 | Grade keyframes (wheels, curves and nodes animated over time) | P1 |
-| 5 | Noise reduction (temporal + spatial) and sharpen | P1 |
+| 5 | Soft clip, ganged curves, curve intensity | P2 |
 | 6 | Polygon and Bézier windows; several windows per node | P1 |
 | 7 | Shot match and chart match | P1 |
 | 8 | Viewer zoom; scopes in % and nits; 4-up | P1 |
@@ -62,7 +62,7 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | 11 | HDR zone wheels, Log wheels, Primaries bars, Mid/Detail | P2 |
 | 12 | Color Warper, Color Slice, RGB Mixer | P2 / P3 |
 
-**Score vs Resolve's color features** (the 152 rows in §2): **45 ✅ · 18 🟡 · 89 ⬜** — about 30 % fully and 36 % counting partial rows as half (this morning: 12 % / 18 %). For everyday grading Lectern now covers far more than the number suggests: the rows it has are the ones colorists use on every shot.
+**Score vs Resolve's color features** (the 152 rows in §2): **53 ✅ · 18 🟡 · 81 ⬜** — about 35 % fully and 41 % counting partial rows as half (this morning: 12 % / 18 %). For everyday grading Lectern now covers far more than the number suggests: the rows it has are the ones colorists use on every shot.
 
 ---
 
@@ -120,14 +120,14 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | 2.3.1 | Custom curves Y / R / G / B | ✅ add, drag, remove points | – | 1.6 |
 | 2.3.2 | Ganged / un-ganged channels, intensity per channel | ⬜ | P2 | 1.6 |
 | 2.3.3 | Soft clip (low, high, softness) | ⬜ | P2 | 1.6 |
-| 2.3.4 | Hue vs Hue | ⬜ | P1 | 1.6 |
-| 2.3.5 | Hue vs Sat | ⬜ | P1 | 1.6 |
-| 2.3.6 | Hue vs Lum | ⬜ | P1 | 1.6 |
-| 2.3.7 | Lum vs Sat | ⬜ | P1 | 1.6 |
-| 2.3.8 | Sat vs Sat | ⬜ | P1 | 1.6 |
-| 2.3.9 | Sat vs Lum | ⬜ | P2 | 1.6 |
-| 2.3.10 | Click the viewer to add a curve point at that color | ⬜ | P1 | 1.6 |
-| 2.3.11 | Six-vector preset points (R Y G C B M) | ⬜ | P2 | 1.6 |
+| 2.3.4 | Hue vs Hue | ✅ | – | 1.6 |
+| 2.3.5 | Hue vs Sat | ✅ | – | 1.6 |
+| 2.3.6 | Hue vs Lum | ✅ weighted by saturation | – | 1.6 |
+| 2.3.7 | Lum vs Sat | ✅ | – | 1.6 |
+| 2.3.8 | Sat vs Sat | ✅ | – | 1.6 |
+| 2.3.9 | Sat vs Lum | ✅ | – | 1.6 |
+| 2.3.10 | Click the viewer to add a curve point at that color | ✅ Pick adds the point at the clicked color | – | 1.6 |
+| 2.3.11 | Six-vector preset points (R Y G C B M) | ✅ Six vectors button | – | 1.6 |
 
 ### 2.4 Hue, saturation and channel tools
 
@@ -296,7 +296,7 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 |---|---|---|---|---|
 | 2.1 Pipeline and management | 18 | 3 | 4 | 11 |
 | 2.2 Primaries | 17 | 9 | 1 | 7 |
-| 2.3 Curves | 11 | 1 | 0 | 10 |
+| 2.3 Curves | 11 | 9 | 0 | 2 |
 | 2.4 Hue / channel tools | 5 | 0 | 0 | 5 |
 | 2.5 Qualifier | 8 | 4 | 2 | 2 |
 | 2.6 Windows | 8 | 4 | 1 | 3 |
@@ -308,7 +308,7 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | 2.12 Grade management | 12 | 5 | 2 | 5 |
 | 2.13 Viewer and scopes | 14 | 5 | 4 | 5 |
 | 2.14 Hardware and workflow | 7 | 2 | 0 | 5 |
-| **Total** | **152** | **45** | **18** | **89** |
+| **Total** | **152** | **53** | **18** | **81** |
 
 
 ---
@@ -426,6 +426,7 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 
 ## 5. Order of work for color (what to build next)
 
+Done on 2026-10-07: all six HSL curves with picker and six vectors.
 Done on 2026-10-06: cinematic looks with Amount and My Looks; copy / paste
 and spread grades; wipe, side by side, bypass; nodes with windows, a color
 key and person / background; gallery stills; grain, halation, glow and film
@@ -433,13 +434,12 @@ print emulation; the Resolve-style Color page.
 
 | Order | What | Rows | Step |
 |---|---|---|---|
-| 1 | HSL curves (Hue vs Hue / Sat / Lum, Lum vs Sat, Sat vs Sat) + viewer picker | 2.3.4–2.3.10 | 1.6 |
-| 2 | Sharpen and spatial / temporal noise reduction | 2.10.1–2.10.3 | – |
-| 3 | Tracking for windows (point / cloud), magic mask follows already | 2.7 | 1.9 |
-| 4 | Grade keyframes (correction, nodes, windows) | 2.12.10 | 1.14 |
-| 5 | Float linear pipeline, working / output space, ACES | 2.1.1–2.1.5 | 1.2 |
-| 6 | Polygon / Bézier windows, several windows per node | 2.6.2, 2.6.5 | 1.8 |
-| 7 | Shot match, chart match | 2.8.3, 2.8.4 | 1.12 |
-| 8 | Timeline grade, color groups, parallel / layer mixer / shared nodes | 2.9.2–2.9.8 | 1.13 |
-| 9 | Viewer zoom, scopes % / nits / 4-up | 2.13.4, 2.13.9, 2.13.11 | 1.5 / 1.14 |
-| 10 | HDR zone wheels, Log wheels, Primaries bars, Mid/Detail | 2.2.5, 2.2.13–2.2.15 | 1.4 |
+| 1 | Sharpen and spatial / temporal noise reduction | 2.10.1–2.10.3 | – |
+| 2 | Tracking for windows (point / cloud), magic mask follows already | 2.7 | 1.9 |
+| 3 | Grade keyframes (correction, nodes, windows) | 2.12.10 | 1.14 |
+| 4 | Float linear pipeline, working / output space, ACES | 2.1.1–2.1.5 | 1.2 |
+| 5 | Polygon / Bézier windows, several windows per node | 2.6.2, 2.6.5 | 1.8 |
+| 6 | Shot match, chart match | 2.8.3, 2.8.4 | 1.12 |
+| 7 | Timeline grade, color groups, parallel / layer mixer / shared nodes | 2.9.2–2.9.8 | 1.13 |
+| 8 | Viewer zoom, scopes % / nits / 4-up | 2.13.4, 2.13.9, 2.13.11 | 1.5 / 1.14 |
+| 9 | HDR zone wheels, Log wheels, Primaries bars, Mid/Detail | 2.2.5, 2.2.13–2.2.15 | 1.4 |
