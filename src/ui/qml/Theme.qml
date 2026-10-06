@@ -13,6 +13,10 @@ QtObject {
     property string mode: "dark"
     property string preference: "dark"   // what the user chose: dark | light | system
     readonly property bool dark: mode !== "light"
+    /// "modern": rounded cards, crisp text (default) · "flat": square panels and
+    /// softer text, closer to DaVinci Resolve.
+    property string style: "modern"
+    readonly property bool flat: style === "flat"
 
     // Surfaces (darkest → lightest in dark mode)
     readonly property color bg: dark ? "#0E0F12" : "#E8EBF0"         // window chrome, gaps between panels
@@ -31,10 +35,10 @@ QtObject {
     readonly property color knob: "#F2F3F6"                          // handles drawn over video
 
     // Text
-    readonly property color text: dark ? "#F3F4F6" : "#15171C"
-    readonly property color textSecondary: dark ? "#C9CCD3" : "#343843"
-    readonly property color textMuted: dark ? "#9A9EA9" : "#5F6573"
-    readonly property color textFaint: dark ? "#676C78" : "#8B91A0"
+    readonly property color text: dark ? (flat ? "#E4E6EA" : "#F3F4F6") : "#15171C"
+    readonly property color textSecondary: dark ? (flat ? "#8B919E" : "#C9CCD3") : "#343843"
+    readonly property color textMuted: dark ? (flat ? "#646A76" : "#9A9EA9") : "#5F6573"
+    readonly property color textFaint: dark ? (flat ? "#454A54" : "#676C78") : "#8B91A0"
     readonly property color accentText: "#FFFFFF"
 
     // Accents
@@ -49,10 +53,10 @@ QtObject {
     readonly property color warningSoft: dark ? "#3A2E14" : "#FCF0D6"
     readonly property color danger: dark ? "#F87171" : "#DC3D3D"
 
-    // Shape & rhythm (rounded, like the reference design)
-    readonly property int radiusS: 6
-    readonly property int radiusM: 10
-    readonly property int radiusL: 14
+    // Shape & rhythm: rounded (modern) or square (flat, Resolve-like)
+    readonly property int radiusS: flat ? 0 : 6
+    readonly property int radiusM: flat ? 0 : 10
+    readonly property int radiusL: flat ? 2 : 14
     readonly property int gapS: 6
     readonly property int gap: 10
     readonly property int pad: 16
@@ -75,6 +79,9 @@ QtObject {
         else
             theme.mode = theme.preference
     }
+
+    /// "modern" or "flat".
+    function applyStyle(choice) { theme.style = choice === "flat" ? "flat" : "modern" }
 
     property Connections systemScheme: Connections {
         target: Qt.styleHints

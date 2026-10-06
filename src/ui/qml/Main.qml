@@ -19,7 +19,15 @@ ApplicationWindow {
     font.pixelSize: Theme.fontM
 
     readonly property var editor: window.app.view === "editor" ? viewLoader.item : null
-    Component.onCompleted: Theme.apply(window.app.workspaceValue("theme", "dark"))
+    Component.onCompleted: {
+        Theme.apply(window.app.workspaceValue("theme", "dark"))
+        Theme.applyStyle(window.app.workspaceValue("themeStyle", "modern"))
+    }
+    function setThemeStyle(choice) {
+        Theme.applyStyle(choice)
+        window.app.setWorkspaceValue("themeStyle", choice)
+        console.info("theme style:", choice)
+    }
     function setTheme(choice) {
         Theme.apply(choice)
         window.app.setWorkspaceValue("theme", choice)
@@ -132,6 +140,9 @@ ApplicationWindow {
                 MenuItem { text: "Dark"; checkable: true; checked: Theme.preference === "dark"; onTriggered: window.setTheme("dark") }
                 MenuItem { text: "Light"; checkable: true; checked: Theme.preference === "light"; onTriggered: window.setTheme("light") }
                 MenuItem { text: "Match System"; checkable: true; checked: Theme.preference === "system"; onTriggered: window.setTheme("system") }
+                MenuSeparator {}
+                MenuItem { text: "Modern Style (rounded)"; checkable: true; checked: !Theme.flat; onTriggered: window.setThemeStyle("modern") }
+                MenuItem { text: "Flat Style (Resolve-like)"; checkable: true; checked: Theme.flat; onTriggered: window.setThemeStyle("flat") }
             }
             MenuSeparator {}
             MenuItem { text: "Edit Page"; checkable: true; enabled: window.editor !== null; checked: !!window.editor && window.editor.page === "edit"; onTriggered: window.editor.page = "edit" }
