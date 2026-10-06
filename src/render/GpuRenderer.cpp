@@ -46,8 +46,12 @@ struct Uniforms {
     float gamut1[4];
     float gamut2[4];
     float grade2[4];
+    float nodeInfo[4];   // node count, source aspect, person mask bound, highlighted node
+    float nodes[56][4];  // 7 per node (layer.frag "Nodes")
 };
-static_assert(sizeof(Uniforms) == 304);
+static_assert(sizeof(Uniforms) == 1216);
+constexpr std::size_t kNodeVecs = 7;
+constexpr int kCurveRows = 1 + static_cast<int>(timeline::ColorAdjustments::kMaxNodes);
 
 enum Mode {
     kGradient = 0,
@@ -262,7 +266,7 @@ private:
         QSize size;
         qint64 key = -1;
         std::unique_ptr<QRhiTexture> curves;
-        editor::ColorParams curveParams;
+        std::vector<editor::ColorParams> curveParams;  ///< primary, then each node
         bool curvesValid = false;
     };
     struct LutTexture {
@@ -391,27 +395,54 @@ private:
         return s.texture.get();
     }
 
-    QRhiTexture* curvesTexture(std::size_t slot, const editor::ColorParams& color) {
+    /// Row 0: the layer's primary grade; row n + 1: node n (identity when unused).
+    QRhiTexture* curvesTexture(std::size_t slot, const editor::ColorParams& color, const std::vector<editor::NodeParams>& nodes) {
         SourceTexture& s = sources_[slot];
         if (!s.curves) {
-            s.curves.reset(rhi_->newTexture(QRhiTexture::RGBA8, QSize(256, 1)));
+            s.curves.reset(rhi_->newTexture(QRhiTexture::RGBA8, QSize(256, kCurveRows)));
             s.curves->create();
         }
-        if (!s.curvesValid || !(s.curveParams == color)) {
-            const editor::ColorCurves c = editor::colorCurves(color);
-            QImage table(256, 1, QImage::Format_RGBA8888);
-            auto* px = table.scanLine(0);
-            for (int v = 0; v < 256; ++v) {
-                px[v * 4 + 0] = c[0][static_cast<std::size_t>(v)];
-                px[v * 4 + 1] = c[1][static_cast<std::size_t>(v)];
-                px[v * 4 + 2] = c[2][static_cast<std::size_t>(v)];
-                px[v * 4 + 3] = 255;
+        std::vector<editor::ColorParams> key{color};
+        for (const auto& n : nodes) key.push_back(n.grade);
+        if (!s.curvesValid || s.curveParams != key) {
+            QImage table(256, kCurveRows, QImage::Format_RGBA8888);
+            for (int row = 0; row < kCurveRows; ++row) {
+                const editor::ColorParams params = row < static_cast<int>(key.size()) ? key[static_cast<std::size_t>(row)] : editor::ColorParams{};
+                const editor::ColorCurves c = editor::colorCurves(params);
+                auto* px = table.scanLine(row);
+                for (int v = 0; v < 256; ++v) {
+                    px[v * 4 + 0] = c[0][static_cast<std::size_t>(v)];
+                    px[v * 4 + 1] = c[1][static_cast<std::size_t>(v)];
+                    px[v * 4 + 2] = c[2][static_cast<std::size_t>(v)];
+                    px[v * 4 + 3] = 255;
+                }
             }
             pending_->uploadTexture(s.curves.get(), table);
-            s.curveParams = color;
+            s.curveParams = std::move(key);
             s.curvesValid = true;
         }
         return s.curves.get();
+    }
+
+    /// Packs a layer's nodes into the uniforms (layer.frag "Nodes").
+    static void setNodes(Uniforms& u, const VisualLayer& l, double aspect, bool hasMask) {
+        const std::size_t count = std::min(l.nodes.size(), timeline::ColorAdjustments::kMaxNodes);
+        set4(u.nodeInfo, static_cast<double>(count), aspect, hasMask ? 1 : 0, l.highlightNode);
+        constexpr double kPi = 3.14159265358979323846;
+        for (std::size_t n = 0; n < count; ++n) {
+            const editor::NodeParams& node = l.nodes[n];
+            float(*v)[4] = &u.nodes[n * kNodeVecs];
+            const auto& w = node.window;
+            const auto& q = node.qualifier;
+            const int shape = w.shape == "circle" ? 1 : w.shape == "rectangle" ? 2 : w.shape == "gradient" ? 3 : 0;
+            set4(v[0], 1.0 + node.grade.saturation, node.grade.colorBoost, node.grade.hue * kPi, 0);
+            set4(v[1], shape, w.x, w.y, w.rotation * kPi / 180.0);
+            set4(v[2], w.width, w.height, w.softness, w.invert ? 1 : 0);
+            set4(v[3], q.enabled ? 1 : 0, q.hue, q.hueWidth, q.hueSoft);
+            set4(v[4], q.satLow, q.satHigh, q.satSoft, q.invert ? 1 : 0);
+            set4(v[5], q.lumLow, q.lumHigh, q.lumSoft, node.subject);
+            set4(v[6], node.invert ? 1 : 0, 0, 0, 0);
+        }
     }
 
     const LutTexture* lutTexture(const std::string& ref) {
@@ -604,12 +635,18 @@ private:
         const double texW = src.width();
         const double texH = src.height();
         const bool grade = !l.color.isIdentity();
-        QRhiTexture* curves = grade && !l.color.curvesAreIdentity() ? curvesTexture(slot, l.color) : nullptr;
+        const bool primaryCurves = grade && !l.color.curvesAreIdentity();
+        QRhiTexture* curves = primaryCurves || !l.nodes.empty() ? curvesTexture(slot, l.color, l.nodes) : nullptr;
+        const bool subjects = std::any_of(l.nodes.begin(), l.nodes.end(), [](const editor::NodeParams& n) { return n.subject != 0; });
+        // One person mask serves the background blur and person/background nodes.
+        QRhiTexture* personTex = l.backgroundBlur > 0 || subjects ? personMask(l, src) : nullptr;
+        QRhiTexture* nodeMask = subjects ? personTex : nullptr;
+        QRhiTexture* mask = l.backgroundBlur > 0 ? personTex : nullptr;
         const LutTexture* lut = grade && !l.color.lut.empty() && l.color.lutAmount > 0 ? lutTexture(l.color.lut) : nullptr;
         auto setGrade = [&](Draw& d) {
             set4(d.u.uvMap, srcPixels.x() / texW, srcPixels.y() / texH, srcPixels.width() / (texW * size.width()),
                  srcPixels.height() / (texH * size.height()));
-            set4(d.u.grade, 1.0 + (grade ? l.color.saturation : 0.0), curves ? 1 : 0, l.mirror ? 1 : 0, 0);
+            set4(d.u.grade, 1.0 + (grade ? l.color.saturation : 0.0), primaryCurves ? 1 : 0, l.mirror ? 1 : 0, 0);
             set4(d.u.grade2, grade ? l.color.colorBoost : 0.0, grade ? l.color.hue * 3.14159265358979323846 : 0.0, 0, 0);
             if (lut) {
                 set4(d.u.lutScale, lut->scale[0], lut->scale[1], lut->scale[2], std::clamp(l.color.lutAmount, 0.0, 1.0));
@@ -624,6 +661,8 @@ private:
             set4(d.u.gamut0, g[0][0], g[0][1], g[0][2], 0);
             set4(d.u.gamut1, g[1][0], g[1][1], g[1][2], 0);
             set4(d.u.gamut2, g[2][0], g[2][1], g[2][2], 0);
+            setNodes(d.u, l, texW / texH, nodeMask != nullptr);
+            if (nodeMask) d.mask = nodeMask;
         };
 
         Draw layer = draw({}, {}, kMedia);
@@ -635,7 +674,6 @@ private:
             model.translate(-size.width() / 2.0f, -size.height() / 2.0f);
         }
 
-        QRhiTexture* mask = l.backgroundBlur > 0 ? personMask(l, src) : nullptr;
         const bool prepare = l.blur > 0 || mask;
         if (prepare) {
             // Grade into a layer-sized image, then soften it on the GPU.
@@ -693,6 +731,8 @@ private:
             set4(layer.u.grade, 1, 0, 0, 0);
             set4(layer.u.grade2, 0, 0, 0, 0);
             set4(layer.u.inputColor, 0, 0, 0, 0);
+            set4(layer.u.nodeInfo, 0, 0, 0, -1);
+            layer.mask = nullptr;
             layer.lut = nullptr;
             set4(layer.u.lutScale, 0, 0, 0, 0);
         }

@@ -264,7 +264,12 @@ LookSettings scaleLook(const LookSettings& look, double amount) {
 
 ColorParams applyLook(const ColorParams& base, const LookSettings& look) {
     if (look.isNone() || look.amount <= 0.0) return base;
-    const LookSettings l = scaleLook(look, look.amount);
+    return combineGrades(base, scaleLook(look, look.amount));
+}
+
+ColorParams paramsOf(const timeline::ColorAdjustments::Grade& grade) { return combineGrades(ColorParams{}, grade); }
+
+ColorParams combineGrades(const ColorParams& base, const timeline::ColorAdjustments::Grade& l) {
     ColorParams out = base;
     out.exposure = std::clamp(base.exposure + l.exposure, -2.0, 2.0);
     out.brightness = clampUnit(base.brightness + l.brightness);

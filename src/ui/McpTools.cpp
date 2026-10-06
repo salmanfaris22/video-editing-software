@@ -291,6 +291,84 @@ void registerMcpTools(Server& server, ProjectController* p) {
              }
              p->copyGradeTo(str(a, "fromClipId"), targets);
          });
+    const Json gradeSchema = object({{"exposure", number(-2, 2)},    {"brightness", number(-1, 1)}, {"contrast", number(-1, 1)},
+                                     {"pivot", number(0, 1)},       {"saturation", number(-1, 1)}, {"temperature", number(-1, 1)},
+                                     {"tint", number(-1, 1)},       {"shadows", number(-1, 1)},    {"highlights", number(-1, 1)},
+                                     {"colorBoost", number(-1, 1)}, {"hue", number(-1, 1)}});
+    const Json windowSchema = object({{"shape", choice({"none", "circle", "rectangle", "gradient"})}, {"x", number(-1, 2)},
+                                      {"y", number(-1, 2)}, {"width", number(0.002, 4)}, {"height", number(0.002, 4)},
+                                      {"rotation", number(-360, 360)}, {"softness", number(0, 1)}, {"invert", boolean()}});
+    const Json qualifierSchema = object({{"enabled", boolean()}, {"hue", number(0, 1)}, {"hueWidth", number(0, 0.5)},
+                                         {"satLow", number(0, 1)}, {"satHigh", number(0, 1)}, {"lumLow", number(0, 1)},
+                                         {"lumHigh", number(0, 1)}, {"invert", boolean()}});
+    const Json pickSchema = object({{"x", number(0, 1)}, {"y", number(0, 1)}, {"time", time()}}, {"x", "y", "time"});
+    // Shared by add_node and set_node: everything after the node exists.
+    const auto configureNode = [p](const Json& a, const QString& clip, const QString& nodeId) {
+        if (a.contains("label")) p->setNodeLabel(clip, nodeId, str(a, "label"));
+        if (a.contains("enabled")) p->setNodeEnabled(clip, nodeId, a["enabled"].get<bool>());
+        if (a.contains("subject")) p->setNodeSubject(clip, nodeId, str(a, "subject") == QLatin1String("none") ? QString() : str(a, "subject"));
+        if (a.contains("window")) {
+            QVariantMap m = variant(a["window"]).toMap();
+            if (m.value(QStringLiteral("shape")).toString() == QLatin1String("none")) m[QStringLiteral("shape")] = QString();
+            p->setNodeWindow(clip, nodeId, m);
+        }
+        if (a.contains("qualifier")) {
+            QVariantMap m = variant(a["qualifier"]).toMap();
+            if (!m.contains(QStringLiteral("enabled"))) m[QStringLiteral("enabled")] = true;
+            p->setNodeQualifier(clip, nodeId, m);
+        }
+        if (a.contains("pick")) {
+            const Json& k = a["pick"];
+            if (!p->pickNodeColor(clip, nodeId, k["x"].get<double>(), k["y"].get<double>(), k["time"].get<double>()))
+                throw std::runtime_error("The pick point is not on this clip's picture at that time");
+        }
+        if (a.contains("grade")) {
+            for (const auto& [key, value] : a["grade"].items()) p->setNodeValue(clip, nodeId, QString::fromStdString(key), value.get<double>());
+        }
+        if (a.contains("invert")) p->setNodeInvert(clip, nodeId, a["invert"].get<bool>());
+    };
+    add("add_node",
+        "Grade only part of a clip, like a serial node in DaVinci Resolve after the clip's correction. select: whole, "
+        "person or background (AI person segmentation), circle, rectangle or gradient (power windows in source "
+        "coordinates 0..1; shape them with window), or color (a key on one color: give pick {x, y, time} with a canvas "
+        "point 0..1 on the object, e.g. the pen, or qualifier ranges). grade holds the node's own adjustments. Limits "
+        "multiply (e.g. a circle and a color key). invert grades everything except the selection. Returns nodeId.",
+        object({{"clipId", text(64)}, {"select", choice({"whole", "person", "background", "circle", "rectangle", "gradient", "color"})},
+                {"label", text(40)}, {"window", windowSchema}, {"qualifier", qualifierSchema}, {"pick", pickSchema},
+                {"grade", gradeSchema}, {"invert", boolean()}},
+               {"clipId", "select"}),
+        Access::Edit, [p, configureNode](const Json& a, const Context& ctx) {
+            QString nodeId;
+            const auto error = p->assistantEdit(QString::fromStdString(ctx.session.id), QStringLiteral("add_node"), [&] {
+                const QString clip = str(a, "clipId");
+                const QString select = str(a, "select");
+                nodeId = p->addNode(clip, select == QLatin1String("whole") ? QString() : select);
+                if (nodeId.isEmpty()) throw std::runtime_error("Could not add a node (at most 8 per clip)");
+                configureNode(a, clip, nodeId);
+            });
+            if (!error.isEmpty()) return Server::failure(error.toStdString());
+            Json out = summary(p);
+            out["nodeId"] = nodeId.toStdString();
+            return Server::result(out);
+        });
+    edit("set_node",
+         "Change a node from add_node (ids are also in get_selection under nodes): label, enabled, subject (none, person, "
+         "background), window, qualifier, pick, grade values, invert.",
+         object({{"clipId", text(64)}, {"nodeId", text(16)}, {"label", text(40)}, {"enabled", boolean()},
+                 {"subject", choice({"none", "person", "background"})}, {"window", windowSchema}, {"qualifier", qualifierSchema},
+                 {"pick", pickSchema}, {"grade", gradeSchema}, {"invert", boolean()}},
+                {"clipId", "nodeId"}),
+         [p, configureNode](const Json& a) {
+             const QString clip = str(a, "clipId");
+             const QString nodeId = str(a, "nodeId");
+             bool found = false;
+             p->selectClip(clip);
+             for (const QVariant& n : p->selection().value(QStringLiteral("nodes")).toList()) found = found || n.toMap().value("id").toString() == nodeId;
+             if (!found) throw std::runtime_error("Unknown nodeId for this clip");
+             configureNode(a, clip, nodeId);
+         });
+    edit("remove_node", "Delete a node from a clip's grade.", object({{"clipId", text(64)}, {"nodeId", text(16)}}, {"clipId", "nodeId"}),
+         [p](const Json& a) { p->removeNode(str(a, "clipId"), str(a, "nodeId")); });
     edit("set_clip_color_space",
          "Set how a clip's source colors are read: auto (from the file), rec709, srgb, display-p3, rec2020, "
          "rec2020-hlg or rec2020-pq (HDR sources are tone-mapped to SDR).",

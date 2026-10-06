@@ -645,4 +645,176 @@ void applyColor(QImage& img, const ColorParams& c, const Lut3D* lut) {
     }
 }
 
+namespace {
+
+constexpr double kPiValue = 3.14159265358979323846;
+
+/// GLSL smoothstep; a zero-width edge is a step.
+double smooth(double e0, double e1, double x) {
+    if (e1 <= e0) return x < e0 ? 0.0 : 1.0;
+    const double t = std::clamp((x - e0) / (e1 - e0), 0.0, 1.0);
+    return t * t * (3.0 - 2.0 * t);
+}
+
+}  // namespace
+
+double windowMatte(const timeline::ColorAdjustments::Window& w, double u, double v, double aspect) {
+    if (w.shape.empty()) return 1.0;
+    const double px = (u - w.x) * aspect;
+    const double py = v - w.y;
+    const double a = w.rotation * kPiValue / 180.0;
+    const double c = std::cos(a);
+    const double s = std::sin(a);
+    const double qx = c * px + s * py;  // into the window's own (unrotated) frame
+    const double qy = -s * px + c * py;
+    const double hx = std::max(w.width * aspect * 0.5, 1e-4);
+    const double hy = std::max(w.height * 0.5, 1e-4);
+    double m = 0.0;
+    if (w.shape == "gradient") {
+        m = 1.0 - smooth(-1.0, 1.0, qy / hy);  // full at the top edge, none at the bottom edge
+    } else {
+        const double e = w.shape == "rectangle" ? std::max(std::abs(qx) / hx, std::abs(qy) / hy) : std::hypot(qx / hx, qy / hy);
+        const double soft = std::max(w.softness * 0.5, 0.004);
+        m = 1.0 - smooth(1.0 - soft, 1.0 + soft, e);
+    }
+    return w.invert ? 1.0 - m : m;
+}
+
+std::array<double, 3> qualifierAxes(double r, double g, double b) {
+    const double mx = std::max({r, g, b});
+    const double mn = std::min({r, g, b});
+    const double chroma = mx - mn;
+    double h = 0.0;
+    if (chroma > 1e-6) {
+        if (mx == r) h = (g - b) / chroma;
+        else if (mx == g) h = 2.0 + (b - r) / chroma;
+        else h = 4.0 + (r - g) / chroma;
+        h /= 6.0;
+        if (h < 0.0) h += 1.0;
+    }
+    return {h, mx > 1e-6 ? chroma / mx : 0.0, 0.2126 * r + 0.7152 * g + 0.0722 * b};
+}
+
+double qualifierMatte(const timeline::ColorAdjustments::Qualifier& q, double r, double g, double b) {
+    if (!q.enabled) return 1.0;
+    const auto [h, sat, lum] = qualifierAxes(r, g, b);
+    double dh = std::abs(h - q.hue);
+    dh = std::min(dh, 1.0 - dh);  // around the wheel
+    const double hm = 1.0 - smooth(q.hueWidth, q.hueWidth + std::max(q.hueSoft, 1e-4), dh);
+    const double ss = std::max(q.satSoft, 1e-4);
+    const double ls = std::max(q.lumSoft, 1e-4);
+    const double sm = smooth(q.satLow - ss, q.satLow, sat) * (1.0 - smooth(q.satHigh, q.satHigh + ss, sat));
+    const double lm = smooth(q.lumLow - ls, q.lumLow, lum) * (1.0 - smooth(q.lumHigh, q.lumHigh + ls, lum));
+    const double m = hm * sm * lm;
+    return q.invert ? 1.0 - m : m;
+}
+
+double nodeMatte(const NodeParams& n, double u, double v, double aspect, double r, double g, double b, double person) {
+    double m = windowMatte(n.window, u, v, aspect) * qualifierMatte(n.qualifier, r, g, b);
+    if (n.subject != 0 && person >= 0.0) m *= n.subject == 1 ? person : 1.0 - person;
+    return n.invert ? 1.0 - m : m;
+}
+
+timeline::ColorAdjustments::Qualifier qualifierAround(double r, double g, double b) {
+    const auto [h, sat, lum] = qualifierAxes(r, g, b);
+    timeline::ColorAdjustments::Qualifier q;
+    q.enabled = true;
+    if (sat < 0.12) {  // a gray: key on brightness, any hue
+        q.hue = 0.0;
+        q.hueWidth = 0.5;
+        q.satLow = 0.0;
+        q.satHigh = std::min(1.0, sat + 0.12);
+    } else {
+        q.hue = h;
+        q.hueWidth = 0.05;
+        q.hueSoft = 0.04;
+        q.satLow = std::max(0.0, sat * 0.45);
+        q.satHigh = 1.0;
+    }
+    q.satSoft = 0.06;
+    q.lumLow = std::max(0.0, lum - 0.3);
+    q.lumHigh = std::min(1.0, lum + 0.3);
+    q.lumSoft = 0.08;
+    return q;
+}
+
+void applyNodes(QImage& img, const std::vector<NodeParams>& nodes, const SourceMap& map, const QImage* person, int highlight) {
+    if (img.isNull() || nodes.empty()) return;
+    if (img.format() != QImage::Format_RGB32 && img.format() != QImage::Format_ARGB32_Premultiplied) {
+        img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
+    struct Prepared {
+        ColorCurves curves;
+        double sat = 1;
+        bool pixelOps = false;
+        const NodeParams* node = nullptr;
+    };
+    const std::size_t count = highlight >= 0 ? std::min(nodes.size(), static_cast<std::size_t>(highlight) + 1) : nodes.size();
+    std::vector<Prepared> prepared;
+    prepared.reserve(count);
+    for (std::size_t i = 0; i < count; ++i) {
+        const ColorParams& c = nodes[i].grade;
+        prepared.push_back({colorCurves(c), 1.0 + c.saturation, c.colorBoost != 0 || c.hue != 0, &nodes[i]});
+    }
+    const bool hasMask = person && !person->isNull() && person->size() == img.size() && person->format() == QImage::Format_Grayscale8;
+    const int w = img.width();
+    for (int y = 0; y < img.height(); ++y) {
+        auto* px = reinterpret_cast<std::uint32_t*>(img.scanLine(y));
+        const std::uint8_t* maskRow = hasMask ? person->constScanLine(y) : nullptr;
+        const double v = map.v0 + (y + 0.5) * map.dv;
+        for (int x = 0; x < w; ++x) {
+            const std::uint32_t pv = px[x];
+            const std::uint32_t a = pv >> 24;
+            if (a == 0) continue;
+            int r = static_cast<int>((pv >> 16) & 0xFF);
+            int g = static_cast<int>((pv >> 8) & 0xFF);
+            int b = static_cast<int>(pv & 0xFF);
+            if (a < 255) {
+                r = std::min(255, r * 255 / static_cast<int>(a));
+                g = std::min(255, g * 255 / static_cast<int>(a));
+                b = std::min(255, b * 255 / static_cast<int>(a));
+            }
+            const double u = map.u0 + ((map.mirror ? w - 1 - x : x) + 0.5) * map.du;
+            const double personValue = maskRow ? maskRow[x] / 255.0 : -1.0;
+            for (std::size_t i = 0; i < prepared.size(); ++i) {
+                const Prepared& n = prepared[i];
+                const double m = nodeMatte(*n.node, u, v, map.aspect, r / 255.0, g / 255.0, b / 255.0, personValue);
+                const bool show = static_cast<int>(i) == highlight;
+                if (m <= 0.0 && !show) continue;
+                int gr = n.curves[0][static_cast<std::size_t>(r)];
+                int gg = n.curves[1][static_cast<std::size_t>(g)];
+                int gb = n.curves[2][static_cast<std::size_t>(b)];
+                if (n.sat != 1.0) {
+                    const double l = 0.2126 * gr + 0.7152 * gg + 0.0722 * gb;
+                    gr = static_cast<int>(std::clamp(l + (gr - l) * n.sat, 0.0, 255.0));
+                    gg = static_cast<int>(std::clamp(l + (gg - l) * n.sat, 0.0, 255.0));
+                    gb = static_cast<int>(std::clamp(l + (gb - l) * n.sat, 0.0, 255.0));
+                }
+                if (n.pixelOps) {
+                    const auto o = boostAndHue(n.node->grade, gr / 255.0, gg / 255.0, gb / 255.0);
+                    gr = static_cast<int>(std::lround(o[0] * 255.0));
+                    gg = static_cast<int>(std::lround(o[1] * 255.0));
+                    gb = static_cast<int>(std::lround(o[2] * 255.0));
+                }
+                if (show) {  // the selection in color, everything else mid gray
+                    r = static_cast<int>(std::lround(128 + (gr - 128) * m));
+                    g = static_cast<int>(std::lround(128 + (gg - 128) * m));
+                    b = static_cast<int>(std::lround(128 + (gb - 128) * m));
+                    break;
+                }
+                r = static_cast<int>(std::lround(r + (gr - r) * m));
+                g = static_cast<int>(std::lround(g + (gg - g) * m));
+                b = static_cast<int>(std::lround(b + (gb - b) * m));
+            }
+            if (a < 255) {
+                r = r * static_cast<int>(a) / 255;
+                g = g * static_cast<int>(a) / 255;
+                b = b * static_cast<int>(a) / 255;
+            }
+            px[x] = (a << 24) | (static_cast<std::uint32_t>(r) << 16) | (static_cast<std::uint32_t>(g) << 8) |
+                    static_cast<std::uint32_t>(b);
+        }
+    }
+}
+
 }  // namespace lectern::editor

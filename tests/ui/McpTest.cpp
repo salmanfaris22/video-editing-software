@@ -332,3 +332,52 @@ TEST(McpUi, LooksAndCopyGradeThroughTools) {
     p.controller.selectClip(QString::fromStdString(clips[1]));
     EXPECT_EQ(p.controller.selection().value("look").toString(), "");
 }
+
+TEST(McpUi, NodesGradePartsOfAClipThroughTools) {
+    Project p;
+    const auto clip = p.clip();
+    // "Warm up only the person, darken the rest": two nodes in two calls.
+    auto r = p.call("add_node", {{"clipId", clip}, {"select", "person"}, {"grade", {{"temperature", 0.4}, {"exposure", 0.2}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    const std::string person = r["result"]["structuredContent"]["nodeId"];
+    EXPECT_EQ(person, "n2");
+    r = p.call("add_node", {{"clipId", clip}, {"select", "circle"}, {"label", "Spot"},
+                            {"window", {{"x", 0.4}, {"y", 0.5}, {"width", 0.3}, {"softness", 0.6}}},
+                            {"grade", {{"exposure", -0.5}}}, {"invert", true}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    const std::string spot = r["result"]["structuredContent"]["nodeId"];
+    p.controller.selectClip(QString::fromStdString(clip));
+    auto nodes = p.controller.selection().value("nodes").toList();
+    ASSERT_EQ(nodes.size(), 2);
+    EXPECT_EQ(nodes[0].toMap().value("subject").toString(), "person");
+    EXPECT_DOUBLE_EQ(nodes[0].toMap().value("temperature").toDouble(), 0.4);
+    EXPECT_EQ(nodes[1].toMap().value("label").toString(), "Spot");
+    EXPECT_TRUE(nodes[1].toMap().value("invert").toBool());
+    EXPECT_DOUBLE_EQ(nodes[1].toMap().value("window").toMap().value("softness").toDouble(), 0.6);
+
+    // A color key picked on the canvas, in the same call.
+    r = p.call("add_node", {{"clipId", clip}, {"select", "color"}, {"pick", {{"x", 0.5}, {"y", 0.5}, {"time", 1.0}}},
+                            {"grade", {{"saturation", -1.0}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    // A pick after the clip ends fails and changes nothing (the assistant edit rolls back).
+    p.controller.selectClip(QString::fromStdString(clip));
+    const auto before = p.controller.selection().value("nodes").toList().size();
+    r = p.call("add_node", {{"clipId", clip}, {"select", "color"}, {"pick", {{"x", 0.5}, {"y", 0.5}, {"time", 3000.0}}}});
+    EXPECT_TRUE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    EXPECT_EQ(p.controller.selection().value("nodes").toList().size(), before);
+
+    r = p.call("set_node", {{"clipId", clip}, {"nodeId", spot}, {"enabled", false}, {"window", {{"shape", "none"}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    nodes = p.controller.selection().value("nodes").toList();
+    EXPECT_FALSE(nodes[1].toMap().value("enabled").toBool());
+    EXPECT_EQ(nodes[1].toMap().value("window").toMap().value("shape").toString(), "");
+    EXPECT_TRUE(p.call("set_node", {{"clipId", clip}, {"nodeId", "n99"}, {"enabled", false}})["result"]["isError"].get<bool>());
+    EXPECT_EQ(p.call("add_node", {{"clipId", clip}, {"select", "star"}})["error"]["code"], -32602);
+
+    r = p.call("remove_node", {{"clipId", clip}, {"nodeId", person}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    EXPECT_EQ(p.controller.selection().value("nodes").toList().size(), static_cast<int>(before) - 1);
+}

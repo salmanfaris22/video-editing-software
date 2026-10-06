@@ -19,6 +19,12 @@ struct LayerBounds {
 /// fills (camera), the fitted picture inside the box otherwise (screen).
 [[nodiscard]] NormRect visibleMediaRect(const VisualLayer& layer, int canvasWidth, int canvasHeight);
 
+/// Where the whole source frame of a media layer lies on the canvas
+/// (fractions), placed exactly as the compositor draws it (crop, zoom,
+/// fill/fit). Parts outside visibleMediaRect are cut away. Windows of color
+/// nodes, in source coordinates, map onto the viewer through it.
+[[nodiscard]] NormRect sourceFrameRect(const VisualLayer& layer, int canvasWidth, int canvasHeight);
+
 /// Visible bounds of every layer of `plan`, in plan order: fitted media,
 /// text blocks as animated at this instant, subtitle boxes (moved above titles).
 [[nodiscard]] std::vector<LayerBounds> layerBounds(const RenderPlan& plan);

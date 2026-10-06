@@ -106,4 +106,41 @@ using ColorCurves = std::array<std::array<std::uint8_t, 256>, 3>;
 /// brightness, contrast, temperature/tint, lift/gamma/gain, saturation.
 void applyColor(QImage& image, const ColorParams& color, const Lut3D* lut = nullptr);
 
+// ---- Nodes: secondary corrections (Phase 1.7 qualifier, 1.8 windows, 1.10 subject)
+// The GPU shader (src/render/shaders/layer.frag) mirrors these functions.
+
+/// How much of a window covers source point (u, v), 0…1. `aspect` = source
+/// width / height, so circles stay round and rotation keeps shapes.
+[[nodiscard]] double windowMatte(const timeline::ColorAdjustments::Window& window, double u, double v, double aspect);
+/// Hue (0…1, 0 = red), saturation ((max − min) / max) and luma (Rec.709) of
+/// an RGB color (0…1): the qualifier's axes.
+[[nodiscard]] std::array<double, 3> qualifierAxes(double r, double g, double b);
+/// How much a color (0…1 RGB) is selected by an HSL qualifier, 0…1.
+[[nodiscard]] double qualifierMatte(const timeline::ColorAdjustments::Qualifier& q, double r, double g, double b);
+/// A node's selection at one pixel: window × qualifier × subject, inverted
+/// when asked. `person` is the person mask there (0…1), negative without a mask
+/// (then the subject does not limit the node).
+[[nodiscard]] double nodeMatte(const NodeParams& node, double u, double v, double aspect, double r, double g, double b,
+                               double person);
+/// A qualifier centered on a picked color, with ranges wide enough for the
+/// shading of one object (Resolve's qualifier picker).
+[[nodiscard]] timeline::ColorAdjustments::Qualifier qualifierAround(double r, double g, double b);
+
+/// Where an image's pixels lie in the source frame: pixel (x, y) shows source
+/// point (u0 + (x′ + 0.5)·du, v0 + (y + 0.5)·dv), x′ = width − 1 − x when mirrored.
+struct SourceMap {
+    double u0 = 0;
+    double du = 0;
+    double v0 = 0;
+    double dv = 0;
+    bool mirror = false;
+    double aspect = 1;  ///< source width / height
+};
+
+/// Applies `nodes` in order to an image graded by applyColor. `person` is the
+/// person mask (Grayscale8, the image's size) or null. `highlight` ≥ 0 stops
+/// at that node and shows its selection in color over mid gray.
+void applyNodes(QImage& image, const std::vector<NodeParams>& nodes, const SourceMap& map, const QImage* person = nullptr,
+                int highlight = -1);
+
 }  // namespace lectern::editor

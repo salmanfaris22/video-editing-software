@@ -23,6 +23,8 @@ layout(std140, binding = 0) uniform Params {
     vec4 gamut1;
     vec4 gamut2;
     vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians)
+    vec4 nodeInfo;   // x: node count, y: source aspect (w/h), z: person mask bound (0/1), w: highlighted node (-1 none)
+    vec4 nodes[56];  // 7 per node: grade, window0, window1, qual0, qual1, qual2, misc (see layer.frag)
 };
 
 layout(binding = 1) uniform sampler2D tex;      // source (premultiplied)
@@ -126,36 +128,146 @@ vec3 convertInput(vec3 code)
     return pow(clamp(o, 0.0, 1.0), vec3(1.0 / 2.4));
 }
 
-vec3 applyGrade(vec3 rgb)
+// The per-channel curves of row `row` of the curves texture (8-bit tables).
+vec3 curvesRow(vec3 rgb, int row)
 {
-    if (lutScale.w > 0.0) {
-        vec3 graded = texture(lut, rgb * lutScale.xyz + lutOffset.xyz).rgb;
-        rgb = clamp(mix(rgb, graded, lutScale.w), 0.0, 1.0);
-    }
-    if (grade.y > 0.5) {
-        ivec3 i = ivec3(floor(clamp(rgb, 0.0, 1.0) * 255.0 + 0.5));
-        rgb = vec3(texelFetch(curves, ivec2(i.r, 0), 0).r,
-                   texelFetch(curves, ivec2(i.g, 0), 0).g,
-                   texelFetch(curves, ivec2(i.b, 0), 0).b);
-    }
-    if (grade.x != 1.0) {
+    ivec3 i = ivec3(floor(clamp(rgb, 0.0, 1.0) * 255.0 + 0.5));
+    return vec3(texelFetch(curves, ivec2(i.r, row), 0).r,
+                texelFetch(curves, ivec2(i.g, row), 0).g,
+                texelFetch(curves, ivec2(i.b, row), 0).b);
+}
+
+// Saturation, color boost and hue rotation (mirrors editor::applyColor / boostAndHue).
+vec3 finishGrade(vec3 rgb, float saturation, float boost, float hueAngle)
+{
+    if (saturation != 1.0) {
         float l = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
-        rgb = clamp(vec3(l) + (rgb - vec3(l)) * grade.x, 0.0, 1.0);
+        rgb = clamp(vec3(l) + (rgb - vec3(l)) * saturation, 0.0, 1.0);
     }
-    if (grade2.x != 0.0) {  // color boost: muted colors gain more (mirrors editor::boostAndHue)
+    if (boost != 0.0) {  // color boost: muted colors gain more
         float l = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
         float chroma = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
-        rgb = vec3(l) + (rgb - vec3(l)) * (1.0 + grade2.x * (1.0 - chroma));
+        rgb = vec3(l) + (rgb - vec3(l)) * (1.0 + boost * (1.0 - chroma));
     }
-    if (grade2.y != 0.0) {  // hue rotation around the gray axis
-        float c = cos(grade2.y);
-        float s = sin(grade2.y);
+    if (hueAngle != 0.0) {  // hue rotation around the gray axis
+        float c = cos(hueAngle);
+        float s = sin(hueAngle);
         mat3 m = mat3(0.2126 + 0.7874 * c - 0.2126 * s, 0.2126 - 0.2126 * c + 0.143 * s, 0.2126 - 0.2126 * c - 0.7874 * s,
                       0.7152 - 0.7152 * c - 0.7152 * s, 0.7152 + 0.2848 * c + 0.140 * s, 0.7152 - 0.7152 * c + 0.7152 * s,
                       0.0722 - 0.0722 * c + 0.9278 * s, 0.0722 - 0.0722 * c - 0.283 * s, 0.0722 + 0.9278 * c + 0.0722 * s);
         rgb = m * rgb;
     }
     return clamp(rgb, 0.0, 1.0);
+}
+
+vec3 applyGrade(vec3 rgb)
+{
+    if (lutScale.w > 0.0) {
+        vec3 graded = texture(lut, rgb * lutScale.xyz + lutOffset.xyz).rgb;
+        rgb = clamp(mix(rgb, graded, lutScale.w), 0.0, 1.0);
+    }
+    if (grade.y > 0.5)
+        rgb = curvesRow(rgb, 0);
+    return finishGrade(rgb, grade.x, grade2.x, grade2.y);
+}
+
+// ---- Nodes (mirror editor::windowMatte / qualifierMatte / nodeMatte / applyNodes)
+// Per node n, nodes[7n + k]:
+//   0 grade:   saturation multiplier, color boost, hue rotation (radians), -
+//   1 window0: shape (0 none, 1 circle, 2 rectangle, 3 gradient), center x, center y, rotation (radians)
+//   2 window1: width, height, softness, invert
+//   3 qual0:   enabled, hue, hue width, hue softness
+//   4 qual1:   sat low, sat high, sat softness, invert
+//   5 qual2:   lum low, lum high, lum softness, subject (0 none, 1 person, 2 background)
+//   6 misc:    invert the whole selection, -, -, -
+// The node's curves are row n + 1 of the curves texture.
+
+float windowMatte(int n, vec2 uv)
+{
+    vec4 w0 = nodes[n * 7 + 1];
+    vec4 w1 = nodes[n * 7 + 2];
+    int shapeKind = int(w0.x + 0.5);
+    if (shapeKind == 0)
+        return 1.0;
+    float aspect = nodeInfo.y;
+    vec2 p = vec2((uv.x - w0.y) * aspect, uv.y - w0.z);
+    float c = cos(w0.w);
+    float s = sin(w0.w);
+    vec2 q = vec2(c * p.x + s * p.y, -s * p.x + c * p.y);
+    vec2 halfSize = vec2(max(w1.x * aspect * 0.5, 1e-4), max(w1.y * 0.5, 1e-4));
+    float m;
+    if (shapeKind == 3) {
+        m = 1.0 - smoothstep(-1.0, 1.0, q.y / halfSize.y);
+    } else {
+        float e = shapeKind == 2 ? max(abs(q.x) / halfSize.x, abs(q.y) / halfSize.y) : length(q / halfSize);
+        float soft = max(w1.z * 0.5, 0.004);
+        m = 1.0 - smoothstep(1.0 - soft, 1.0 + soft, e);
+    }
+    return w1.w > 0.5 ? 1.0 - m : m;
+}
+
+float qualifierMatte(int n, vec3 rgb)
+{
+    vec4 q0 = nodes[n * 7 + 3];
+    if (q0.x < 0.5)
+        return 1.0;
+    vec4 q1 = nodes[n * 7 + 4];
+    vec4 q2 = nodes[n * 7 + 5];
+    float mx = max(rgb.r, max(rgb.g, rgb.b));
+    float mn = min(rgb.r, min(rgb.g, rgb.b));
+    float chroma = mx - mn;
+    float h = 0.0;
+    if (chroma > 1e-6) {
+        if (mx == rgb.r)
+            h = (rgb.g - rgb.b) / chroma;
+        else if (mx == rgb.g)
+            h = 2.0 + (rgb.b - rgb.r) / chroma;
+        else
+            h = 4.0 + (rgb.r - rgb.g) / chroma;
+        h /= 6.0;
+        if (h < 0.0)
+            h += 1.0;
+    }
+    float sat = mx > 1e-6 ? chroma / mx : 0.0;
+    float lum = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+    float dh = abs(h - q0.y);
+    dh = min(dh, 1.0 - dh);
+    float hm = 1.0 - smoothstep(q0.z, q0.z + max(q0.w, 1e-4), dh);
+    float ss = max(q1.z, 1e-4);
+    float ls = max(q2.z, 1e-4);
+    float sm = smoothstep(q1.x - ss, q1.x, sat) * (1.0 - smoothstep(q1.y, q1.y + ss, sat));
+    float lm = smoothstep(q2.x - ls, q2.x, lum) * (1.0 - smoothstep(q2.y, q2.y + ls, lum));
+    float m = hm * sm * lm;
+    return q1.w > 0.5 ? 1.0 - m : m;
+}
+
+float nodeMatte(int n, vec3 rgb, vec2 uv)
+{
+    float m = windowMatte(n, uv) * qualifierMatte(n, rgb);
+    int subject = int(nodes[n * 7 + 5].w + 0.5);
+    if (subject != 0 && nodeInfo.z > 0.5) {
+        float person = texture(mask, uv).r;
+        m *= subject == 1 ? person : 1.0 - person;
+    }
+    return nodes[n * 7 + 6].x > 0.5 ? 1.0 - m : m;
+}
+
+vec3 applyNodes(vec3 rgb, vec2 uv)
+{
+    int count = int(nodeInfo.x + 0.5);
+    int highlight = int(floor(nodeInfo.w + 0.5));
+    for (int n = 0; n < count; ++n) {
+        float m = nodeMatte(n, rgb, uv);
+        bool show = n == highlight;
+        if (m <= 0.0 && !show)
+            continue;
+        vec4 g = nodes[n * 7];
+        vec3 graded = finishGrade(curvesRow(rgb, n + 1), g.x, g.y, g.z);
+        if (show)  // the selection in color, everything else mid gray
+            return mix(vec3(128.0 / 255.0), graded, m);
+        rgb = mix(rgb, graded, m);
+    }
+    return rgb;
 }
 
 vec4 gradedSource(vec2 uv)
@@ -169,6 +281,8 @@ vec4 gradedSource(vec2 uv)
     if (inputColor.z > 0.5)
         rgb = convertInput(rgb);
     rgb = applyGrade(rgb);
+    if (nodeInfo.x > 0.5)
+        rgb = applyNodes(rgb, uv);
     return vec4(rgb * s.a, s.a);
 }
 

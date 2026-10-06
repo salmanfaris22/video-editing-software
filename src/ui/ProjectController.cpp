@@ -550,6 +550,7 @@ void ProjectController::rebuildSelection() {
         {"look", qs(clip->color.look.id)},
         {"lookName", qs(clip->color.look.name)},
         {"lookAmount", clip->color.look.isNone() ? 1.0 : clip->color.look.amount},
+        {"nodes", nodesView(clip->color)},
         {"backgroundBlurOn", hasEffect(*clip, editor::kEffectBackgroundBlur)},
         {"backgroundBlur", hasEffect(*clip, editor::kEffectBackgroundBlur)
                                ? effectValue(*clip, editor::kEffectBackgroundBlur, "amount", 0.6) : 0.0},

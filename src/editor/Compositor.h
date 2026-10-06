@@ -76,6 +76,9 @@ private:
     void drawShadow(QPainter& p, const QRectF& rect, const VisualLayer& layer, double height, bool opaque);
     /// Blurs what is behind the person in `image` (camera background blur).
     void blurBackground(QImage& image, const VisualLayer& layer, double height);
+    /// The person mask of a layer image (Grayscale8, same size), cached per
+    /// frame; null without a segmenter.
+    QImage personMask(const QImage& image, const VisualLayer& layer);
 
     std::map<std::tuple<int, int, int, bool>, QImage> shadowCache_;  ///< full-resolution shadows by shape
     QImage background_;  ///< the canvas background, rebuilt only when it changes

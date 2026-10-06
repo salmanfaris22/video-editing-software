@@ -263,6 +263,42 @@ public:
     /// what "previous", "next" and "all" refer to.
     Q_INVOKABLE QStringList gradableClips() const;
 
+    // ---- Nodes: grade part of the picture (ProjectNodes.cpp) ---------------------
+    // Node 01 is the clip's own correction (the setColor… methods); these add
+    // serial nodes after it, each with its own grade and selection.
+    /// Adds a node after the clip's last one; returns its id ("" when it cannot).
+    /// kind presets the selection: "" or "whole" (all of the picture), "person",
+    /// "background", "circle", "rectangle", "gradient", "color" (a key to pick).
+    Q_INVOKABLE QString addNode(const QString& clipId, const QString& kind = {});
+    Q_INVOKABLE void removeNode(const QString& clipId, const QString& nodeId);
+    /// Moves a node one place earlier (−1) or later (+1).
+    Q_INVOKABLE void moveNode(const QString& clipId, const QString& nodeId, int direction);
+    Q_INVOKABLE void setNodeEnabled(const QString& clipId, const QString& nodeId, bool enabled);
+    Q_INVOKABLE void setNodeLabel(const QString& clipId, const QString& nodeId, const QString& label);
+    /// Resets the node's grade; its selection stays.
+    Q_INVOKABLE void resetNode(const QString& clipId, const QString& nodeId);
+    /// The node's grade, with the keys of setColorValue (except lutAmount).
+    Q_INVOKABLE void setNodeValue(const QString& clipId, const QString& nodeId, const QString& key, double value);
+    Q_INVOKABLE void setNodeWheel(const QString& clipId, const QString& nodeId, const QString& wheel, double x, double y,
+                                  double master);
+    Q_INVOKABLE void setNodeCurve(const QString& clipId, const QString& nodeId, const QString& channel, const QVariantList& points);
+    /// Any of: shape ("" none, "circle", "rectangle", "gradient"), x, y (center,
+    /// 0…1 of the source), width, height, rotation (degrees), softness (0…1), invert.
+    Q_INVOKABLE void setNodeWindow(const QString& clipId, const QString& nodeId, const QVariantMap& values);
+    /// Any of: enabled, hue, hueWidth, hueSoft, satLow, satHigh, satSoft, lumLow, lumHigh, lumSoft, invert.
+    Q_INVOKABLE void setNodeQualifier(const QString& clipId, const QString& nodeId, const QVariantMap& values);
+    /// "" (no limit), "person" or "background" (uses the person segmenter).
+    Q_INVOKABLE void setNodeSubject(const QString& clipId, const QString& nodeId, const QString& subject);
+    /// Grade everything except the selection (Resolve's outside node).
+    Q_INVOKABLE void setNodeInvert(const QString& clipId, const QString& nodeId, bool invert);
+    /// Keys the node on the color at canvas point (x, y) (fractions) at `seconds`
+    /// — the picture as the node receives it there. False outside the clip.
+    Q_INVOKABLE bool pickNodeColor(const QString& clipId, const QString& nodeId, double x, double y, double seconds);
+    /// Where the clip's whole source frame lies on the canvas at `seconds`
+    /// (fractions; larger than the picture when cropped or filled): {x, y, w, h,
+    /// mirror, rotation, aspect, visibleX/Y/W/H, centerX/Y}. Windows map through it.
+    Q_INVOKABLE QVariantMap sourceFrame(const QString& clipId, double seconds) const;
+
     // ---- Canvas (ProjectCanvas.cpp) --------------------------------------------
     /// The topmost visible layer under a canvas point (fractions) at `seconds`: its clip id, or "".
     Q_INVOKABLE QString layerAt(double x, double y, double seconds) const;
@@ -439,6 +475,8 @@ private:
     std::shared_ptr<std::atomic<bool>> jobCancel_;
     bool assistantEditing_ = false;
     QString assistantError_;
+    /// The selection's view of a clip's nodes (ProjectNodes.cpp).
+    [[nodiscard]] static QVariantList nodesView(const timeline::ColorAdjustments& color);
     // Looks and grade clipboard (ProjectGrades.cpp)
     void loadSavedLooks() const;
     [[nodiscard]] const timeline::ColorAdjustments::Look* findLook(const QString& id) const;

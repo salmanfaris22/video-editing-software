@@ -66,6 +66,17 @@ struct InputColor {
 [[nodiscard]] InputColor resolveInputColor(std::string_view override, std::string_view transferTag,
                                            std::string_view primariesTag);
 
+/// A node (secondary correction after the primary grade) as the renderers
+/// see it: its grade and what limits it (window × qualifier × subject).
+struct NodeParams {
+    ColorParams grade;  ///< no LUT
+    timeline::ColorAdjustments::Window window;
+    timeline::ColorAdjustments::Qualifier qualifier;
+    int subject = 0;     ///< 0 whole picture, 1 person, 2 background
+    bool invert = false;
+    friend bool operator==(const NodeParams&, const NodeParams&) = default;
+};
+
 struct VisualLayer {
     LayerKind kind = LayerKind::Media;
     timeline::ClipId clip;
@@ -98,6 +109,8 @@ struct VisualLayer {
     double sourceAspect = 0;    ///< media width / height (0 = unknown)
     ColorParams color;
     InputColor input;  ///< how to read the source's colors
+    std::vector<NodeParams> nodes;  ///< after `color`, in order (at most ColorAdjustments::kMaxNodes)
+    int highlightNode = -1;         ///< ≥ 0: show that node's selection in color over gray (Color page)
 
     // Text / subtitle
     std::string text;
@@ -129,6 +142,11 @@ struct RenderPlan {
 /// The plan with every grade removed (before/after compare): layers keep
 /// their input color conversion, effects and placement.
 [[nodiscard]] RenderPlan ungraded(RenderPlan plan);
+/// Position of node `nodeId` among the clip's enabled nodes (what
+/// VisualLayer::nodes holds), or −1.
+[[nodiscard]] int enabledNodeIndex(const timeline::ColorAdjustments& color, std::string_view nodeId);
+/// The enabled nodes of a clip's grade, as renderer parameters.
+[[nodiscard]] std::vector<NodeParams> gradeNodes(const timeline::ColorAdjustments& color);
 /// A clip's grade at clip-local time `local` as renderer parameters: the
 /// correction, then (unless `withLook` is false) its creative look on top.
 [[nodiscard]] ColorParams gradeAt(const timeline::ColorAdjustments& color, Time local, bool withLook = true);

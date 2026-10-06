@@ -81,7 +81,7 @@ qt_add_qml_module(lectern_ui
         AppController.h AppController.cpp
         RecorderController.h RecorderController.cpp
         ProjectController.h ProjectController.cpp ProjectEdits.cpp ProjectLooks.cpp ProjectColor.cpp ProjectCanvas.cpp
-        ProjectClipKeyframes.cpp ProjectTracks.cpp ProjectGrades.cpp
+        ProjectClipKeyframes.cpp ProjectTracks.cpp ProjectGrades.cpp ProjectNodes.cpp
         ProjectAssistant.cpp
         McpController.h McpController.cpp McpTools.cpp
         PlaybackController.h PlaybackController.cpp

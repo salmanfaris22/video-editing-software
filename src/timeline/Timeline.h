@@ -83,14 +83,8 @@ struct ColorAdjustments {
     /// How to read the source's colors: "auto" (from the file's tags), "rec709",
     /// "srgb", "display-p3", "rec2020", "rec2020-hlg", "rec2020-pq".
     std::string inputColorSpace = "auto";
-    /// A creative look on top of the correction above (Lumetri's "Creative"
-    /// section, a second node in Resolve): its own primaries and curves, mixed
-    /// in by `amount`. The settings are stored in the project, so a project
-    /// shows its looks on any machine. Empty `id` = no look.
-    struct Look {
-        std::string id;       ///< preset id ("oppenheimer", "custom-…")
-        std::string name;     ///< shown in the UI
-        double amount = 1.0;  ///< 0…1
+    /// Primaries and curves without keyframes: the settings of a look or of a node.
+    struct Grade {
         double exposure = 0;
         double brightness = 0;
         double contrast = 0;
@@ -107,10 +101,66 @@ struct ColorAdjustments {
         Wheel gain;
         Wheel offset;
         std::array<std::vector<Vec2>, 4> curves;  ///< Y, R, G, B
+        friend bool operator==(const Grade&, const Grade&) = default;
+    };
+    /// A creative look on top of the correction above (Lumetri's "Creative"
+    /// section, a second node in Resolve): its own primaries and curves, mixed
+    /// in by `amount`. The settings are stored in the project, so a project
+    /// shows its looks on any machine. Empty `id` = no look.
+    struct Look : Grade {
+        std::string id;       ///< preset id ("oppenheimer", "custom-…")
+        std::string name;     ///< shown in the UI
+        double amount = 1.0;  ///< 0…1
         [[nodiscard]] bool isNone() const noexcept { return id.empty(); }
         friend bool operator==(const Look&, const Look&) = default;
     };
     Look look;
+
+    /// A power window: the part of the picture a node changes, in source
+    /// coordinates (it follows the clip's crop, zoom and placement).
+    struct Window {
+        std::string shape;      ///< "" (none), "circle", "rectangle", "gradient"
+        double x = 0.5;         ///< center, 0…1 of the source width
+        double y = 0.5;         ///< center, 0…1 of the source height
+        double width = 0.5;     ///< 0…2 of the source width (circle: horizontal diameter)
+        double height = 0.5;    ///< 0…2 of the source height (gradient: the fade's length)
+        double rotation = 0;    ///< degrees, clockwise
+        double softness = 0.2;  ///< 0…1 edge feather
+        bool invert = false;    ///< outside the shape instead of inside
+        [[nodiscard]] bool isNone() const noexcept { return shape.empty(); }
+        friend bool operator==(const Window&, const Window&) = default;
+    };
+    /// An HSL key (Resolve's Qualifier): the colors a node changes.
+    struct Qualifier {
+        bool enabled = false;
+        double hue = 0;          ///< center, 0…1 around the color wheel (0 red, ⅓ green, ⅔ blue)
+        double hueWidth = 0.08;  ///< half width, 0…0.5 (0.5 = every hue)
+        double hueSoft = 0.04;
+        double satLow = 0.15;    ///< saturation range (0 gray … 1 pure color)
+        double satHigh = 1.0;
+        double satSoft = 0.05;
+        double lumLow = 0.0;     ///< brightness range (luma, 0…1)
+        double lumHigh = 1.0;
+        double lumSoft = 0.05;
+        bool invert = false;
+        friend bool operator==(const Qualifier&, const Qualifier&) = default;
+    };
+    /// A serial node after the clip's correction and look (Resolve's nodes
+    /// 02, 03 …): its own grade, limited to a window, a color key and/or the
+    /// person or the background. All three limits multiply.
+    struct Node {
+        std::string id;       ///< unique within the clip
+        std::string label;
+        bool enabled = true;
+        Grade grade;
+        Window window;
+        Qualifier qualifier;
+        std::string subject;  ///< "" (no limit), "person", "background" (needs a segmenter)
+        bool invert = false;  ///< change everything except the selection
+        friend bool operator==(const Node&, const Node&) = default;
+    };
+    static constexpr std::size_t kMaxNodes = 8;
+    std::vector<Node> nodes;  ///< in order, at most kMaxNodes
     friend bool operator==(const ColorAdjustments&, const ColorAdjustments&) = default;
 };
 

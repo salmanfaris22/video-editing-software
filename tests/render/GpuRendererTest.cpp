@@ -3,6 +3,7 @@
 // feature the compositor draws, one scene each — and the GPU must be fast
 // enough for real-time 1080p preview.
 
+#include "editor/ColorGrading.h"
 #include "editor/Compositor.h"
 #include "editor/EditorFixture.h"
 #include "editor/Exporter.h"
@@ -473,4 +474,102 @@ TEST_F(GpuRenderer, CustomCurvesMatchTheCpu) {
     const Difference d = r.at(f.project, 0.5);
     EXPECT_GT(compare(plain, r.cpuImage).mean, 3.0);
     EXPECT_CLOSE(d, 1.0, 0.002);
+}
+
+TEST_F(GpuRenderer, NodesWithWindowsAndQualifiersMatchTheCpu) {
+    test::EditorFixture f;
+    useDetailImage(f);
+    Both r(f);
+    r.at(f.project, 0.5);
+    const QImage plain = r.cpuImage;
+    timeline::ColorAdjustments& c = clipOf(f, "Camera").color;
+    c.exposure = timeline::Animated<double>{0.1};  // a primary under the nodes
+    // A soft rotated circle that brightens and warms, a gradient that cools
+    // the top, and a qualifier that turns the green disc magenta.
+    timeline::ColorAdjustments::Node spot;
+    spot.id = "n1";
+    spot.window.shape = "circle";
+    spot.window.x = 0.55;
+    spot.window.y = 0.45;
+    spot.window.width = 0.35;
+    spot.window.height = 0.5;
+    spot.window.rotation = 25;
+    spot.window.softness = 0.4;
+    spot.grade.exposure = 0.6;
+    spot.grade.temperature = 0.5;
+    timeline::ColorAdjustments::Node sky;
+    sky.id = "n2";
+    sky.window.shape = "gradient";
+    sky.window.height = 0.8;
+    sky.window.y = 0.3;
+    sky.grade.temperature = -0.6;
+    sky.grade.contrast = 0.2;
+    timeline::ColorAdjustments::Node green;
+    green.id = "n3";
+    green.qualifier = qualifierAround(60 / 255.0, 200 / 255.0, 90 / 255.0);
+    green.grade.hue = 0.5;
+    green.grade.saturation = 0.3;
+    green.grade.curves[0] = {{0, 0}, {0.5, 0.6}, {1, 1}};
+    c.nodes = {spot, sky, green};
+    Difference d = r.at(f.project, 0.5);
+    EXPECT_GT(compare(plain, r.cpuImage).mean, 3.0);  // the nodes really change the picture
+    EXPECT_CLOSE(d, 1.2, 0.004);
+
+    // Mirrored camera and an inverted rectangle: windows stay on the source.
+    clipOf(f, "Camera").transform.flipH = true;
+    c.nodes[1].window.shape = "rectangle";
+    c.nodes[1].window.invert = true;
+    c.nodes[1].window.rotation = -15;
+    d = r.at(f.project, 0.5);
+    EXPECT_CLOSE(d, 1.2, 0.004);
+
+    // Highlight view of the qualifier node.
+    clipOf(f, "Camera").color.nodes = {green};
+    RenderPlan plan = buildRenderPlan(f.project, sec(0.5));
+    for (auto& l : plan.layers) {
+        if (!l.nodes.empty()) l.highlightNode = 0;
+    }
+    r.frames.setProject(std::make_shared<const project::Project>(f.project));
+    const auto images = [&r](const VisualLayer& l, QSizeF box) { return r.frames.image(l, box); };
+    QImage cpu(1280, 720, QImage::Format_RGB32);
+    QImage gpu(1280, 720, QImage::Format_RGB32);
+    r.cpu->render(plan, cpu, images);
+    r.gpu->render(plan, gpu, images);
+    d = compare(cpu, gpu);
+    std::printf("  highlight difference: mean %.3f, outliers %.3f %%\n", d.mean, d.outliers * 100);
+    EXPECT_CLOSE(d, 1.2, 0.004);
+}
+
+TEST_F(GpuRenderer, PersonAndBackgroundNodesMatchTheCpu) {
+    setPersonSegmenter([](const QImage& image) {  // bright pixels are the "person"
+        const QImage rgb = image.convertToFormat(QImage::Format_RGB32);
+        QImage mask(rgb.size(), QImage::Format_Grayscale8);
+        for (int y = 0; y < rgb.height(); ++y) {
+            const auto* in = reinterpret_cast<const QRgb*>(rgb.constScanLine(y));
+            auto* out = mask.scanLine(y);
+            for (int x = 0; x < rgb.width(); ++x) out[x] = qGray(in[x]) > 140 ? 255 : 0;
+        }
+        return mask;
+    });
+    test::EditorFixture f;
+    useDetailImage(f);
+    Both r(f);
+    r.at(f.project, 0.5);
+    const QImage plain = r.cpuImage;
+    timeline::ColorAdjustments& c = clipOf(f, "Camera").color;
+    timeline::ColorAdjustments::Node person;
+    person.id = "p";
+    person.subject = "person";
+    person.grade.temperature = 0.6;
+    timeline::ColorAdjustments::Node background;
+    background.id = "b";
+    background.subject = "background";
+    background.grade.saturation = -1.0;
+    background.grade.exposure = -0.5;
+    c.nodes = {person, background};
+    const Difference d = r.at(f.project, 0.5);
+    setPersonSegmenter({});
+    EXPECT_GT(compare(plain, r.cpuImage).mean, 3.0);
+    // As with the background blur: the GPU segments the source, the CPU the layer.
+    EXPECT_CLOSE(d, 3.0, 0.01);
 }

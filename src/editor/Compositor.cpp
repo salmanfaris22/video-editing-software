@@ -377,6 +377,19 @@ void Compositor::drawMedia(QPainter& p, const VisualLayer& l, double W, double H
         const std::shared_ptr<const Lut3D> lut = l.color.lut.empty() ? nullptr : luts_.get(l.color.lut, projectDir_);
         applyColor(layer, l.color, lut.get());
     }
+    if (!l.nodes.empty()) {
+        // Windows are placed in source coordinates: map the layer's pixels back.
+        SourceMap map;
+        map.u0 = srcPixels.x() / static_cast<double>(src.width());
+        map.du = srcPixels.width() / (static_cast<double>(src.width()) * size.width());
+        map.v0 = srcPixels.y() / static_cast<double>(src.height());
+        map.dv = srcPixels.height() / (static_cast<double>(src.height()) * size.height());
+        map.mirror = l.mirror;
+        map.aspect = src.width() / static_cast<double>(src.height());
+        const bool subjects = std::any_of(l.nodes.begin(), l.nodes.end(), [](const NodeParams& n) { return n.subject != 0; });
+        const QImage mask = subjects ? personMask(layer, l) : QImage();
+        applyNodes(layer, l.nodes, map, mask.isNull() ? nullptr : &mask, l.highlightNode);
+    }
     if (l.backgroundBlur > 0) blurBackground(layer, l, H);
     if (l.blur > 0) blurImage(layer, l.blur * 0.03 * H);
     // Whole-pixel placement keeps blits exact (no resampling on draw).
@@ -525,24 +538,26 @@ QImage Compositor::segmentPerson(const QImage& image) {
     return mask.convertToFormat(QImage::Format_Grayscale8).scaled(image.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 }
 
-void Compositor::blurBackground(QImage& img, const VisualLayer& l, double H) {
-    (void)H;
+QImage Compositor::personMask(const QImage& img, const VisualLayer& l) {
     const PersonSegmenter segmenter = currentSegmenter();
-    if (!segmenter || img.isNull()) return;
+    if (!segmenter || img.isNull()) return {};
     const std::string key = l.media.toString() + '@' + std::to_string(l.sourceTime.ticks()) + '#' +
                             std::to_string(img.width()) + 'x' + std::to_string(img.height()) + (l.mirror ? "m" : "");
-    QImage mask;
     for (const MaskEntry& e : masks_) {
-        if (e.key == key) mask = e.mask;
+        if (e.key == key) return e.mask;
     }
-    if (mask.isNull()) {
-        mask = segmenter(img.convertToFormat(QImage::Format_RGB32));
-        if (mask.isNull()) return;
-        mask = mask.convertToFormat(QImage::Format_Grayscale8)
-                   .scaled(img.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        if (masks_.size() >= 3) masks_.erase(masks_.begin());
-        masks_.push_back({key, mask});
-    }
+    QImage mask = segmenter(img.convertToFormat(QImage::Format_RGB32));
+    if (mask.isNull()) return {};
+    mask = mask.convertToFormat(QImage::Format_Grayscale8).scaled(img.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (masks_.size() >= 3) masks_.erase(masks_.begin());
+    masks_.push_back({key, mask});
+    return mask;
+}
+
+void Compositor::blurBackground(QImage& img, const VisualLayer& l, double H) {
+    (void)H;
+    const QImage mask = personMask(img, l);
+    if (mask.isNull()) return;
     if (img.format() != QImage::Format_RGB32 && img.format() != QImage::Format_ARGB32_Premultiplied) {
         img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }

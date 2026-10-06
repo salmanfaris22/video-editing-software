@@ -32,6 +32,8 @@ class PlaybackController : public QObject, private editor::PlaybackEngine::Liste
     Q_PROPERTY(QString compareMode READ compareMode WRITE setCompareMode NOTIFY compareChanged)
     /// Wipe position, 0…1 of the picture width (ungraded to the left).
     Q_PROPERTY(double compareSplit READ compareSplit WRITE setCompareSplit NOTIFY compareChanged)
+    /// The node whose selection the viewer shows (setHighlight); "" = off.
+    Q_PROPERTY(QString highlightNode READ highlightNode NOTIFY compareChanged)
 
 public:
     /// `silent` uses no audio device (synthetic sessions, automated runs).
@@ -54,6 +56,9 @@ public:
     void setCompareMode(const QString& mode);
     [[nodiscard]] double compareSplit() const { return compareSplit_; }
     void setCompareSplit(double split);
+    /// Shows what a node selects (in color over gray); nodeId "" turns it off.
+    Q_INVOKABLE void setHighlight(const QString& clipId, const QString& nodeId);
+    [[nodiscard]] QString highlightNode() const { return highlightNode_; }
 
     /// Latest rendered canvas (any thread).
     [[nodiscard]] QImage frame() const;
@@ -89,6 +94,8 @@ private:
     QString outputName_;
     QString compareMode_ = QStringLiteral("off");
     double compareSplit_ = 0.5;
+    QString highlightClip_;
+    QString highlightNode_;
 };
 
 }  // namespace lectern::ui

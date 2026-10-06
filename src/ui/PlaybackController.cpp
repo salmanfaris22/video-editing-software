@@ -1,6 +1,7 @@
 #include "ui/PlaybackController.h"
 
 #include "core/Log.h"
+#include "core/Uuid.h"
 
 #include "platform/AudioOutput.h"
 #include "ui/ProjectController.h"
@@ -77,8 +78,18 @@ void PlaybackController::setCompareSplit(double split) {
     emit compareChanged();
 }
 
+void PlaybackController::setHighlight(const QString& clipId, const QString& nodeId) {
+    if (clipId == highlightClip_ && nodeId == highlightNode_) return;
+    highlightClip_ = nodeId.isEmpty() ? QString() : clipId;
+    highlightNode_ = nodeId;
+    applyCompare();
+    emit compareChanged();
+}
+
 void PlaybackController::applyCompare() {
     if (!engine_) return;
+    const auto clip = Uuid::parse(highlightClip_.toStdString());
+    engine_->setHighlight(clip ? timeline::ClipId(*clip) : timeline::ClipId(), highlightNode_.toStdString());
     using Compare = editor::PlaybackEngine::Compare;
     const Compare mode = compareMode_ == QLatin1String("bypass") ? Compare::Bypass
                          : compareMode_ == QLatin1String("wipe") ? Compare::Wipe

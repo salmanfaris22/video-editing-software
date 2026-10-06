@@ -280,6 +280,17 @@ void PlaybackEngine::setCompare(Compare mode, double split) {
     videoCv_.notify_all();
 }
 
+void PlaybackEngine::setHighlight(timeline::ClipId clip, std::string nodeId) {
+    {
+        std::lock_guard lock(mutex_);
+        if (highlightClip_ == clip && highlightNode_ == nodeId) return;
+        highlightClip_ = clip;
+        highlightNode_ = std::move(nodeId);
+        renderRequested_ = true;
+    }
+    videoCv_.notify_all();
+}
+
 void PlaybackEngine::composeComparison(QImage& out, const QImage& before, const QImage& after, Compare mode, double split) {
     QPainter p(&out);
     if (mode == Compare::Wipe) {
@@ -312,6 +323,8 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
         bool ended = false;
         Compare compare = Compare::Off;
         double split = 0.5;
+        timeline::ClipId highlightClip;
+        std::string highlightNode;
         Time t;
         {
             std::unique_lock lock(mutex_);
@@ -324,6 +337,8 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
             size = previewSize_;
             compare = compare_;
             split = compareSplit_;
+            highlightClip = highlightClip_;
+            highlightNode = highlightNode_;
             requested = renderRequested_;
             renderRequested_ = false;
             t = positionLocked();
@@ -352,7 +367,15 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
         // Exact frame times, like the exporter, so preview and export agree.
         const Time frameTime = std::min(rate.frameStart(index), std::max(Time::zero(), project->timeline.duration()));
         QImage image(size, QImage::Format_RGB32);
-        const RenderPlan plan = buildRenderPlan(*project, frameTime);
+        RenderPlan plan = buildRenderPlan(*project, frameTime);
+        if (!highlightNode.empty()) {
+            if (const timeline::Clip* clip = project->timeline.findClip(highlightClip)) {
+                const int index = enabledNodeIndex(clip->color, highlightNode);
+                for (auto& l : plan.layers) {
+                    if (l.clip == highlightClip) l.highlightNode = index;
+                }
+            }
+        }
         const auto source = [&frames](const VisualLayer& l, QSizeF box) { return frames.image(l, box); };
         if (compare == Compare::Off) {
             renderer->render(plan, image, source);

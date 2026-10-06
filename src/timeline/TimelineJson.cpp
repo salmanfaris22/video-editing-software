@@ -188,6 +188,138 @@ void readCurves(const Json& j, std::array<std::vector<Vec2>, 4>& curves) {
     }
 }
 
+std::string textOr(const Json& j, const char* key, std::string fallback = {}) {
+    const auto it = j.find(key);
+    return it != j.end() && it->is_string() ? it->get<std::string>() : fallback;
+}
+
+double numberOr(const Json& j, const char* key, double fallback, double lo, double hi) {
+    const auto it = j.find(key);
+    return it != j.end() && it->is_number() ? std::clamp(it->get<double>(), lo, hi) : fallback;
+}
+
+bool boolOr(const Json& j, const char* key, bool fallback) {
+    const auto it = j.find(key);
+    return it != j.end() && it->is_boolean() ? it->get<bool>() : fallback;
+}
+
+/// Grade fields (looks and nodes); neutral values are left out.
+void writeGrade(Json& j, const ColorAdjustments::Grade& g) {
+    const auto put = [&j](const char* key, double v, double neutral) {
+        if (v != neutral) j[key] = v;
+    };
+    put("exposure", g.exposure, 0.0);
+    put("brightness", g.brightness, 0.0);
+    put("contrast", g.contrast, 0.0);
+    put("pivot", g.pivot, 0.5);
+    put("shadows", g.shadows, 0.0);
+    put("highlights", g.highlights, 0.0);
+    put("saturation", g.saturation, 0.0);
+    put("colorBoost", g.colorBoost, 0.0);
+    put("hue", g.hue, 0.0);
+    put("temperature", g.temperature, 0.0);
+    put("tint", g.tint, 0.0);
+    if (!g.lift.isIdentity()) j["lift"] = wheelJson(g.lift);
+    if (!g.gammaWheel.isIdentity()) j["gammaWheel"] = wheelJson(g.gammaWheel);
+    if (!g.gain.isIdentity()) j["gain"] = wheelJson(g.gain);
+    if (!g.offset.isIdentity()) j["offset"] = wheelJson(g.offset);
+    writeCurves(j, g.curves);
+}
+
+/// Lenient: unknown or out-of-range values fall back to neutral.
+ColorAdjustments::Grade readGrade(const Json& j) {
+    ColorAdjustments::Grade g;
+    if (!j.is_object()) return g;
+    g.exposure = numberOr(j, "exposure", 0.0, -2.0, 2.0);
+    g.brightness = numberOr(j, "brightness", 0.0, -1.0, 1.0);
+    g.contrast = numberOr(j, "contrast", 0.0, -1.0, 1.0);
+    g.pivot = numberOr(j, "pivot", 0.5, 0.0, 1.0);
+    g.shadows = numberOr(j, "shadows", 0.0, -1.0, 1.0);
+    g.highlights = numberOr(j, "highlights", 0.0, -1.0, 1.0);
+    g.saturation = numberOr(j, "saturation", 0.0, -1.0, 1.0);
+    g.colorBoost = numberOr(j, "colorBoost", 0.0, -1.0, 1.0);
+    g.hue = numberOr(j, "hue", 0.0, -1.0, 1.0);
+    g.temperature = numberOr(j, "temperature", 0.0, -1.0, 1.0);
+    g.tint = numberOr(j, "tint", 0.0, -1.0, 1.0);
+    if (const auto it = j.find("lift"); it != j.end()) g.lift = wheelFrom(*it);
+    if (const auto it = j.find("gammaWheel"); it != j.end()) g.gammaWheel = wheelFrom(*it);
+    if (const auto it = j.find("gain"); it != j.end()) g.gain = wheelFrom(*it);
+    if (const auto it = j.find("offset"); it != j.end()) g.offset = wheelFrom(*it);
+    readCurves(j, g.curves);
+    return g;
+}
+
+Json windowJson(const ColorAdjustments::Window& w) {
+    return Json{{"shape", w.shape},       {"x", w.x},
+                {"y", w.y},               {"width", w.width},
+                {"height", w.height},     {"rotation", w.rotation},
+                {"softness", w.softness}, {"invert", w.invert}};
+}
+
+ColorAdjustments::Window windowFrom(const Json& j) {
+    ColorAdjustments::Window w;
+    if (!j.is_object()) return w;
+    const std::string shape = textOr(j, "shape");
+    w.shape = shape == "circle" || shape == "rectangle" || shape == "gradient" ? shape : std::string();
+    w.x = numberOr(j, "x", 0.5, -1.0, 2.0);
+    w.y = numberOr(j, "y", 0.5, -1.0, 2.0);
+    w.width = numberOr(j, "width", 0.5, 0.002, 4.0);
+    w.height = numberOr(j, "height", 0.5, 0.002, 4.0);
+    w.rotation = numberOr(j, "rotation", 0.0, -360.0, 360.0);
+    w.softness = numberOr(j, "softness", 0.2, 0.0, 1.0);
+    w.invert = boolOr(j, "invert", false);
+    return w;
+}
+
+Json qualifierJson(const ColorAdjustments::Qualifier& q) {
+    return Json{{"enabled", q.enabled}, {"hue", q.hue},         {"hueWidth", q.hueWidth}, {"hueSoft", q.hueSoft},
+                {"satLow", q.satLow},   {"satHigh", q.satHigh}, {"satSoft", q.satSoft},   {"lumLow", q.lumLow},
+                {"lumHigh", q.lumHigh}, {"lumSoft", q.lumSoft}, {"invert", q.invert}};
+}
+
+ColorAdjustments::Qualifier qualifierFrom(const Json& j) {
+    ColorAdjustments::Qualifier q;
+    if (!j.is_object()) return q;
+    q.enabled = boolOr(j, "enabled", false);
+    q.hue = numberOr(j, "hue", 0.0, 0.0, 1.0);
+    q.hueWidth = numberOr(j, "hueWidth", 0.08, 0.0, 0.5);
+    q.hueSoft = numberOr(j, "hueSoft", 0.04, 0.0, 0.5);
+    q.satLow = numberOr(j, "satLow", 0.15, 0.0, 1.0);
+    q.satHigh = numberOr(j, "satHigh", 1.0, 0.0, 1.0);
+    q.satSoft = numberOr(j, "satSoft", 0.05, 0.0, 0.5);
+    q.lumLow = numberOr(j, "lumLow", 0.0, 0.0, 1.0);
+    q.lumHigh = numberOr(j, "lumHigh", 1.0, 0.0, 1.0);
+    q.lumSoft = numberOr(j, "lumSoft", 0.05, 0.0, 0.5);
+    q.invert = boolOr(j, "invert", false);
+    return q;
+}
+
+Json nodeJson(const ColorAdjustments::Node& n) {
+    Json grade = Json::object();
+    writeGrade(grade, n.grade);
+    Json j{{"id", n.id}, {"label", n.label}, {"enabled", n.enabled}, {"grade", grade}};
+    if (!n.window.isNone()) j["window"] = windowJson(n.window);
+    if (n.qualifier.enabled) j["qualifier"] = qualifierJson(n.qualifier);
+    if (!n.subject.empty()) j["subject"] = n.subject;
+    if (n.invert) j["invert"] = true;
+    return j;
+}
+
+ColorAdjustments::Node nodeFrom(const Json& j) {
+    ColorAdjustments::Node n;
+    if (!j.is_object()) return n;
+    n.id = textOr(j, "id");
+    n.label = textOr(j, "label");
+    n.enabled = boolOr(j, "enabled", true);
+    if (const auto it = j.find("grade"); it != j.end()) n.grade = readGrade(*it);
+    if (const auto it = j.find("window"); it != j.end()) n.window = windowFrom(*it);
+    if (const auto it = j.find("qualifier"); it != j.end()) n.qualifier = qualifierFrom(*it);
+    const std::string subject = textOr(j, "subject");
+    n.subject = subject == "person" || subject == "background" ? subject : std::string();
+    n.invert = boolOr(j, "invert", false);
+    return n;
+}
+
 Json colorJson(const ColorAdjustments& c) {
     Json j{{"exposure", animatedJson(c.exposure)},     {"brightness", animatedJson(c.brightness)},
            {"contrast", animatedJson(c.contrast)},     {"highlights", animatedJson(c.highlights)},
@@ -209,6 +341,11 @@ Json colorJson(const ColorAdjustments& c) {
     }
     if (c.inputColorSpace != "auto") j["inputColorSpace"] = c.inputColorSpace;
     if (!c.look.isNone()) j["look"] = toJson(c.look);
+    if (!c.nodes.empty()) {
+        Json nodes = Json::array();
+        for (const auto& n : c.nodes) nodes.push_back(nodeJson(n));
+        j["nodes"] = nodes;
+    }
     return j;
 }
 
@@ -237,6 +374,14 @@ Result<ColorAdjustments> colorFrom(const Json& j, const std::string& path) {
     c.lutAmount = std::clamp(j.value("lutAmount", 1.0), 0.0, 1.0);
     c.inputColorSpace = j.value("inputColorSpace", "auto");
     if (const auto it = j.find("look"); it != j.end()) c.look = lookFromJson(*it);
+    if (const auto it = j.find("nodes"); it != j.end() && it->is_array()) {
+        for (const Json& n : *it) {
+            if (c.nodes.size() >= ColorAdjustments::kMaxNodes) break;
+            ColorAdjustments::Node node = nodeFrom(n);
+            if (node.id.empty()) node.id = "n" + std::to_string(c.nodes.size() + 1);
+            c.nodes.push_back(std::move(node));
+        }
+    }
     return c;
 }
 
@@ -538,58 +683,17 @@ Result<Timeline> timelineFromJson(const Json& j, const std::string& path) {
 
 json::Json toJson(const ColorAdjustments::Look& l) {
     Json j{{"id", l.id}, {"name", l.name}, {"amount", l.amount}};
-    const auto put = [&j](const char* key, double v, double neutral) {
-        if (v != neutral) j[key] = v;
-    };
-    put("exposure", l.exposure, 0.0);
-    put("brightness", l.brightness, 0.0);
-    put("contrast", l.contrast, 0.0);
-    put("pivot", l.pivot, 0.5);
-    put("shadows", l.shadows, 0.0);
-    put("highlights", l.highlights, 0.0);
-    put("saturation", l.saturation, 0.0);
-    put("colorBoost", l.colorBoost, 0.0);
-    put("hue", l.hue, 0.0);
-    put("temperature", l.temperature, 0.0);
-    put("tint", l.tint, 0.0);
-    if (!l.lift.isIdentity()) j["lift"] = wheelJson(l.lift);
-    if (!l.gammaWheel.isIdentity()) j["gammaWheel"] = wheelJson(l.gammaWheel);
-    if (!l.gain.isIdentity()) j["gain"] = wheelJson(l.gain);
-    if (!l.offset.isIdentity()) j["offset"] = wheelJson(l.offset);
-    writeCurves(j, l.curves);
+    writeGrade(j, l);
     return j;
 }
 
 ColorAdjustments::Look lookFromJson(const Json& j) {
     ColorAdjustments::Look l;
     if (!j.is_object()) return l;
-    const auto text = [&j](const char* key) {
-        const auto it = j.find(key);
-        return it != j.end() && it->is_string() ? it->get<std::string>() : std::string();
-    };
-    const auto number = [&j](const char* key, double neutral, double lo, double hi) {
-        const auto it = j.find(key);
-        return it != j.end() && it->is_number() ? std::clamp(it->get<double>(), lo, hi) : neutral;
-    };
-    l.id = text("id");
-    l.name = text("name");
-    l.amount = number("amount", 1.0, 0.0, 1.0);
-    l.exposure = number("exposure", 0.0, -2.0, 2.0);
-    l.brightness = number("brightness", 0.0, -1.0, 1.0);
-    l.contrast = number("contrast", 0.0, -1.0, 1.0);
-    l.pivot = number("pivot", 0.5, 0.0, 1.0);
-    l.shadows = number("shadows", 0.0, -1.0, 1.0);
-    l.highlights = number("highlights", 0.0, -1.0, 1.0);
-    l.saturation = number("saturation", 0.0, -1.0, 1.0);
-    l.colorBoost = number("colorBoost", 0.0, -1.0, 1.0);
-    l.hue = number("hue", 0.0, -1.0, 1.0);
-    l.temperature = number("temperature", 0.0, -1.0, 1.0);
-    l.tint = number("tint", 0.0, -1.0, 1.0);
-    if (const auto it = j.find("lift"); it != j.end()) l.lift = wheelFrom(*it);
-    if (const auto it = j.find("gammaWheel"); it != j.end()) l.gammaWheel = wheelFrom(*it);
-    if (const auto it = j.find("gain"); it != j.end()) l.gain = wheelFrom(*it);
-    if (const auto it = j.find("offset"); it != j.end()) l.offset = wheelFrom(*it);
-    readCurves(j, l.curves);
+    static_cast<ColorAdjustments::Grade&>(l) = readGrade(j);
+    l.id = textOr(j, "id");
+    l.name = textOr(j, "name");
+    l.amount = numberOr(j, "amount", 1.0, 0.0, 1.0);
     return l;
 }
 

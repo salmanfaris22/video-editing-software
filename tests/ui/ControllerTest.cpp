@@ -2,7 +2,9 @@
 #include "editor/RenderPlan.h"
 #include "media/MediaProbe.h"
 #include "project/ProjectStore.h"
+#include "editor/ColorGrading.h"
 #include "ui/ExportController.h"
+#include "ui/FrameGrab.h"
 #include "ui/LookPreviews.h"
 #include "ui/PlaybackController.h"
 #include "ui/ProjectController.h"
@@ -703,6 +705,132 @@ TEST(ProjectControllerUi, LookThumbnailsRenderInTheBackground) {
     EXPECT_GT(greenGain / (none.width() * none.height() / 16.0), 5.0);
 }
 
+TEST(ProjectControllerUi, NodesGradePartsOfThePicture) {
+    OpenProject o;
+    ProjectController& c = o.controller;
+    const QString screen = o.clipId("Screen");
+    auto nodes = [&] {
+        c.selectClip(screen);
+        return c.selection().value("nodes").toList();
+    };
+    auto screenLayer = [&] {
+        for (const auto& l : editor::buildRenderPlan(*c.snapshot(), Time::fromSeconds(1)).layers) {
+            if (l.role == "screen") return l;
+        }
+        return editor::VisualLayer{};
+    };
+
+    const QString circle = c.addNode(screen, "circle");
+    EXPECT_EQ(circle, "n2");  // node 01 is the clip's own correction
+    ASSERT_EQ(nodes().size(), 1);
+    QVariantMap n = nodes()[0].toMap();
+    EXPECT_EQ(n.value("label").toString(), "Circle");
+    EXPECT_EQ(n.value("window").toMap().value("shape").toString(), "circle");
+    // Round on the 16:9 screen recording.
+    EXPECT_NEAR(n.value("window").toMap().value("height").toDouble(), 0.35 * 640.0 / 360.0, 1e-9);
+
+    for (int i = 1; i <= 10; ++i) c.setNodeValue(screen, circle, "exposure", i * 0.05);  // a slider drag
+    c.setNodeWheel(screen, circle, "gain", 0.2, 0.1, 0.05);
+    c.setNodeCurve(screen, circle, "y", QVariantList{QVariantMap{{"x", 0.0}, {"y", 0.1}}, QVariantMap{{"x", 1.0}, {"y", 1.0}}});
+    c.setNodeWindow(screen, circle, QVariantMap{{"x", 0.3}, {"softness", 0.5}, {"rotation", 20}});
+    n = nodes()[0].toMap();
+    EXPECT_DOUBLE_EQ(n.value("exposure").toDouble(), 0.5);
+    EXPECT_DOUBLE_EQ(n.value("gain").toMap().value("x").toDouble(), 0.2);
+    EXPECT_EQ(n.value("curveY").toList().size(), 2);
+    EXPECT_DOUBLE_EQ(n.value("window").toMap().value("x").toDouble(), 0.3);
+    EXPECT_DOUBLE_EQ(n.value("window").toMap().value("rotation").toDouble(), 20.0);
+    // The clip's own correction is untouched; the renderers get the node.
+    c.selectClip(screen);
+    EXPECT_DOUBLE_EQ(c.selection().value("exposure").toDouble(), 0.0);
+    editor::VisualLayer l = screenLayer();
+    ASSERT_EQ(l.nodes.size(), 1u);
+    EXPECT_NEAR(l.nodes[0].grade.exposure, 0.5, 1e-12);
+    EXPECT_EQ(l.nodes[0].window.shape, "circle");
+    c.undo();  // the exposure drag was one step
+    c.undo();
+    c.undo();
+    c.undo();
+    EXPECT_DOUBLE_EQ(nodes()[0].toMap().value("exposure").toDouble(), 0.0);
+
+    const QString person = c.addNode(screen, "person");
+    const QString key = c.addNode(screen, "color");
+    ASSERT_EQ(nodes().size(), 3);
+    EXPECT_EQ(nodes()[1].toMap().value("subject").toString(), "person");
+    EXPECT_TRUE(nodes()[2].toMap().value("qualifier").toMap().value("enabled").toBool());
+    c.setNodeQualifier(screen, key, QVariantMap{{"satLow", 0.9}, {"satHigh", 0.2}});  // swapped into order
+    EXPECT_DOUBLE_EQ(nodes()[2].toMap().value("qualifier").toMap().value("satLow").toDouble(), 0.2);
+
+    c.setNodeEnabled(screen, person, false);
+    EXPECT_EQ(screenLayer().nodes.size(), 2u);  // disabled nodes are not rendered
+    c.moveNode(screen, key, -1);
+    EXPECT_EQ(nodes()[1].toMap().value("id").toString(), key);
+    c.setNodeSubject(screen, person, "background");
+    c.setNodeInvert(screen, person, true);
+    c.setNodeLabel(screen, person, "  Room  ");
+    n = nodes()[2].toMap();
+    EXPECT_EQ(n.value("subject").toString(), "background");
+    EXPECT_TRUE(n.value("invert").toBool());
+    EXPECT_EQ(n.value("label").toString(), "Room");
+
+    // At most eight nodes per clip.
+    for (int i = 0; i < 5; ++i) EXPECT_FALSE(c.addNode(screen).isEmpty());
+    EXPECT_TRUE(c.addNode(screen).isEmpty());
+    EXPECT_FALSE(c.message().isEmpty());
+    EXPECT_TRUE(c.addNode(screen, "triangle").isEmpty());
+
+    c.removeNode(screen, circle);
+    EXPECT_EQ(nodes().size(), 7);
+    c.undo();
+    EXPECT_EQ(nodes().size(), 8);
+    c.resetNode(screen, circle);
+    EXPECT_EQ(nodes()[0].toMap().value("window").toMap().value("shape").toString(), "circle");  // the selection stays
+
+    // Copying a grade takes its nodes along.
+    const QString camera = o.clipId("Camera");
+    c.copyGradeTo(screen, {camera});
+    c.selectClip(camera);
+    EXPECT_EQ(c.selection().value("nodes").toList().size(), 8);
+}
+
+TEST(ProjectControllerUi, PickingAColorKeysTheNodeOnThatColor) {
+    OpenProject o;
+    ProjectController& c = o.controller;
+    const QString screen = o.clipId("Screen");
+    const QVariantMap frame = c.sourceFrame(screen, 1.0);
+    ASSERT_FALSE(frame.isEmpty());
+    // The screen fits its box: the whole source is visible.
+    EXPECT_NEAR(frame.value("w").toDouble(), frame.value("visibleW").toDouble(), 1e-9);
+    EXPECT_NEAR(frame.value("aspect").toDouble(), 640.0 / 360.0, 1e-9);
+    const QString key = c.addNode(screen, "color");
+    const double x = frame.value("x").toDouble() + frame.value("w").toDouble() * 0.3;
+    const double y = frame.value("y").toDouble() + frame.value("h").toDouble() * 0.6;
+    ASSERT_TRUE(c.pickNodeColor(screen, key, x, y, 1.0));
+    EXPECT_EQ(c.undoLabel(), "Pick color");
+
+    // The key selects the screen's color, not the camera's.
+    c.selectClip(screen);
+    const QVariantMap q = c.selection().value("nodes").toList()[0].toMap().value("qualifier").toMap();
+    EXPECT_TRUE(q.value("enabled").toBool());
+    editor::NodeParams node;
+    for (const auto& l : editor::buildRenderPlan(*c.snapshot(), Time::fromSeconds(1)).layers) {
+        if (l.role == "screen") node = l.nodes.at(0);
+    }
+    const QImage shown = ui::grabFrame(QString::fromStdString((o.fixture.dir / "screen.mkv").string()), 1.0, 90)
+                             .convertToFormat(QImage::Format_RGB32);
+    const QImage other = ui::grabFrame(QString::fromStdString((o.fixture.dir / "camera.mkv").string()), 1.0, 90)
+                             .convertToFormat(QImage::Format_RGB32);
+    ASSERT_FALSE(shown.isNull());
+    const QColor a = shown.pixelColor(10, 10);
+    const QColor b = other.pixelColor(10, 10);
+    EXPECT_GT(editor::nodeMatte(node, 0.5, 0.5, 1, a.redF(), a.greenF(), a.blueF(), -1), 0.95);
+    EXPECT_LT(editor::nodeMatte(node, 0.5, 0.5, 1, b.redF(), b.greenF(), b.blueF(), -1), 0.05);
+
+    // Off the clip's picture: nothing to pick.
+    const QString camera = o.clipId("Camera");
+    const QString camKey = c.addNode(camera, "color");
+    EXPECT_FALSE(c.pickNodeColor(camera, camKey, 0.01, 0.99, 1.0));
+}
+
 TEST(PlaybackControllerUi, PlaysSeeksAndRendersFrames) {
     OpenProject p;
     PlaybackController playback(&p.controller, /*silent=*/true);
@@ -769,6 +897,41 @@ TEST(PlaybackControllerUi, ComparesGradedAndUngraded) {
     playback.setCompareMode("nonsense");
     EXPECT_EQ(playback.compareMode(), "off");
     EXPECT_EQ(next(side), graded);
+}
+
+TEST(PlaybackControllerUi, HighlightShowsANodesSelection) {
+    OpenProject p;
+    const QString screen = p.clipId("Screen");
+    const QString node = p.controller.addNode(screen, "circle");
+    PlaybackController playback(&p.controller, /*silent=*/true);
+    playback.setPreviewSize({320, 180});
+    playback.seek(1.0);
+    ASSERT_TRUE(waitUntil([&] { return !playback.frame().isNull(); }));
+    auto next = [&](const QImage& old) {
+        waitUntil([&] { return playback.frame() != old; }, 3000);
+        QImage last = playback.frame();
+        for (int i = 0; i < 40; ++i) {
+            waitUntil([] { return false; }, 25);
+            const QImage now = playback.frame();
+            if (now == last) break;
+            last = now;
+        }
+        return last;
+    };
+    const QImage normal = next(QImage());
+    playback.setHighlight(screen, node);
+    EXPECT_EQ(playback.highlightNode(), node);
+    const QImage highlight = next(normal);
+    // Outside the circle, the screen turns mid gray; the center keeps its color.
+    const QVariantMap frame = p.controller.sourceFrame(screen, 1.0);
+    const int cx = static_cast<int>((frame.value("x").toDouble() + frame.value("w").toDouble() * 0.5) * 320);
+    const int cy = static_cast<int>((frame.value("y").toDouble() + frame.value("h").toDouble() * 0.5) * 180);
+    const int ex = static_cast<int>((frame.value("x").toDouble() + frame.value("w").toDouble() * 0.04) * 320);
+    const int ey = static_cast<int>((frame.value("y").toDouble() + frame.value("h").toDouble() * 0.06) * 180);
+    EXPECT_EQ(highlight.pixelColor(cx, cy), normal.pixelColor(cx, cy));
+    EXPECT_EQ(highlight.pixelColor(ex, ey), QColor(128, 128, 128));
+    playback.setHighlight(screen, QString());
+    EXPECT_EQ(next(highlight), normal);
 }
 
 TEST(ExportControllerUi, ExportsTheProjectInTheBackground) {

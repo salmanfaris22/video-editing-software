@@ -38,6 +38,12 @@ struct LookPreset {
 /// a neutral base the result is exactly the look; at amount 0 exactly `base`.
 [[nodiscard]] ColorParams applyLook(const ColorParams& base, const LookSettings& look);
 
+/// `top` applied after `base`, as one set of renderer parameters (the rules
+/// of applyLook at full strength).
+[[nodiscard]] ColorParams combineGrades(const ColorParams& base, const timeline::ColorAdjustments::Grade& top);
+/// A node's or a look's grade on its own.
+[[nodiscard]] ColorParams paramsOf(const timeline::ColorAdjustments::Grade& grade);
+
 /// A grade's settings as a look, to save a clip's grade for reuse. The LUT
 /// and the input color space are not part of a look.
 [[nodiscard]] LookSettings lookFromGrade(const ColorParams& grade);

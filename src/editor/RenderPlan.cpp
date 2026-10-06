@@ -226,8 +226,37 @@ ColorParams gradeAt(const timeline::ColorAdjustments& c, Time local, bool withLo
 }
 
 RenderPlan ungraded(RenderPlan plan) {
-    for (auto& l : plan.layers) l.color = ColorParams{};
+    for (auto& l : plan.layers) {
+        l.color = ColorParams{};
+        l.nodes.clear();
+        l.highlightNode = -1;
+    }
     return plan;
+}
+
+int enabledNodeIndex(const timeline::ColorAdjustments& c, std::string_view nodeId) {
+    int index = 0;
+    for (const auto& n : c.nodes) {
+        if (!n.enabled) continue;
+        if (n.id == nodeId) return index < static_cast<int>(timeline::ColorAdjustments::kMaxNodes) ? index : -1;
+        ++index;
+    }
+    return -1;
+}
+
+std::vector<NodeParams> gradeNodes(const timeline::ColorAdjustments& c) {
+    std::vector<NodeParams> out;
+    for (const auto& n : c.nodes) {
+        if (!n.enabled || out.size() >= timeline::ColorAdjustments::kMaxNodes) continue;
+        NodeParams p;
+        p.grade = paramsOf(n.grade);
+        p.window = n.window;
+        p.qualifier = n.qualifier;
+        p.subject = n.subject == "person" ? 1 : n.subject == "background" ? 2 : 0;
+        p.invert = n.invert;
+        out.push_back(std::move(p));
+    }
+    return out;
 }
 
 RenderPlan buildRenderPlan(const project::Project& p, Time t) {
@@ -277,6 +306,7 @@ RenderPlan buildRenderPlan(const project::Project& p, Time t) {
         l.sourceTime = a.clip->sourceTimeAt(t);
         l.opacity = std::clamp(a.clip->opacity.evaluate(local), 0.0, 1.0);
         l.color = gradeAt(a.clip->color, local);
+        l.nodes = gradeNodes(a.clip->color);
         l.input = inputColorOf(a.clip->color, a.media);
         applyTransformKeys(l, *a.clip, local);
         if (a.media->info.video && a.media->info.video->width > 0 && a.media->info.video->height > 0) {
@@ -344,6 +374,7 @@ RenderPlan buildRenderPlan(const project::Project& p, Time t) {
             l.sourceTime = c->sourceTimeAt(t);
             l.opacity = std::clamp(c->opacity.evaluate(local), 0.0, 1.0);
             l.color = gradeAt(c->color, local);
+            l.nodes = gradeNodes(c->color);
             l.input = inputColorOf(c->color, m);
             applyEffects(l, *c, local);
             applyTransformKeys(l, *c, local);
