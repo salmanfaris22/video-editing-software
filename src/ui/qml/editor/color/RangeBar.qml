@@ -39,13 +39,17 @@ Item {
             for (const s of root.stops) g.addColorStop(s.at, s.color)
             ctx.fillStyle = g
             ctx.fillRect(0, 0, width, height)
-            ctx.strokeStyle = "#2A2E37"
+            ctx.strokeStyle = String(Theme.strokeStrong)
             ctx.strokeRect(0.5, 0.5, width - 1, height - 1)
         }
         onWidthChanged: requestPaint()
         Connections {
             target: root
             function onStopsChanged() { trackPaint.requestPaint() }
+        }
+        Connections {
+            target: Theme
+            function onModeChanged() { trackPaint.requestPaint() }
         }
     }
     // Dim what is not selected (drawn as one or two dark bands).
@@ -97,7 +101,7 @@ Item {
             width: 7
             height: track.height + 6
             radius: 2
-            color: dragArea.pressed && dragArea.which === index ? Theme.accent : "#F2F3F6"
+            color: dragArea.pressed && dragArea.which === index ? Theme.accent : Theme.knob
             border.color: "#0B0C10"
             visible: root.active
         }

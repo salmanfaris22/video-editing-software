@@ -188,7 +188,7 @@ Item {
                     ToolTip.text: modelData.label + " page (" + modelData.keys + ")"
                     ToolTip.delay: 500
                     background: Rectangle {
-                        color: pageButton.current ? "#0B0C10" : pageButton.hovered ? Theme.hover : "transparent"
+                        color: pageButton.current ? Theme.selected : pageButton.hovered ? Theme.hover : "transparent"
                         Rectangle {  // the current page, underlined in red like Resolve
                             anchors.left: parent.left
                             anchors.right: parent.right

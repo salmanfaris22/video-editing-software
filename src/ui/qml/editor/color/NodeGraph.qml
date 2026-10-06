@@ -24,7 +24,7 @@ Rectangle {
     readonly property bool hasLook: !!root.sel && (root.sel.look || "").length > 0
     readonly property bool hasFilm: !!root.sel && root.sel.filmOn === true
 
-    color: "#121419"
+    color: Theme.surface
 
     function addNode(kind) {
         const id = root.project.addNode(root.clipId, kind)
@@ -67,7 +67,7 @@ Rectangle {
                 onClicked: addMenu.popup(addButton, 0, addButton.height + 2)
             }
         }
-        Rectangle { Layout.fillWidth: true; height: 1; color: "#23262E" }
+        Rectangle { Layout.fillWidth: true; height: 1; color: Theme.stroke }
 
         Flickable {
             Layout.fillWidth: true
@@ -150,7 +150,7 @@ Rectangle {
     component Connector: Item {
         width: parent ? parent.width : 0
         height: 12
-        Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 1.5; height: parent.height; color: "#596070" }
+        Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 1.5; height: parent.height; color: Theme.strokeStrong }
     }
     component Marker: Item {
         property string text
@@ -180,14 +180,14 @@ Rectangle {
         Item {  // the connection from the previous node
             width: card.width
             height: 12
-            Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 1.5; height: parent.height; color: "#596070" }
+            Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 1.5; height: parent.height; color: Theme.strokeStrong }
         }
         Rectangle {
             width: card.width
             height: 44
-            radius: 4
-            color: card.selected ? "#20264A" : cardMouse.containsMouse ? "#1E2128" : "#1A1D23"
-            border.color: card.selected ? card.accentColor : "#363B46"
+            radius: Theme.radiusM
+            color: card.selected ? Theme.selected : cardMouse.containsMouse ? Theme.hover : Theme.raised
+            border.color: card.selected ? card.accentColor : Theme.stroke
             border.width: card.selected ? 2 : 1
             opacity: card.nodeEnabled ? 1 : 0.45
             Rectangle {
@@ -197,8 +197,8 @@ Rectangle {
                 width: 24
                 height: 18
                 radius: 3
-                color: card.selected ? card.accentColor : "#2A2E37"
-                Label { anchors.centerIn: parent; text: card.number; color: card.selected ? "#0B0C10" : Theme.text; font.pixelSize: 10; font.weight: Font.Bold; font.family: Theme.monoFamily }
+                color: card.selected ? card.accentColor : Theme.pressed
+                Label { anchors.centerIn: parent; text: card.number; color: card.selected ? Theme.accentText : Theme.text; font.pixelSize: 10; font.weight: Font.Bold; font.family: Theme.monoFamily }
             }
             Column {
                 anchors.left: badge.right
@@ -234,7 +234,7 @@ Rectangle {
                 font.pixelSize: 11
                 padding: 2
                 color: Theme.text
-                background: Rectangle { color: "#0B0C10"; border.color: Theme.accent; radius: 2 }
+                background: Rectangle { color: Theme.inset; border.color: Theme.accent; radius: Theme.radiusS }
                 onAccepted: { card.renamed(text); card.renaming = false }
                 onActiveFocusChanged: if (!activeFocus) card.renaming = false
                 Keys.onEscapePressed: card.renaming = false

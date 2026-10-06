@@ -749,7 +749,7 @@ Rectangle {
                         height: parent.height - 3
                         y: 1
                         radius: 0
-                        color: index % 2 ? "#1F2740" : "#252F4D"
+                        color: index % 2 ? (Theme.dark ? "#1F2740" : "#DCE3FF") : (Theme.dark ? "#252F4D" : "#CDD7FF")
                         Label {
                             anchors.fill: parent
                             anchors.leftMargin: 6
@@ -795,7 +795,7 @@ Rectangle {
                     id: scrubTime
                     anchors.centerIn: parent
                     text: root.project.formatTimecode(root.playhead)
-                    color: "#0B0C10"
+                    color: Theme.accentText
                     font.family: Theme.monoFamily
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -959,7 +959,7 @@ Rectangle {
                     z: lane.dragging ? 5 : 0
                     property bool dragging: false
                     readonly property bool selectedLayer: root.project.selectedTrack === lane.modelData.id
-                    color: lane.modelData.locked ? "#121318" : index % 2 ? Theme.bg : "#0E1014"
+                    color: lane.modelData.locked ? Theme.inset : index % 2 ? Theme.bg : Theme.surface
                     Rectangle {  // selected layer / drop target tint
                         anchors.fill: parent
                         color: root.dropLane === lane.index ? (root.dropOk ? Theme.accent : Theme.danger) : Theme.accent

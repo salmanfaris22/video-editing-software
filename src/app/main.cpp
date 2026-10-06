@@ -16,6 +16,7 @@
 
 #include <QCommandLineParser>
 #include <QGuiApplication>
+#include <QSettings>
 #include <QQmlApplicationEngine>
 #include <QQmlEngineExtensionPlugin>
 #include <QQuickStyle>
@@ -30,6 +31,11 @@ int main(int argc, char** argv) {
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral(LECTERN_PRODUCT_NAME));
     QGuiApplication::setOrganizationName(QStringLiteral(LECTERN_PRODUCT_NAME));
+    // Tests and automated runs keep their workspace (window state, theme …) out of the user's preferences.
+    if (const QByteArray dir = qgetenv("LECTERN_APP_DATA_DIR"); !dir.isEmpty()) {
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, QString::fromLocal8Bit(dir));
+    }
     QGuiApplication::setApplicationVersion(QStringLiteral(LECTERN_VERSION));
 
     QCommandLineParser cli;

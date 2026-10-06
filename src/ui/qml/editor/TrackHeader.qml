@@ -30,7 +30,7 @@ Rectangle {
         root.activated()
     }
 
-    color: root.selected ? Theme.raised : headerHover.hovered ? "#14161C" : Theme.surface
+    color: root.selected ? Theme.raised : headerHover.hovered ? Theme.hover : Theme.surface
     HoverHandler { id: headerHover }
     Rectangle {  // selected layer marker
         width: 3
@@ -65,7 +65,7 @@ Rectangle {
             width: 28
             height: 20
             radius: 0
-            color: root.audio ? "#2A2312" : root.track.kind === "subtitle" ? "#2A2614" : Theme.accentSoft
+            color: root.audio || root.track.kind === "subtitle" ? Theme.warningSoft : Theme.accentSoft
             Label {
                 anchors.centerIn: parent
                 text: root.track.label
@@ -79,7 +79,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.leftMargin: 4
             text: root.track.name
-            color: root.track.hidden || root.track.muted ? Theme.textFaint : root.selected ? Theme.text : "#C9CDD6"
+            color: root.track.hidden || root.track.muted ? Theme.textFaint : root.selected ? Theme.text : Theme.textSecondary
             font.pixelSize: Theme.fontS
             font.weight: root.selected ? Font.DemiBold : Font.Normal
             elide: Text.ElideRight

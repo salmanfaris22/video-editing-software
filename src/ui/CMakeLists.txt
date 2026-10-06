@@ -53,6 +53,7 @@ qt_add_qml_module(lectern_ui
         qml/components/SectionLabel.qml
         qml/components/EmptyHint.qml
         qml/components/InputField.qml
+        qml/components/ThemeToggle.qml
         qml/editor/EditorTopBar.qml
         qml/editor/ToolRail.qml
         qml/editor/ToolPanel.qml

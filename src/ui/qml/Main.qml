@@ -19,6 +19,12 @@ ApplicationWindow {
     font.pixelSize: Theme.fontM
 
     readonly property var editor: window.app.view === "editor" ? viewLoader.item : null
+    Component.onCompleted: Theme.apply(window.app.workspaceValue("theme", "dark"))
+    function setTheme(choice) {
+        Theme.apply(choice)
+        window.app.setWorkspaceValue("theme", choice)
+        console.info("theme:", choice)
+    }
     readonly property ProjectController project: window.app.project
     readonly property PlaybackController playback: window.app.playback
 
@@ -121,13 +127,20 @@ ApplicationWindow {
         }
         Menu {
             title: "View"
-            enabled: window.editor !== null
-            MenuItem { text: "Edit Page"; checkable: true; checked: !!window.editor && window.editor.page === "edit"; onTriggered: window.editor.page = "edit" }
-            MenuItem { text: "Color Page"; checkable: true; checked: !!window.editor && window.editor.page === "color"; onTriggered: window.editor.page = "color" }
+            Menu {
+                title: "Appearance"
+                MenuItem { text: "Dark"; checkable: true; checked: Theme.preference === "dark"; onTriggered: window.setTheme("dark") }
+                MenuItem { text: "Light"; checkable: true; checked: Theme.preference === "light"; onTriggered: window.setTheme("light") }
+                MenuItem { text: "Match System"; checkable: true; checked: Theme.preference === "system"; onTriggered: window.setTheme("system") }
+            }
+            MenuSeparator {}
+            MenuItem { text: "Edit Page"; checkable: true; enabled: window.editor !== null; checked: !!window.editor && window.editor.page === "edit"; onTriggered: window.editor.page = "edit" }
+            MenuItem { text: "Color Page"; checkable: true; enabled: window.editor !== null; checked: !!window.editor && window.editor.page === "color"; onTriggered: window.editor.page = "color" }
             MenuSeparator {}
             Menu {
                 id: scopesMenu
                 title: "Scopes"
+                enabled: window.editor !== null
                 Instantiator {
                     model: [["Parade", "parade"], ["Waveform", "waveform"], ["Vectorscope", "vectorscope"], ["Histogram", "histogram"]]
                     delegate: MenuItem {

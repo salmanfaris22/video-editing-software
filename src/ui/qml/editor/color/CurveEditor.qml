@@ -36,8 +36,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: !root.transparent
-        color: "#0C0D11"
-        border.color: "#262A33"
+        color: Theme.well
+        border.color: Theme.wellStroke
         radius: 2
     }
     Item {
@@ -93,7 +93,7 @@ Item {
             width: hot ? 11 : 9
             height: width
             radius: width / 2
-            color: hot ? root.tint : "#0C0D11"
+            color: hot ? root.tint : Theme.well
             border.color: root.tint
             border.width: 2
         }
@@ -108,7 +108,7 @@ Item {
         width: readout.implicitWidth + 12
         height: 20
         radius: 3
-        color: "#1A1D23"
+        color: "#1A1D23"  // over the dark plot in both themes
         border.color: "#2E333D"
         Label {
             id: readout

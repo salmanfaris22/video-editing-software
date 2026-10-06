@@ -145,6 +145,7 @@ if(TARGET lectern_ui)
         qml/CanvasInteractionTest.cpp
         qml/TimelineInteractionTest.cpp
         qml/ColorPageTest.cpp
+        qml/ThemeTest.cpp
         editor/EditorFixture.cpp)
     target_include_directories(lectern_qml_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(lectern_qml_tests PRIVATE

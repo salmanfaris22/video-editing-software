@@ -74,6 +74,10 @@ Rectangle {
         }
         Item { Layout.fillWidth: true }
 
+        ThemeToggle {
+            objectName: "themeToggle"
+            app: root.app
+        }
         IconButton {
             iconName: "folder"
             tooltip: "Show project in Finder"

@@ -44,7 +44,7 @@ Item {
             x: root.playback.compareSplit * root.width - 1
             width: 2
             height: parent.height
-            color: "#F2F3F6"
+            color: Theme.knob
             opacity: 0.9
         }
         Rectangle {
@@ -54,7 +54,7 @@ Item {
             width: 18
             height: 18
             radius: 9
-            color: wipeDrag.pressed ? Theme.accent : "#F2F3F6"
+            color: wipeDrag.pressed ? Theme.accent : Theme.knob
             border.color: "#0B0C10"
             border.width: 2
         }
@@ -209,7 +209,7 @@ Item {
                     width: 10
                     height: 10
                     radius: modelData.id === "corner" ? 2 : 5
-                    color: sizeDrag.pressed ? Theme.accent : "#F2F3F6"
+                    color: sizeDrag.pressed ? Theme.accent : Theme.knob
                     border.color: "#0B0C10"
                     visible: windowLayer.w.shape !== "gradient" || modelData.id === "top" || modelData.id === "bottom"
                     MouseArea {
@@ -253,9 +253,9 @@ Item {
                 width: 12
                 height: 12
                 radius: 6
-                color: rotateDrag.pressed ? Theme.accent : "#F2F3F6"
+                color: rotateDrag.pressed ? Theme.accent : Theme.knob
                 border.color: "#0B0C10"
-                Rectangle { x: parent.width / 2 - 0.5; y: parent.height; width: 1; height: 16; color: "#F2F3F6"; opacity: 0.7 }
+                Rectangle { x: parent.width / 2 - 0.5; y: parent.height; width: 1; height: 16; color: Theme.knob; opacity: 0.7 }
                 MouseArea {
                     id: rotateDrag
                     anchors.fill: parent

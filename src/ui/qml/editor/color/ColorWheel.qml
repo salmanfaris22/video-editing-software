@@ -33,7 +33,7 @@ Item {
         Label {
             anchors.centerIn: parent
             text: root.title
-            color: root.changed ? Theme.text : "#B8BDC8"
+            color: root.changed ? Theme.text : Theme.textSecondary
             font.pixelSize: 12
             font.weight: root.changed ? Font.DemiBold : Font.Normal
         }
@@ -155,7 +155,7 @@ Item {
             width: 11
             height: 11
             radius: 5.5
-            color: "#F2F3F6"
+            color: Theme.knob
             border.color: "#0B0C10"
             border.width: 2
         }
@@ -200,13 +200,13 @@ Item {
                 width: Math.max(34, Math.min(46, (root.dialSize - 9) / 4))
                 height: 18
                 radius: 2
-                color: "#0E1014"
-                border.color: "#262A33"
+                color: Theme.inset
+                border.color: Theme.stroke
                 Label {
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: -1
                     text: Number(root.channels[index] || 0).toFixed(2)
-                    color: "#D7DAE1"
+                    color: Theme.textSecondary
                     font.pixelSize: 10
                     font.family: Theme.monoFamily
                 }

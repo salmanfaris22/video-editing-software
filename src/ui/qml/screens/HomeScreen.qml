@@ -48,6 +48,7 @@ Item {
                 }
             }
             Item { Layout.fillWidth: true }
+            ThemeToggle { app: root.app }
             StatusChip {
                 visible: root.app.syntheticSources
                 text: "Synthetic sources"
@@ -76,8 +77,8 @@ Item {
                 border.width: 1
                 border.color: Theme.stroke
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: "#1A1B26" }
-                    GradientStop { position: 1.0; color: "#13151B" }
+                    GradientStop { position: 0.0; color: Theme.dark ? "#1A1C2A" : "#FFFFFF" }
+                    GradientStop { position: 1.0; color: Theme.dark ? "#13151B" : "#EEF1F8" }
                 }
                 ColumnLayout {
                     anchors.fill: parent

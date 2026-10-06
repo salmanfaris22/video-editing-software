@@ -22,9 +22,9 @@ AbstractButton {
     ToolTip.delay: 450
 
     background: Rectangle {
-        radius: 3
-        color: control.down ? Theme.pressed : control.checked ? "#262A33" : control.hovered ? Theme.hover : "#1A1D23"
-        border.color: control.checked ? control.accentColor : "#30343E"
+        radius: Theme.radiusS
+        color: control.down ? Theme.pressed : control.checked ? Theme.selected : control.hovered ? Theme.hover : Theme.raised
+        border.color: control.checked ? control.accentColor : Theme.strokeStrong
     }
     contentItem: Item {
         Row {
@@ -42,7 +42,7 @@ AbstractButton {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: control.text.length > 0
                 text: control.text
-                color: control.checked ? Theme.text : "#C3C7D0"
+                color: control.checked ? Theme.text : Theme.textSecondary
                 font.pixelSize: 11
                 font.weight: control.checked ? Font.DemiBold : Font.Normal
             }

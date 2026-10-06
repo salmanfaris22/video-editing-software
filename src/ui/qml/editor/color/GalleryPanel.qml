@@ -18,7 +18,7 @@ Rectangle {
     property string tab: "looks"
     signal compareWithStill(string stillId)
 
-    color: "#121419"
+    color: Theme.surface
 
     readonly property bool gradable: root.clipId.length > 0 && root.sel.visual === true && root.sel.role !== "text"
 
@@ -51,7 +51,7 @@ Rectangle {
                         text: tabButton.modelData.label
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        color: tabButton.current ? Theme.text : tabButton.hovered ? "#C3C7D0" : Theme.textMuted
+                        color: tabButton.current ? Theme.text : tabButton.hovered ? Theme.textSecondary : Theme.textMuted
                         font.pixelSize: 12
                         font.weight: tabButton.current ? Font.DemiBold : Font.Normal
                     }
@@ -59,7 +59,7 @@ Rectangle {
             }
             Item { Layout.fillWidth: true }
         }
-        Rectangle { Layout.fillWidth: true; height: 1; color: "#23262E" }
+        Rectangle { Layout.fillWidth: true; height: 1; color: Theme.stroke }
 
         StackLayout {
             Layout.fillWidth: true
@@ -118,8 +118,8 @@ Rectangle {
                             anchors.fill: parent
                             anchors.margins: 3
                             radius: 3
-                            color: stillMouse.containsMouse ? "#1E2128" : "#16181D"
-                            border.color: stillMouse.containsMouse ? "#3A3F4B" : "#262A33"
+                            color: stillMouse.containsMouse ? Theme.hover : Theme.raised
+                            border.color: stillMouse.containsMouse ? Theme.strokeStrong : Theme.stroke
                             Image {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -249,8 +249,8 @@ Rectangle {
                             anchors.fill: parent
                             anchors.margins: 3
                             radius: 3
-                            color: tileMouse.containsMouse ? "#1E2128" : "#16181D"
-                            border.color: tile.current ? Theme.accent : tileMouse.containsMouse ? "#3A3F4B" : "#262A33"
+                            color: tileMouse.containsMouse ? Theme.hover : Theme.raised
+                            border.color: tile.current ? Theme.accent : tileMouse.containsMouse ? Theme.strokeStrong : Theme.stroke
                             border.width: tile.current ? 2 : 1
                             Image {
                                 id: thumb
@@ -269,7 +269,7 @@ Rectangle {
                                 anchors.bottom: parent.bottom
                                 anchors.margins: 4
                                 text: tile.modelData.name
-                                color: tile.current ? Theme.text : "#C3C7D0"
+                                color: tile.current ? Theme.text : Theme.textSecondary
                                 font.pixelSize: 10
                                 font.weight: tile.current ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
@@ -356,7 +356,7 @@ Rectangle {
                             placeholderText: "Look name"
                             font.pixelSize: 11
                             color: Theme.text
-                            background: Rectangle { color: "#0B0C10"; border.color: lookName.activeFocus ? Theme.accent : "#30343E"; radius: 2 }
+                            background: Rectangle { color: Theme.inset; border.color: lookName.activeFocus ? Theme.accent : Theme.strokeStrong; radius: Theme.radiusS }
                             onAccepted: saveButton.clicked()
                             Keys.onEscapePressed: saveRow.visible = false
                         }
@@ -405,7 +405,7 @@ Rectangle {
                         contentItem: Label {
                             leftPadding: 6
                             text: parent.modelData.name
-                            color: parent.current ? Theme.text : "#C3C7D0"
+                            color: parent.current ? Theme.text : Theme.textSecondary
                             font.pixelSize: 11
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter

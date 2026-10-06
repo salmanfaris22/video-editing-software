@@ -31,8 +31,8 @@ Slider {
         width: 12
         height: 12
         radius: 6
-        color: control.pressed ? Theme.accentHover : control.hovered ? "#FFFFFF" : Theme.text
-        border.color: Theme.bg
+        color: control.pressed ? Theme.accentHover : "#FFFFFF"
+        border.color: control.hovered || control.pressed ? Theme.accent : Theme.strokeStrong
         border.width: 1
     }
 }

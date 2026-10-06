@@ -96,7 +96,7 @@ Item {
             opacity: enabled ? 1 : 0.45
 
             // Hue
-            Label { text: "Hue"; color: "#9CA2AF"; font.pixelSize: 11; Layout.preferredWidth: 32 }
+            Label { text: "Hue"; color: Theme.textMuted; font.pixelSize: 11; Layout.preferredWidth: 32 }
             RangeBar {
                 objectName: "hueRange"
                 Layout.fillWidth: true
@@ -118,7 +118,7 @@ Item {
             ScrubField { objectName: "hueSoft"; label: "Soft"; value: root.q.hueSoft || 0; from: 0; to: 0.5; defaultValue: 0.04; displayScale: 360; decimals: 0; onEdited: v => root.setQ({ hueSoft: v }) }
 
             // Saturation
-            Label { text: "Sat"; color: "#9CA2AF"; font.pixelSize: 11 }
+            Label { text: "Sat"; color: Theme.textMuted; font.pixelSize: 11 }
             RangeBar {
                 objectName: "satRange"
                 Layout.fillWidth: true
@@ -133,7 +133,7 @@ Item {
             ScrubField { label: "Soft"; value: root.q.satSoft || 0; from: 0; to: 0.5; defaultValue: 0.05; displayScale: 100; decimals: 0; onEdited: v => root.setQ({ satSoft: v }) }
 
             // Luminance
-            Label { text: "Lum"; color: "#9CA2AF"; font.pixelSize: 11 }
+            Label { text: "Lum"; color: Theme.textMuted; font.pixelSize: 11 }
             RangeBar {
                 objectName: "lumRange"
                 Layout.fillWidth: true

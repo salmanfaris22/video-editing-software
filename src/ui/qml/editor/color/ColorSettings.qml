@@ -26,7 +26,7 @@ Rectangle {
         return out
     }
 
-    color: "#121419"
+    color: Theme.surface
 
     function on(type, enabled) { root.project.setEffectEnabled(root.clipId, type, enabled) }
     function set(type, param, v) { root.project.setEffectValue(root.clipId, type, param, v) }
@@ -85,7 +85,7 @@ Rectangle {
                 wrapMode: Text.WordWrap
             }
 
-            Rectangle { Layout.fillWidth: true; height: 1; color: "#23262E"; Layout.topMargin: 4 }
+            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.stroke; Layout.topMargin: 4 }
             Label { text: "Effects"; color: Theme.text; font.pixelSize: 12; font.weight: Font.DemiBold }
 
             EffectRow {
@@ -173,7 +173,7 @@ Rectangle {
         spacing: 4
         RowLayout {
             Layout.fillWidth: true
-            Label { Layout.fillWidth: true; text: row.title; color: row.checked ? Theme.text : "#C3C7D0"; font.pixelSize: 11 }
+            Label { Layout.fillWidth: true; text: row.title; color: row.checked ? Theme.text : Theme.textSecondary; font.pixelSize: 11 }
             Switch {
                 id: toggle
                 objectName: row.objectName + "-switch"
@@ -185,15 +185,15 @@ Rectangle {
                     implicitWidth: 30
                     implicitHeight: 16
                     radius: 8
-                    color: toggle.checked ? Theme.accent : "#2A2E37"
-                    border.color: toggle.checked ? Theme.accent : "#3A3F4B"
+                    color: toggle.checked ? Theme.accent : Theme.pressed
+                    border.color: toggle.checked ? Theme.accent : Theme.strokeStrong
                     Rectangle {
                         x: toggle.checked ? parent.width - width - 2 : 2
                         anchors.verticalCenter: parent.verticalCenter
                         width: 12
                         height: 12
                         radius: 6
-                        color: "#F2F3F6"
+                        color: Theme.knob
                         Behavior on x { NumberAnimation { duration: 90 } }
                     }
                 }

@@ -123,7 +123,7 @@ Item {
                 anchors.centerIn: parent
                 anchors.verticalCenterOffset: -8
                 radius: 0
-                color: "#0D0F14"
+                color: Theme.well
                 clip: true
                 border.width: 1
                 border.color: Theme.strokeStrong

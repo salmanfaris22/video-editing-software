@@ -11,9 +11,9 @@ ComboBox {
     focusPolicy: Qt.NoFocus
 
     background: Rectangle {
-        radius: 3
-        color: control.pressed ? Theme.pressed : control.hovered ? Theme.hover : "#1A1D23"
-        border.color: control.popup.visible ? Theme.accent : "#30343E"
+        radius: Theme.radiusS
+        color: control.pressed ? Theme.pressed : control.hovered ? Theme.hover : Theme.raised
+        border.color: control.popup.visible ? Theme.accent : Theme.strokeStrong
     }
     contentItem: Label {
         leftPadding: 8
@@ -40,7 +40,7 @@ ComboBox {
         highlighted: control.highlightedIndex === index
         contentItem: Label {
             text: item.modelData
-            color: item.index === control.currentIndex ? Theme.text : "#C3C7D0"
+            color: item.index === control.currentIndex ? Theme.text : Theme.textSecondary
             font.pixelSize: 11
             font.weight: item.index === control.currentIndex ? Font.DemiBold : Font.Normal
             verticalAlignment: Text.AlignVCenter
@@ -60,6 +60,6 @@ ComboBox {
             currentIndex: control.highlightedIndex
             ScrollIndicator.vertical: ScrollIndicator {}
         }
-        background: Rectangle { radius: 4; color: "#1A1D23"; border.color: "#363B46" }
+        background: Rectangle { radius: Theme.radiusM; color: Theme.raised; border.color: Theme.strokeStrong }
     }
 }

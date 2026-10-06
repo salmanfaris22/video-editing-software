@@ -35,7 +35,7 @@ Item {
             Layout.fillHeight: true
             Layout.fillWidth: true
             Layout.maximumWidth: height * 1.7
-            Rectangle { anchors.fill: parent; color: "#0C0D11"; border.color: "#262A33"; radius: 2 }
+            Rectangle { anchors.fill: parent; color: Theme.well; border.color: Theme.wellStroke; radius: Theme.radiusS }
             ScopeItem {  // the picture's histogram behind the curve
                 anchors.fill: parent
                 anchors.margins: 10
@@ -75,11 +75,11 @@ Item {
                         onClicked: root.channel = modelData.id
                         background: Rectangle {
                             radius: 3
-                            color: chan.current ? "#262A33" : chan.hovered ? "#1E2128" : "#16181D"
-                            border.color: chan.current ? chan.modelData.color : "#2A2E37"
+                            color: chan.current ? Theme.selected : chan.hovered ? Theme.hover : Theme.raised
+                            border.color: chan.current ? chan.modelData.color : Theme.strokeStrong
                         }
                         contentItem: Item {
-                            Label { anchors.centerIn: parent; text: chan.modelData.id.toUpperCase(); color: chan.modelData.color; font.pixelSize: 12; font.weight: Font.Bold }
+                            Label { anchors.centerIn: parent; text: chan.modelData.id.toUpperCase(); color: chan.modelData.id === "y" ? Theme.text : chan.modelData.color; font.pixelSize: 12; font.weight: Font.Bold }
                             Rectangle { visible: chan.edited; width: 5; height: 5; radius: 2.5; color: chan.modelData.color; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 4 }
                         }
                     }

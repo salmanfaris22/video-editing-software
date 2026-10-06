@@ -14,9 +14,9 @@ Button {
         if (!enabled) return Theme.raised
         switch (variant) {
         case "record": return down ? "#E8394A" : hovered ? Theme.recordHover : Theme.record
-        case "danger": return down ? Theme.recordSoft : hovered ? "#4A1F26" : "#2E1519"
+        case "danger": return down ? Qt.darker(Theme.recordSoft, 1.15) : hovered ? Qt.darker(Theme.recordSoft, 1.08) : Theme.recordSoft
         case "ghost": return down ? Theme.pressed : hovered ? Theme.hover : "transparent"
-        default: return down ? "#6A7AF0" : hovered ? Theme.accentHover : Theme.accent
+        default: return down ? Qt.darker(Theme.accent, 1.15) : hovered ? Theme.accentHover : Theme.accent
         }
     }
     readonly property color labelColor: !enabled ? Theme.textFaint

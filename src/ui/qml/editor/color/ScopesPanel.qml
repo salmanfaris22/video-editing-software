@@ -14,7 +14,7 @@ Rectangle {
     readonly property alias stats: scope.stats
     readonly property alias mode: scope.mode
 
-    color: "#121419"
+    color: Theme.surface
 
     ColumnLayout {
         anchors.fill: parent

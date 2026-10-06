@@ -192,7 +192,7 @@ Item {
                     Rectangle {  // viewer toolbar
                         Layout.fillWidth: true
                         Layout.preferredHeight: 34
-                        color: "#121419"
+                        color: Theme.surface
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: 10
@@ -206,7 +206,7 @@ Item {
                                 elide: Text.ElideRight
                             }
                             Label { text: root.project.formatTimecode(root.playback.position); color: Theme.textMuted; font.pixelSize: 11; font.family: Theme.monoFamily }
-                            Rectangle { width: 1; height: 16; color: "#2A2E37" }
+                            Rectangle { width: 1; height: 16; color: Theme.stroke }
                             PaletteButton {
                                 objectName: "compareWipe"
                                 compact: true
@@ -295,7 +295,7 @@ Item {
         Rectangle {
             SplitView.preferredHeight: Math.max(360, Math.min(470, root.height * 0.5))
             SplitView.minimumHeight: 330
-            color: "#121419"
+            color: Theme.surface
 
             ColumnLayout {
                 anchors.fill: parent
@@ -322,9 +322,9 @@ Item {
                         width: 104
                         height: 58
                         radius: 3
-                        color: current ? Theme.accentSoft : "#1A1D23"
+                        color: current ? Theme.accentSoft : Theme.raised
                         border.width: current ? 2 : 1
-                        border.color: current ? Theme.accent : "#2A2E37"
+                        border.color: current ? Theme.accent : Theme.stroke
                         Image {
                             anchors.fill: parent
                             anchors.margins: 2
@@ -363,16 +363,16 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 34
-                    color: "#16181D"
-                    Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 1; color: "#23262E" }
-                    Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; height: 1; color: "#23262E" }
+                    color: Theme.raised
+                    Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 1; color: Theme.stroke }
+                    Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; height: 1; color: Theme.stroke }
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
                         spacing: 2
                         PaletteTab { objectName: "palette-primaries"; text: "Primaries"; iconName: "adjust"; current: true }
-                        Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 18; color: "#2A2E37"; Layout.leftMargin: 6; Layout.rightMargin: 6 }
+                        Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 18; color: Theme.stroke; Layout.leftMargin: 6; Layout.rightMargin: 6 }
                         PaletteTab { objectName: "palette-curves"; text: "Curves"; iconName: "effects"; current: root.centerPalette === "curves"; onClicked: root.centerPalette = "curves" }
                         PaletteTab { objectName: "palette-qualifier"; text: "Qualifier"; iconName: "sparkle"; current: root.centerPalette === "qualifier"; onClicked: root.centerPalette = "qualifier" }
                         PaletteTab { objectName: "palette-window"; text: "Window"; iconName: "window"; current: root.centerPalette === "window"; onClicked: root.centerPalette = "window" }
@@ -383,8 +383,8 @@ Item {
                             Layout.preferredHeight: 22
                             Layout.preferredWidth: nodeChip.implicitWidth + 18
                             radius: 11
-                            color: root.node ? Theme.accentSoft : "#1E2128"
-                            border.color: root.node ? Theme.accent : "#30343E"
+                            color: root.node ? Theme.accentSoft : Theme.hover
+                            border.color: root.node ? Theme.accent : Theme.strokeStrong
                             Label { id: nodeChip; anchors.centerIn: parent; text: "Node " + root.nodeName; color: Theme.text; font.pixelSize: 11 }
                         }
                         AbstractButton {
@@ -399,7 +399,7 @@ Item {
                             ToolTip.visible: hovered
                             ToolTip.text: "Auto Balance — remove the color cast"
                             ToolTip.delay: 400
-                            background: Rectangle { radius: 11; color: autoButton.down ? Theme.pressed : autoButton.hovered ? Theme.hover : "#1E2128"; border.color: "#363B46" }
+                            background: Rectangle { radius: 11; color: autoButton.down ? Theme.pressed : autoButton.hovered ? Theme.hover : Theme.raised; border.color: Theme.strokeStrong }
                             contentItem: Label { text: "A"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; color: autoButton.enabled ? Theme.text : Theme.textFaint; font.pixelSize: 11; font.weight: Font.Bold }
                         }
                         PaletteButton {
@@ -424,7 +424,7 @@ Item {
                         onValueEdited: (key, v) => root.setValue(key, v)
                         onWheelEdited: (w, x, y, m) => root.setWheel(w, x, y, m)
                     }
-                    Rectangle { Layout.fillHeight: true; width: 1; color: "#23262E" }
+                    Rectangle { Layout.fillHeight: true; width: 1; color: Theme.stroke }
                     StackLayout {
                         Layout.fillHeight: true
                         Layout.fillWidth: false  // layouts fill by default; the wheels take the rest
@@ -461,7 +461,7 @@ Item {
                             onNodeCreated: id => root.nodeId = id
                         }
                     }
-                    Rectangle { Layout.fillHeight: true; width: 1; color: "#23262E" }
+                    Rectangle { Layout.fillHeight: true; width: 1; color: Theme.stroke }
                     ScopesPanel {
                         id: scopes
                         Layout.fillHeight: true
@@ -498,7 +498,7 @@ Item {
         focusPolicy: Qt.NoFocus
         background: Rectangle {
             radius: 3
-            color: tab.current ? "#262A33" : tab.hovered ? "#1E2128" : "transparent"
+            color: tab.current ? Theme.selected : tab.hovered ? Theme.hover : "transparent"
             Rectangle { anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; height: 2; color: Theme.record; visible: tab.current }
         }
         contentItem: Row {
