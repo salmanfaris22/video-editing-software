@@ -9,7 +9,7 @@ other industry tools, and what exists today. The original design documents
 |---|---|---|---|
 | [SUMMARY.md](SUMMARY.md) | **Start here:** all decisions and the plan on one page (delivery, architecture, MCP, phases, next step) | – | – |
 | [INDUSTRY_TOOLS_FEATURES.md](INDUSTRY_TOOLS_FEATURES.md) | Main features of the 14 industry tools (Resolve, Premiere, Final Cut, Avid, After Effects, Fusion, Nuke, Houdini, Cinema 4D, Blender, Vegas, Pro Tools, Audition, RX) and which Lectern adopts | overview | – |
-| [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md) | Color pipeline, grading, curves, secondaries, scopes, LUTs, repair, effects, keying, compositing, transitions, time, motion, text, AI | 230 | 18 / 28 |
+| [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md) | Color pipeline, grading, curves, secondaries, scopes, LUTs, repair, effects, keying, compositing, transitions, time, motion, text, AI | 230 | 19 / 29 |
 | [PRO_INTERFACE_PARITY.md](PRO_INTERFACE_PARITY.md) | After Effects-style workspace: tools, viewer, panels, Effect Controls, timeline switches, graph editor, Character panel, menus | 203 | 27 / 44 |
 | [DAVINCI_COLOR_PAGE.md](DAVINCI_COLOR_PAGE.md) | Resolve 21 Color page control by control (from screenshots) and the plan for a Lectern Color workspace | 104 | 7 / 13 |
 | [FULL_GAP_AUDIT.md](FULL_GAP_AUDIT.md) | Everything else: media, editing, audio, motion graphics, delivery, captions, AI, collaboration, project, performance, platform, recording, privacy, shipping; icon inventory (249 new icons); one combined priority order | 199 | 18 / 42 |
@@ -20,7 +20,7 @@ other industry tools, and what exists today. The original design documents
 | [ROADMAP_PHASES.md](ROADMAP_PHASES.md) | **The order of work in small phases.** Phase 1: DaVinci-style color grading in 14 steps. Phase 2: deep MCP and a pro-editor agent in 12 steps (cinematic color, speed ramps, smooth transitions, focus, editor recipes, self-review) — 3 diagrams | – | – |
 | [MASTER_PHASE_PLAN.md](MASTER_PHASE_PLAN.md) | **Every feature, phase by phase:** all open checklist items (666 after Phase 1.1) placed into small phases (Stages 0–8, each phase split into must-have **a** / power-user **b**, specialist P3 last); each item exactly once; Claude token estimate per phase and stage; regenerate with `python3 scripts/build_master_plan.py` | 666 open | – |
 
-**Total: 736 checklist items — 70 done, 127 partly done, 539 missing** (Phase 1.1 GPU renderer done 2026-10-05).
+**Total: 736 checklist items — 71 done, 128 partly done, 537 missing** (1.1 GPU renderer, 2.1–2.2 MCP done; 1.2 input color done).
 
 **Delivery decision:** the engine and every effect, transition and color tool
 are built in (small, never missing from a project); AI models, look/LUT

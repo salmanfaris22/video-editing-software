@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 
+#include <set>
+
 #include <cmath>
 #include <string>
 
@@ -220,4 +222,95 @@ TEST(BackgroundBlur, KeepsThePersonSharpAndSoftensTheRest) {
     };
     EXPECT_GT(contrast(QRect(80, 80, 40, 40)), 100);  // the person: still a crisp checkerboard
     EXPECT_LT(contrast(QRect(5, 5, 30, 30)), 10);      // the background: smooth gray
+}
+
+// ---- Input color (Phase 1.2) ---------------------------------------------------
+
+TEST(InputColor, ResolvesFromOverrideAndFileTags) {
+    EXPECT_TRUE(resolveInputColor("auto", "", "").isIdentity());  // untagged = Rec.709
+    EXPECT_TRUE(resolveInputColor("auto", "bt709", "bt709").isIdentity());
+    EXPECT_EQ(resolveInputColor("auto", "arib-std-b67", "bt2020"), (InputColor{Transfer::Hlg, Primaries::Bt2020}));
+    EXPECT_EQ(resolveInputColor("auto", "smpte2084", "bt2020"), (InputColor{Transfer::Pq, Primaries::Bt2020}));
+    EXPECT_EQ(resolveInputColor("auto", "iec61966-2-1", "smpte432"), (InputColor{Transfer::Srgb, Primaries::DisplayP3}));
+    // An override wins over the tags.
+    EXPECT_TRUE(resolveInputColor("rec709", "smpte2084", "bt2020").isIdentity());
+    EXPECT_EQ(resolveInputColor("rec2020-hlg", "", ""), (InputColor{Transfer::Hlg, Primaries::Bt2020}));
+}
+
+TEST(InputColor, Rec709AndSrgbPassThroughUnchanged) {
+    for (const InputColor c : {InputColor{}, InputColor{Transfer::Srgb, Primaries::Bt709}}) {
+        const auto out = convertInputColor(c, 0.2, 0.5, 0.9);
+        EXPECT_DOUBLE_EQ(out[0], 0.2);
+        EXPECT_DOUBLE_EQ(out[1], 0.5);
+        EXPECT_DOUBLE_EQ(out[2], 0.9);
+    }
+}
+
+TEST(InputColor, WideGamutWhiteAndGrayStayNeutral) {
+    for (const InputColor c : {InputColor{Transfer::Srgb, Primaries::DisplayP3}, InputColor{Transfer::Bt709, Primaries::Bt2020}}) {
+        for (double v : {0.25, 0.5, 1.0}) {
+            const auto out = convertInputColor(c, v, v, v);
+            EXPECT_NEAR(out[0], out[1], 2e-3) << v;
+            EXPECT_NEAR(out[1], out[2], 2e-3) << v;
+        }
+        EXPECT_NEAR(convertInputColor(c, 1, 1, 1)[0], 1.0, 2e-3);  // white stays white
+    }
+    // Display P3 red is more saturated than Rec.709 can show: it clips at red, not into other hues.
+    const auto red = convertInputColor({Transfer::Srgb, Primaries::DisplayP3}, 1, 0, 0);
+    EXPECT_NEAR(red[0], 1.0, 1e-6);
+    EXPECT_LT(red[1], 0.05);
+    EXPECT_LT(red[2], 0.05);
+    // Gamut matrices keep white (rows sum to 1).
+    for (const Primaries p : {Primaries::DisplayP3, Primaries::Bt2020}) {
+        const Matrix3 m = gamutToBt709(p);
+        for (const auto& row : m) EXPECT_NEAR(row[0] + row[1] + row[2], 1.0, 1e-6);
+    }
+}
+
+TEST(InputColor, PqMapsReferenceWhiteToSdrWhiteAndRollsOffHighlights) {
+    const InputColor pq{Transfer::Pq, Primaries::Bt2020};
+    // PQ 0.58 ≈ 203 nits (BT.2408 reference white) → about SDR white after the knee.
+    const auto white = convertInputColor(pq, 0.58, 0.58, 0.58);
+    EXPECT_GT(white[0], 0.9);
+    EXPECT_LE(white[0], 1.0);
+    // 100 nits (PQ ≈ 0.508) is about half of reference white in light: mid-gray-ish, not black or clipped.
+    const auto hundred = convertInputColor(pq, 0.508, 0.508, 0.508)[0];
+    EXPECT_GT(hundred, 0.65);
+    EXPECT_LT(hundred, 0.85);
+    // Brighter input is never darker, and 10,000 nits does not exceed 1.
+    double last = 0;
+    for (double e = 0.0; e <= 1.0001; e += 0.02) {
+        const double v = convertInputColor(pq, e, e, e)[0];
+        EXPECT_GE(v + 1e-9, last) << e;
+        EXPECT_LE(v, 1.0);
+        last = v;
+    }
+    EXPECT_NEAR(convertInputColor(pq, 0, 0, 0)[0], 0.0, 1e-9);
+}
+
+TEST(InputColor, HlgIsContinuousAndMapsItsNominalWhiteNearSdrWhite) {
+    const InputColor hlg{Transfer::Hlg, Primaries::Bt2020};
+    // Continuous across the curve's join at 0.5.
+    const double below = convertInputColor(hlg, 0.4999, 0.4999, 0.4999)[0];
+    const double above = convertInputColor(hlg, 0.5001, 0.5001, 0.5001)[0];
+    EXPECT_NEAR(below, above, 2e-3);
+    // HLG 0.75 is the nominal diffuse white (~203 nits on a 1000-nit display).
+    const double white = convertInputColor(hlg, 0.75, 0.75, 0.75)[0];
+    EXPECT_GT(white, 0.88);
+    EXPECT_LE(white, 1.0);
+    // Peak (1.0) rolls off below 1 instead of clipping hard; still brighter than white.
+    const double peak = convertInputColor(hlg, 1, 1, 1)[0];
+    EXPECT_GT(peak, white);
+    EXPECT_LE(peak, 1.0);
+}
+
+TEST(InputColor, ConvertsTenBitImagesKeepingPrecision) {
+    // A smooth 10-bit ramp converted to 8 bits keeps (nearly) every step: no banding from an 8-bit detour.
+    QImage ramp(1024, 1, QImage::Format_BGR30);
+    for (int x = 0; x < 1024; ++x) reinterpret_cast<quint32*>(ramp.scanLine(0))[x] = (3u << 30) | (x << 20) | (x << 10) | x;
+    applyInputColor(ramp, {Transfer::Hlg, Primaries::Bt2020});
+    ASSERT_EQ(ramp.format(), QImage::Format_RGB32);
+    std::set<int> levels;
+    for (int x = 0; x < 1024; ++x) levels.insert(qRed(ramp.pixel(x, 0)));
+    EXPECT_GT(levels.size(), 200U);  // an 8-bit-decoded HLG ramp would give far fewer distinct levels
 }

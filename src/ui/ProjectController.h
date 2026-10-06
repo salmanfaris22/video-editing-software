@@ -199,6 +199,9 @@ public:
     Q_INVOKABLE void setColorWheel(const QString& clipId, const QString& wheel, double x, double y, double master);
     /// ref: a built-in conversion ("builtin:…"), a project LUT path, or "" for none.
     Q_INVOKABLE void setColorLut(const QString& clipId, const QString& ref);
+    /// How the clip's source colors are read: "auto" (file tags), "rec709", "srgb",
+    /// "display-p3", "rec2020", "rec2020-hlg", "rec2020-pq" (HDR is tone-mapped).
+    Q_INVOKABLE void setInputColorSpace(const QString& clipId, const QString& space);
     /// Copies a .cube file into the project (media/luts) and applies it.
     Q_INVOKABLE void importLut(const QString& clipId, const QUrl& file);
 

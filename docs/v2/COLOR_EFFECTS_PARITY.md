@@ -54,13 +54,13 @@ these. They are the P0 work.
 | # | Feature | AE | PR | DR | Lectern | P | Notes |
 |---|---|---|---|---|---|---|---|
 | 1.1 | GPU render pipeline (preview + export) | ● | ● (Mercury) | ● | ✅ | P0 | `src/render/GpuRenderer` on Qt RHI (Metal; D3D11 compiled for Windows, not run); matches the CPU compositor within 0.3/255 mean (tests/render) |
-| 1.2 | 16-bit and 32-bit float processing | ● (8/16/32 bpc project) | ● (max bit depth) | ● (32-bit float always) | ⬜ | P0 | Current path is 8-bit; grades band and clip. Float textures (RGBA16F) on GPU |
+| 1.2 | 16-bit and 32-bit float processing | ● (8/16/32 bpc project) | ● (max bit depth) | ● (32-bit float always) | 🟡 | P0 | HDR/wide-gamut sources decode at 10 bits and convert in float (2026-10-06); the canvas is still 8-bit — RGBA16F canvas next |
 | 1.3 | Linear-light compositing | ● (linearize working space) | ◐ | ● | ⬜ | P0 | Blur, blends and opacity must happen in linear light |
 | 1.4 | Color-managed pipeline (input → working → output transforms) | ● (OCIO / ACES in AE 2024+) | ● (color management, 2025) | ● (RCM, ACES, OCIO-like) | ⬜ | P0 | Input color space per clip, working space, display and output transforms |
-| 1.5 | Per-clip input color space / gamma tagging | ● (Interpret Footage) | ● (Override Media Color Space) | ● | 🟡 | P0 | Only through the built-in log LUTs |
+| 1.5 | Per-clip input color space / gamma tagging | ● (Interpret Footage) | ● (Override Media Color Space) | ● | ✅ | P0 | Auto from file tags or override: Rec.709, sRGB, Display P3, Rec.2020, HLG, PQ (Adjust panel, MCP `set_clip_color_space`) |
 | 1.6 | Working spaces: Rec.709, sRGB, Rec.2020, DaVinci Wide Gamut / Intermediate, ACEScct, ACEScg | ● | ◐ | ● | ⬜ | P1 | |
 | 1.7 | Display / viewer transform (what the screen shows) | ● | ● | ● | ⬜ | P1 | macOS EDR / Windows HDR display output |
-| 1.8 | HDR timelines (PQ, HLG) and HDR export | ● | ● | ● | ⬜ | P2 | Needs 1.2–1.4. Phone footage is often HLG |
+| 1.8 | HDR timelines (PQ, HLG) and HDR export | ● | ● | ● | 🟡 | P2 | HLG/PQ sources are tone-mapped to SDR (BT.2408 reference white, highlight roll-off); HDR output not yet |
 | 1.9 | Camera log/RAW decode: Apple Log, S-Log3, V-Log, LogC3/4, C-Log, N-Log, F-Log, BRAW, ProRes RAW, R3D | ◐ | ● | ● | 🟡 | P1 | 4 log curves today; RAW decode is P3 |
 | 1.10 | Effect plug-in architecture (parameters, keyframes, GPU shader per effect) | ● | ● | ● | 🟡 | P0 | `effects[]` with type + params exists; needs a registry and a shader per effect (../RENDERING_PIPELINE.md §12) |
 | 1.11 | Effect stack per clip (order, enable/disable, duplicate, copy/paste attributes) | ● | ● | ● | 🟡 | P1 | Fixed set today; no reordering or copy/paste |
@@ -448,7 +448,7 @@ decode, HDR mastering, control surfaces, relight, depth maps.
 
 | Section | Items | ✅ | 🟡 | ⬜ |
 |---|---|---|---|---|
-| 1 Foundation | 17 | 2 | 4 | 11 |
+| 1 Foundation | 17 | 3 | 5 | 9 |
 | 2 Primaries | 27 | 6 | 4 | 17 |
 | 3 Curves | 10 | 0 | 0 | 10 |
 | 4 Secondaries | 16 | 0 | 1 | 15 |

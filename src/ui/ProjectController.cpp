@@ -428,6 +428,21 @@ void ProjectController::selectAt(double seconds, const QString& trackId) {
     clearSelection();
 }
 
+namespace {
+/// What "auto" reads a source as, for the Adjust panel ("HDR · HLG · BT.2020").
+QString detectedColorSpace(const project::MediaSource* m) {
+    const auto* v = m && m->info.video ? &*m->info.video : nullptr;
+    const editor::InputColor c = editor::resolveInputColor("auto", v ? v->colorTransfer : std::string_view{},
+                                                           v ? v->colorPrimaries : std::string_view{});
+    const QString gamut = c.primaries == editor::Primaries::Bt2020      ? QStringLiteral("BT.2020")
+                          : c.primaries == editor::Primaries::DisplayP3 ? QStringLiteral("Display P3")
+                                                                        : QStringLiteral("Rec.709");
+    if (c.transfer == editor::Transfer::Hlg) return QStringLiteral("HDR · HLG · ") + gamut;
+    if (c.transfer == editor::Transfer::Pq) return QStringLiteral("HDR · PQ · ") + gamut;
+    return gamut;
+}
+}  // namespace
+
 void ProjectController::rebuildSelection() {
     if (project_) {
         QStringList alive;
@@ -510,6 +525,8 @@ void ProjectController::rebuildSelection() {
         {"lut", qs(clip->color.lut)},
         {"lutName", lutName(clip->color.lut)},
         {"lutAmount", clip->color.lutAmount},
+        {"inputColorSpace", qs(clip->color.inputColorSpace)},
+        {"detectedColorSpace", detectedColorSpace(media)},
         {"backgroundBlurOn", hasEffect(*clip, editor::kEffectBackgroundBlur)},
         {"backgroundBlur", hasEffect(*clip, editor::kEffectBackgroundBlur)
                                ? effectValue(*clip, editor::kEffectBackgroundBlur, "amount", 0.6) : 0.0},

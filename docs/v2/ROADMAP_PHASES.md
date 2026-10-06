@@ -70,7 +70,7 @@ stable). Steps 2.1–2.2 wrap the features that already exist today.
   decode+convert that now bounds export) and show the GPU texture in the
   preview without reading it back.
 
-### 1.2 Float and color management — **M** · ~5M Claude tokens
+### 1.2 Float and color management — **M** · ~5M Claude tokens · 🟡 input color done 2026-10-06
 - **Goal:** no banding, correct color for every camera.
 - **Ships:** RGBA16F linear pipeline; OpenColorIO; per-clip input color
   space (auto from metadata, override in clip settings); working space;
@@ -80,6 +80,18 @@ stable). Steps 2.1–2.2 wrap the features that already exist today.
   looks right on SDR export.
 - **Done when:** any supported camera clip looks correct with no manual
   setting.
+- **As built so far (2026-10-06):** media keep their color tags
+  (`colorPrimaries`, `colorTransfer`); each clip has an input color space
+  (Auto or an override, Adjust panel + MCP `set_clip_color_space`);
+  HDR/wide-gamut sources decode at 10 bits (BGR30 → RGB10A2 textures) and are
+  converted to the Rec.709 working space by the same math on CPU and GPU
+  (`editor::convertInputColor`, `layer.frag`): sRGB/BT.1886 decode, gamut
+  matrix, PQ/HLG → nits with BT.2408 reference white (203 nits) and a
+  highlight roll-off. Verified by 6 unit tests, a GPU-vs-CPU test for P3,
+  HLG and PQ, and an end-to-end 10-bit HLG FFV1 file (probe → 10-bit decode →
+  same result on both renderers, within 4 levels of the reference).
+- **Still to do for 1.2:** RGBA16F canvas with linear-light blending,
+  OpenColorIO / ACES working spaces, display and HDR output transforms.
 
 ### 1.3 Corrector layers (project format v3) — **M** · ~5M Claude tokens
 - **Goal:** several corrections per clip, like Resolve's serial nodes.

@@ -4,7 +4,9 @@
 #include "media/Muxer.h"
 #include "media/VideoEncoder.h"
 
+#include <algorithm>
 #include <cmath>
+#include <string_view>
 #include <cstring>
 #include <vector>
 
@@ -49,6 +51,62 @@ Status writeTestVideo(const std::filesystem::path& path, const TestVideoSpec& sp
         LEC_TRY((*enc)->encode(std::move(*f), i % spec.gopFrames == 0, sink));
     }
     LEC_TRY((*enc)->flush(sink));
+    return (*mux)->finalize();
+}
+
+Status writeTestHdrVideo(const std::filesystem::path& path, const TestHdrVideoSpec& spec) {
+    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_FFV1);
+    if (!codec) return fail(ErrorCode::EncoderError, "FFV1 encoder not available");
+    std::unique_ptr<AVCodecContext, void (*)(AVCodecContext*)> ctx(avcodec_alloc_context3(codec), [](AVCodecContext* c) {
+        avcodec_free_context(&c);
+    });
+    ctx->width = spec.width;
+    ctx->height = spec.height;
+    ctx->pix_fmt = AV_PIX_FMT_YUV420P10LE;
+    ctx->time_base = {1, spec.fps};
+    ctx->framerate = {spec.fps, 1};
+    ctx->color_primaries = AVCOL_PRI_BT2020;
+    ctx->colorspace = AVCOL_SPC_BT2020_NCL;
+    ctx->color_range = AVCOL_RANGE_MPEG;
+    ctx->color_trc = std::string_view(spec.transfer) == "smpte2084" ? AVCOL_TRC_SMPTE2084 : AVCOL_TRC_ARIB_STD_B67;
+    ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    if (avcodec_open2(ctx.get(), codec, nullptr) < 0) return fail(ErrorCode::EncoderError, "cannot open FFV1");
+    auto mux = Muxer::create(path, recordingMuxerOptions());
+    if (!mux) return fail(std::move(mux).error());
+    if (auto r = (*mux)->addStream(*ctx); !r) return fail(std::move(r).error());
+    LEC_TRY((*mux)->writeHeader());
+    auto drain = [&]() -> Status {
+        for (;;) {
+            Packet pkt = Packet::alloc();
+            const int rc = avcodec_receive_packet(ctx.get(), pkt.get());
+            if (rc == AVERROR(EAGAIN) || rc == AVERROR_EOF) return ok();
+            if (rc < 0) return fail(ErrorCode::EncoderError, "FFV1 encode failed");
+            LEC_TRY((*mux)->write(std::move(pkt), 0, ctx->time_base));
+        }
+    };
+    const auto count = static_cast<std::int64_t>(std::llround(spec.seconds * spec.fps));
+    for (std::int64_t i = 0; i < count; ++i) {
+        auto f = Frame::allocVideo(spec.width, spec.height, AV_PIX_FMT_YUV420P10LE);
+        if (!f) return fail(std::move(f).error());
+        for (int plane = 0; plane < 3; ++plane) {
+            const int w = plane == 0 ? spec.width : spec.width / 2;
+            const int h = plane == 0 ? spec.height : spec.height / 2;
+            const auto value = static_cast<std::uint16_t>(plane == 0 ? spec.luma : 512);
+            for (int y = 0; y < h; ++y) {
+                auto* row = reinterpret_cast<std::uint16_t*>((*f)->data[plane] + static_cast<std::ptrdiff_t>(y) * (*f)->linesize[plane]);
+                std::fill(row, row + w, value);
+            }
+        }
+        (*f)->pts = i;
+        (*f)->color_primaries = ctx->color_primaries;
+        (*f)->color_trc = ctx->color_trc;
+        (*f)->colorspace = ctx->colorspace;
+        (*f)->color_range = ctx->color_range;
+        if (avcodec_send_frame(ctx.get(), f->get()) < 0) return fail(ErrorCode::EncoderError, "FFV1 encode failed");
+        LEC_TRY(drain());
+    }
+    avcodec_send_frame(ctx.get(), nullptr);
+    LEC_TRY(drain());
     return (*mux)->finalize();
 }
 

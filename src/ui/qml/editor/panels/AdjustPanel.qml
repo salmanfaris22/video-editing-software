@@ -68,6 +68,27 @@ ScrollView {
                 Label { Layout.fillWidth: true; text: root.sel.name || ""; color: Theme.text; font.pixelSize: Theme.fontM; elide: Text.ElideRight }
                 StatusChip { text: root.sel.role || ""; tone: "info" }
             }
+            SectionLabel { text: "Source color" }
+            ComboBox {
+                id: sourceColor
+                objectName: "sourceColor"
+                Layout.fillWidth: true
+                readonly property var spaces: [
+                    { id: "auto", label: "Auto · " + (root.sel.detectedColorSpace || "Rec.709") },
+                    { id: "rec709", label: "Rec.709" },
+                    { id: "srgb", label: "sRGB" },
+                    { id: "display-p3", label: "Display P3" },
+                    { id: "rec2020", label: "Rec.2020" },
+                    { id: "rec2020-hlg", label: "HDR · HLG (Rec.2020)" },
+                    { id: "rec2020-pq", label: "HDR · PQ (Rec.2020)" }
+                ]
+                model: spaces.map(s => s.label)
+                currentIndex: Math.max(0, spaces.findIndex(s => s.id === (root.sel.inputColorSpace || "auto")))
+                onActivated: index => root.project.setInputColorSpace(root.id, spaces[index].id)
+                ToolTip.visible: hovered
+                ToolTip.text: "How this clip's colors are read. HDR video (HLG/PQ) is tone-mapped to standard range."
+                ToolTip.delay: 500
+            }
             SectionLabel { text: "Looks" }
             GridLayout {
                 Layout.fillWidth: true

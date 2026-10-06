@@ -6,7 +6,9 @@
 #include "editor/Compositor.h"
 #include "editor/EditorFixture.h"
 #include "editor/Exporter.h"
+#include "media/MediaProbe.h"
 #include "media/VideoReader.h"
+#include "support/TestMedia.h"
 #include "editor/FrameProvider.h"
 #include "editor/RenderPlan.h"
 #include "render/GpuRenderer.h"
@@ -377,4 +379,65 @@ TEST_F(GpuRenderer, ExportOnTheGpuMatchesTheCpuExport) {
         std::printf("  export luma difference at %.1f s: %.3f\n", t, mean);
         EXPECT_LT(mean, 1.0) << "at " << t << " s";
     }
+}
+
+TEST_F(GpuRenderer, InputColorConversionMatchesTheCpu) {
+    for (const char* space : {"display-p3", "rec2020-hlg", "rec2020-pq"}) {
+        test::EditorFixture f;
+        useDetailImage(f);
+        Both r(f);
+        r.at(f.project, 0.5);
+        const QImage plain = r.cpuImage;
+        clipOf(f, "Screen").color.inputColorSpace = space;
+        clipOf(f, "Camera").color.inputColorSpace = space;
+        const Difference d = r.at(f.project, 0.5);
+        EXPECT_GT(compare(plain, r.cpuImage).mean, 1.0) << space << ": the conversion changes the picture";
+        EXPECT_CLOSE(d, 1.0, 0.002) << space;
+    }
+}
+
+TEST_F(GpuRenderer, HdrHlgRecordingIsDecodedInTenBitsAndToneMapped) {
+    test::EditorFixture f;
+    // An HDR (HLG, BT.2020) 10-bit clip as the screen source, tagged as the probe reports it.
+    const auto file = f.dir / "hdr.mkv";
+    ASSERT_TRUE(test::writeTestHdrVideo(file, {.seconds = 3.0, .luma = 600}));
+    auto info = media::probeMedia(file);
+    ASSERT_TRUE(info) << info.error().toString();
+    ASSERT_NE(info->video(), nullptr);
+    EXPECT_EQ(info->video()->video->colorTransfer, "arib-std-b67");
+    EXPECT_EQ(info->video()->video->colorPrimaries, "bt2020");
+    EXPECT_TRUE(info->video()->video->hdr);
+    project::MediaSource m;
+    m.id = project::MediaId::generate();
+    m.kind = project::MediaKind::Video;
+    m.role = project::MediaRole::Screen;
+    m.name = "HDR";
+    m.path = "hdr.mkv";
+    m.info.duration = Time::fromSecondsF(3.0);
+    m.info.video = project::VideoMetadata{"ffv1", 320, 180, FrameRate(30, 1), "yuv420p10le", "bt2020nc", "tv", 0, false,
+                                          info->video()->video->colorPrimaries, info->video()->video->colorTransfer};
+    f.project.media.push_back(m);
+    clipOf(f, "Screen").media = m.id;
+
+    const RenderPlan plan = buildRenderPlan(f.project, sec(0.5));
+    const VisualLayer* screen = nullptr;
+    for (const auto& l : plan.layers) if (l.role == "screen") screen = &l;
+    ASSERT_TRUE(screen);
+    EXPECT_EQ(screen->input, (InputColor{Transfer::Hlg, Primaries::Bt2020}));
+    FrameProvider frames(f.dir.path(), false);
+    frames.setProject(std::make_shared<const project::Project>(f.project));
+    const QImage decoded = frames.image(*screen, QSizeF(320, 180));
+    EXPECT_EQ(decoded.format(), QImage::Format_BGR30);  // 10 bits kept
+
+    Both r(f);
+    const Difference d = r.at(f.project, 0.5);
+    EXPECT_CLOSE(d, 1.0, 0.003);
+    // Luma 600 of 64..940 (limited range) is HLG code (600-64)/876; gray in, converted gray out.
+    const double code = (600.0 - 64.0) / 876.0;
+    const double expected = convertInputColor({Transfer::Hlg, Primaries::Bt2020}, code, code, code)[0] * 255.0;
+    const QColor center = r.gpuImage.pixelColor(r.gpuImage.width() / 2, r.gpuImage.height() / 2);
+    EXPECT_NEAR(center.red(), expected, 4.0);
+    EXPECT_NEAR(center.green(), expected, 4.0);
+    // Without color management the same pixel would be the raw code value (washed out).
+    EXPECT_GT(std::abs(expected - code * 255.0), 20.0);
 }

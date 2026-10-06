@@ -126,6 +126,24 @@ void ProjectController::setColorLut(const QString& clipId, const QString& ref) {
     });
 }
 
+void ProjectController::setInputColorSpace(const QString& clipId, const QString& space) {
+    static const QStringList known{QStringLiteral("auto"), QStringLiteral("rec709"), QStringLiteral("srgb"),
+                                   QStringLiteral("display-p3"), QStringLiteral("rec2020"), QStringLiteral("rec2020-hlg"),
+                                   QStringLiteral("rec2020-pq")};
+    const auto id = clipIdFrom(clipId);
+    if (!id) return;
+    if (!known.contains(space)) {
+        showMessage(QStringLiteral("Unknown color space"));
+        return;
+    }
+    mutate(QStringLiteral("Source color"), [&](project::Project& p) -> Status {
+        timeline::Clip* c = clipById(p, *id);
+        if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        c->color.inputColorSpace = space.toStdString();
+        return ok();
+    });
+}
+
 void ProjectController::importLut(const QString& clipId, const QUrl& file) {
     if (!project_ || dir_.empty()) return;
     const QString local = file.isLocalFile() ? file.toLocalFile() : file.toString();

@@ -253,3 +253,17 @@ TEST(McpUi, AppToolsListAndOpenOnlyRecentProjects) {
     EXPECT_FALSE(p.call("open_project", {{"path", path.toStdString()}})["result"]["isError"].get<bool>());
     EXPECT_EQ(opened, path);
 }
+
+TEST(McpUi, SetClipColorSpaceIsUndoableAndValidated) {
+    Project p;
+    const auto clip = p.clip();
+    const auto r = p.call("set_clip_color_space", {{"clipId", clip}, {"space", "rec2020-hlg"}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    EXPECT_EQ(p.controller.selection().value("inputColorSpace").toString(), "rec2020-hlg");
+    EXPECT_EQ(p.call("set_clip_color_space", {{"clipId", clip}, {"space", "rec2100"}})["error"]["code"], -32602);
+    p.controller.undo();
+    p.controller.selectClip(QString::fromStdString(clip));
+    EXPECT_EQ(p.controller.selection().value("inputColorSpace").toString(), "auto");
+    EXPECT_EQ(p.controller.selection().value("detectedColorSpace").toString(), "Rec.709");
+}

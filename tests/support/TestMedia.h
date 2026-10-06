@@ -35,6 +35,21 @@ struct TestVideoSpec {
 /// H.264 (software) in Matroska; frame i is solid luma frameLevel(i).
 Status writeTestVideo(const std::filesystem::path& path, const TestVideoSpec& spec = {});
 
+struct TestHdrVideoSpec {
+    double seconds = 1.0;
+    int fps = 30;
+    int width = 320;
+    int height = 180;
+    /// "arib-std-b67" (HLG) or "smpte2084" (PQ); primaries are BT.2020.
+    const char* transfer = "arib-std-b67";
+    /// 10-bit luma code value (limited range 64…940) of every pixel; neutral chroma.
+    int luma = 600;
+};
+
+/// 10-bit 4:2:0 FFV1 (lossless) in Matroska with BT.2020 + `transfer` color tags,
+/// like an HDR phone recording.
+Status writeTestHdrVideo(const std::filesystem::path& path, const TestHdrVideoSpec& spec = {});
+
 struct TestAudioSpec {
     double seconds = 3.0;
     int sampleRate = 48'000;

@@ -4,8 +4,8 @@ Every open item from the v2 checklists (COLOR_EFFECTS_PARITY,
 PRO_INTERFACE_PARITY, DAVINCI_COLOR_PAGE, FULL_GAP_AUDIT) placed into one
 small phase. Generated 2026-10-05 from those documents by `scripts/` in this folder
 (`python3 scripts/build_master_plan.py`), so
-**each of the 666 open items (⬜ missing or 🟡 partly done) appears exactly
-once**; the 70 done items (✅) are listed in the appendix.
+**each of the 665 open items (⬜ missing or 🟡 partly done) appears exactly
+once**; the 71 done items (✅) are listed in the appendix.
 
 How it is organised:
 - **Stages 0–8** follow the order of work: ship basics in parallel; color
@@ -78,7 +78,7 @@ Wave 1 only (all **a** phases + new-work phases): ~238M tokens processed.
 
 **Stage 1 — Color grading like DaVinci (ROADMAP Phase 1)**
 
-- **1.2a** Float pipeline and color management · must-have (P0/P1) · 7 items · ~5.0M tokens
+- **1.2a** Float pipeline and color management · must-have (P0/P1) · 6 items · ~5.0M tokens
 - **1.2b** Float pipeline and color management · power users (P2) · 1 item · ~0.4M tokens
 - **1.3a** Corrector layers (format v3) · must-have (P0/P1) · 8 items · ~5.0M tokens
 - **1.3b** Corrector layers (format v3) · power users (P2) · 2 items · ~0.8M tokens
@@ -279,14 +279,13 @@ Items: 4. User-facing features ship with their MCP tool and a test.
 
 Goal: Linear float, OCIO, camera color spaces, HDR inputs.  
 Claude estimate: ~5.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 7. User-facing features ship with their MCP tool and a test.
+Items: 6. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §1.2 | 16-bit and 32-bit float processing | ⬜ | P0 |
+| COLOR §1.2 | 16-bit and 32-bit float processing | 🟡 | P0 |
 | COLOR §1.3 | Linear-light compositing | ⬜ | P0 |
 | COLOR §1.4 | Color-managed pipeline (input → working → output transforms) | ⬜ | P0 |
-| COLOR §1.5 | Per-clip input color space / gamma tagging | 🟡 | P0 |
 | COLOR §1.6 | Working spaces: Rec.709, sRGB, Rec.2020, DaVinci Wide Gamut / Intermediate, ACEScct, ACEScg | ⬜ | P1 |
 | COLOR §1.7 | Display / viewer transform (what the screen shows) | ⬜ | P1 |
 | COLOR §1.9 | Camera log/RAW decode: Apple Log, S-Log3, V-Log, LogC3/4, C-Log, N-Log, F-Log, BRAW, ProRes RAW, R3D | 🟡 | P1 |
@@ -299,7 +298,7 @@ Items: 1. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §1.8 | HDR timelines (PQ, HLG) and HDR export | ⬜ | P2 |
+| COLOR §1.8 | HDR timelines (PQ, HLG) and HDR export | 🟡 | P2 |
 
 ### 1.3a — Corrector layers (format v3) · must-have (P0/P1)
 
@@ -1930,7 +1929,7 @@ Items: 29. User-facing features ship with their MCP tool and a test.
 
 ## Appendix — already done (✅)
 
-**COLOR_EFFECTS_PARITY:** §1.1 GPU render pipeline (preview + export), §1.15 Real-time playback at full rate with grades and effects, §2.1 Exposure, §2.5 Temperature / Tint, §2.6 Saturation, §2.8 Brightness, §2.11 Lift / Gamma / Gain wheels, §2.25 Copy / paste grade, apply to all of a source, §7.1 3D LUT import (.cube), §7.2 LUT mix / intensity, §9.1 Gaussian Blur, §9.12 Background blur by person mask, §10.11 Digital zoom / punch-in (Ken Burns), §11.1 Vignette, §13.1 Opacity per layer, keyframable, §13.8 Picture-in-picture layouts, §17.1 Text layers with font, size, weight, color, background, §19.9 Undo per parameter, merge slider drags
+**COLOR_EFFECTS_PARITY:** §1.1 GPU render pipeline (preview + export), §1.5 Per-clip input color space / gamma tagging, §1.15 Real-time playback at full rate with grades and effects, §2.1 Exposure, §2.5 Temperature / Tint, §2.6 Saturation, §2.8 Brightness, §2.11 Lift / Gamma / Gain wheels, §2.25 Copy / paste grade, apply to all of a source, §7.1 3D LUT import (.cube), §7.2 LUT mix / intensity, §9.1 Gaussian Blur, §9.12 Background blur by person mask, §10.11 Digital zoom / punch-in (Ken Burns), §11.1 Vignette, §13.1 Opacity per layer, keyframable, §13.8 Picture-in-picture layouts, §17.1 Text layers with font, size, weight, color, background, §19.9 Undo per parameter, merge slider drags
 
 **PRO_INTERFACE_PARITY:** §1.15 Resize frames by dragging dividers, §2.1 Home (start screen), §2.2 Selection [V], §2.16 Snapping toggle with options (edges, centers, guides), §3.1 Fit to window, §3.16 Bounding box with corner/edge handles, §3.20 Esc cancels a drag, §3.21 Double-click text to edit in place, §3.22 Right-click context menu on layers, §6.5 Time ruler with current-time indicator (drag to scrub), §6.9 Snapping (Shift while dragging in AE), §6.11 Auto-scroll during playback, edge scroll while dragging, §6.12 Video eye (hide), Audio speaker (mute), Solo, Lock, §6.15 Source name / layer name, rename (Enter), §6.28 Layer selection highlight; select layer by clicking the header, §6.30 Add, delete, rename layers / tracks, §6.40 Audio waveform under a layer (LL), §6.41 Drag layer bar to move in time, §6.43 Split layer (Ctrl+Shift+D), §6.44 Move a clip to another layer by dragging vertically, §6.45 Box select, Shift/⌘ add to selection, §8.4 Font size, §8.13 Background box / rounded pill with padding, §9.3 Audio (levels meter, volume), §9.15 Render Queue / Export settings, §12.1 Dark UI, one accent color, compact density, §12.5 Hover, pressed and selected states on every control
 
@@ -1940,4 +1939,4 @@ Items: 29. User-facing features ship with their MCP tool and a test.
 
 ---
 
-Totals: 666 open items in 87 phases with items (45 sub-phases) plus 8 new-work phases; 70 items done.
+Totals: 665 open items in 87 phases with items (45 sub-phases) plus 8 new-work phases; 71 items done.

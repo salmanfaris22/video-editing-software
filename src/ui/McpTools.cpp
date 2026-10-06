@@ -246,6 +246,12 @@ void registerMcpTools(Server& server, ProjectController* p) {
              p->setColorLut(str(a, "clipId"), str(a, "lut"));
              if (a.contains("amount")) p->setColorValue(str(a, "clipId"), QStringLiteral("lutAmount"), a["amount"]);
          });
+    edit("set_clip_color_space",
+         "Set how a clip's source colors are read: auto (from the file), rec709, srgb, display-p3, rec2020, "
+         "rec2020-hlg or rec2020-pq (HDR sources are tone-mapped to SDR).",
+         object({{"clipId", text(64)}, {"space", choice({"auto", "rec709", "srgb", "display-p3", "rec2020", "rec2020-hlg", "rec2020-pq"})}},
+                {"clipId", "space"}),
+         [p](const Json& a) { p->setInputColorSpace(str(a, "clipId"), str(a, "space")); });
     edit("set_effect", "Enable/disable a built-in effect and set its parameters. Zoom uses scale/x/y; other effects use amount.",
          object({{"clipId", text(64)}, {"type", choice({"blur", "vignette", "zoom", "background-blur"})}, {"enabled", boolean()},
                  {"params", object({{"amount", number(0, 1)}, {"scale", number(1, 8)}, {"x", number(0, 1)}, {"y", number(0, 1)}})}}, {"clipId", "type", "enabled"}),
