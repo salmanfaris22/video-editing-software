@@ -174,6 +174,10 @@ Json colorJson(const ColorAdjustments& c) {
     if (!c.lift.isIdentity()) j["lift"] = wheelJson(c.lift);
     if (!c.gammaWheel.isIdentity()) j["gammaWheel"] = wheelJson(c.gammaWheel);
     if (!c.gain.isIdentity()) j["gain"] = wheelJson(c.gain);
+    if (!c.offset.isIdentity()) j["offset"] = wheelJson(c.offset);
+    if (c.pivot != 0.5) j["pivot"] = c.pivot;
+    if (c.colorBoost.value != 0.0 || !c.colorBoost.keys.empty()) j["colorBoost"] = animatedJson(c.colorBoost);
+    if (c.hue.value != 0.0 || !c.hue.keys.empty()) j["hue"] = animatedJson(c.hue);
     if (!c.lut.empty()) {
         j["lut"] = c.lut;
         j["lutAmount"] = c.lutAmount;
@@ -198,6 +202,10 @@ Result<ColorAdjustments> colorFrom(const Json& j, const std::string& path) {
     if (const auto it = j.find("lift"); it != j.end()) c.lift = wheelFrom(*it);
     if (const auto it = j.find("gammaWheel"); it != j.end()) c.gammaWheel = wheelFrom(*it);
     if (const auto it = j.find("gain"); it != j.end()) c.gain = wheelFrom(*it);
+    if (const auto it = j.find("offset"); it != j.end()) c.offset = wheelFrom(*it);
+    c.pivot = std::clamp(j.value("pivot", 0.5), 0.0, 1.0);
+    if (j.contains("colorBoost")) { LEC_READ_ANIM(double, c.colorBoost, j, "colorBoost", path) }
+    if (j.contains("hue")) { LEC_READ_ANIM(double, c.hue, j, "hue", path) }
     c.lut = j.value("lut", "");
     c.lutAmount = std::clamp(j.value("lutAmount", 1.0), 0.0, 1.0);
     c.inputColorSpace = j.value("inputColorSpace", "auto");

@@ -231,10 +231,12 @@ void registerMcpTools(Server& server, ProjectController* p) {
          });
     edit("set_color", "Patch current basic color controls without resetting omitted controls. Exposure is -2..2; other controls -1..1.",
          object({{"clipId", text(64)}, {"values", object({{"exposure", number(-2, 2)}, {"brightness", number(-1, 1)},
-                    {"contrast", number(-1, 1)}, {"saturation", number(-1, 1)}, {"temperature", number(-1, 1)}, {"tint", number(-1, 1)}})}}, {"clipId", "values"}),
+                    {"contrast", number(-1, 1)}, {"saturation", number(-1, 1)}, {"temperature", number(-1, 1)}, {"tint", number(-1, 1)},
+                    {"pivot", number(0, 1)}, {"shadows", number(-1, 1)}, {"highlights", number(-1, 1)},
+                    {"colorBoost", number(-1, 1)}, {"hue", number(-1, 1)}})}}, {"clipId", "values"}),
          [p](const Json& a) { for (const auto& [key, value] : a["values"].items()) p->setColorValue(str(a, "clipId"), QString::fromStdString(key), value); });
     edit("set_color_wheel", "Adjust one current color wheel with normalized coordinates and master.",
-         object({{"clipId", text(64)}, {"wheel", choice({"lift", "gamma", "gain"})}, {"x", number(-1, 1)}, {"y", number(-1, 1)}, {"master", number(-1, 1)}},
+         object({{"clipId", text(64)}, {"wheel", choice({"lift", "gamma", "gain", "offset"})}, {"x", number(-1, 1)}, {"y", number(-1, 1)}, {"master", number(-1, 1)}},
                 {"clipId", "wheel", "x", "y", "master"}),
          [p](const Json& a) { p->setColorWheel(str(a, "clipId"), str(a, "wheel"), a["x"], a["y"], a["master"]); });
     edit("reset_color", "Reset a clip's current color adjustments.", object({{"clipId", text(64)}}, {"clipId"}),

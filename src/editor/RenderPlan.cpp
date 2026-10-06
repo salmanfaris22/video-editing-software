@@ -46,6 +46,12 @@ ColorParams colorAt(const timeline::ColorAdjustments& c, Time local) {
     p.lift = c.lift;
     p.gamma = c.gammaWheel;
     p.gain = c.gain;
+    p.offset = c.offset;
+    p.pivot = std::clamp(c.pivot, 0.0, 1.0);
+    p.shadows = std::clamp(c.shadows.evaluate(local), -1.0, 1.0);
+    p.highlights = std::clamp(c.highlights.evaluate(local), -1.0, 1.0);
+    p.colorBoost = std::clamp(c.colorBoost.evaluate(local), -1.0, 1.0);
+    p.hue = std::clamp(c.hue.evaluate(local), -1.0, 1.0);
     p.lut = c.lut;
     p.lutAmount = std::clamp(c.lutAmount, 0.0, 1.0);
     return p;

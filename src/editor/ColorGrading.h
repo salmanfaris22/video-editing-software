@@ -95,6 +95,10 @@ void applyInputColor(QImage& image, const InputColor& input);
 using ColorCurves = std::array<std::array<std::uint8_t, 256>, 3>;
 [[nodiscard]] ColorCurves colorCurves(const ColorParams& color);
 
+/// Color Boost (vibrance) and Hue rotation on one pixel (0…1), after saturation.
+/// The GPU shader mirrors it.
+[[nodiscard]] std::array<double, 3> boostAndHue(const ColorParams& color, double r, double g, double b);
+
 /// Grades `image` in place: LUT (mixed by lutAmount), then exposure,
 /// brightness, contrast, temperature/tint, lift/gamma/gain, saturation.
 void applyColor(QImage& image, const ColorParams& color, const Lut3D* lut = nullptr);

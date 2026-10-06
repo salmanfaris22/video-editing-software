@@ -27,12 +27,19 @@ struct ColorParams {
     Wheel lift;              ///< color wheels (shadows, midtones, highlights)
     Wheel gamma;
     Wheel gain;
+    Wheel offset;            ///< whole-signal shift (Resolve Offset)
+    double pivot = 0.5;      ///< contrast pivot
+    double shadows = 0;      ///< −1…1, darks only
+    double highlights = 0;   ///< −1…1, brights only
+    double colorBoost = 0;   ///< −1…1 vibrance
+    double hue = 0;          ///< −1…1 = −180°…180°
     std::string lut;         ///< .cube path relative to the project, or "builtin:<id>"
     double lutAmount = 1.0;
     /// Everything except the LUT is a per-channel curve plus saturation.
     [[nodiscard]] bool curvesAreIdentity() const noexcept {
         return exposure == 0 && brightness == 0 && contrast == 0 && saturation == 0 && temperature == 0 && tint == 0 &&
-               lift.isIdentity() && gamma.isIdentity() && gain.isIdentity();
+               lift.isIdentity() && gamma.isIdentity() && gain.isIdentity() && offset.isIdentity() && shadows == 0 &&
+               highlights == 0 && colorBoost == 0 && hue == 0;
     }
     [[nodiscard]] bool isIdentity() const noexcept { return curvesAreIdentity() && (lut.empty() || lutAmount <= 0); }
     friend bool operator==(const ColorParams&, const ColorParams&) = default;

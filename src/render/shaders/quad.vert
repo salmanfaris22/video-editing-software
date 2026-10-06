@@ -20,6 +20,7 @@ layout(std140, binding = 0) uniform Params {
     vec4 gamut0;     // source gamut -> Rec.709 (linear light), rows
     vec4 gamut1;
     vec4 gamut2;
+    vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians)
 };
 
 out gl_PerVertex { vec4 gl_Position; };

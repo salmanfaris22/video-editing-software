@@ -67,6 +67,10 @@ struct ColorAdjustments {
     Wheel lift;   ///< shadows
     Wheel gammaWheel;  ///< midtones
     Wheel gain;   ///< highlights
+    Wheel offset;  ///< the whole signal (Resolve's Offset wheel)
+    double pivot = 0.5;  ///< contrast turns around this level (0…1)
+    Animated<double> colorBoost{0.0};  ///< vibrance: saturates muted colors more (−1…1)
+    Animated<double> hue{0.0};         ///< hue rotation, −1…1 = −180°…180°
     /// A 3D LUT: a .cube file (path relative to the project folder) or a
     /// built-in camera log conversion ("builtin:apple-log", …); empty = none.
     std::string lut;

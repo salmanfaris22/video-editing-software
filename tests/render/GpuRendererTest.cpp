@@ -441,3 +441,22 @@ TEST_F(GpuRenderer, HdrHlgRecordingIsDecodedInTenBitsAndToneMapped) {
     // Without color management the same pixel would be the raw code value (washed out).
     EXPECT_GT(std::abs(expected - code * 255.0), 20.0);
 }
+
+TEST_F(GpuRenderer, ResolvePrimariesMatchTheCpu) {
+    test::EditorFixture f;
+    useDetailImage(f);
+    Both r(f);
+    r.at(f.project, 0.5);
+    const QImage plain = r.cpuImage;
+    timeline::ColorAdjustments& c = clipOf(f, "Camera").color;  // the top layer in this scene
+    c.contrast = timeline::Animated<double>{0.3};
+    c.pivot = 0.35;
+    c.shadows = timeline::Animated<double>{0.4};
+    c.highlights = timeline::Animated<double>{-0.3};
+    c.offset = {0.05, -0.04, 0.03};
+    c.colorBoost = timeline::Animated<double>{0.6};
+    c.hue = timeline::Animated<double>{0.15};
+    const Difference d = r.at(f.project, 0.5);
+    EXPECT_GT(compare(plain, r.cpuImage).mean, 3.0);  // the grade really changes the picture
+    EXPECT_CLOSE(d, 1.0, 0.002);
+}

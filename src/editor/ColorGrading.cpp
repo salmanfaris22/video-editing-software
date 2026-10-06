@@ -480,6 +480,32 @@ void applyInputColor(QImage& img, const InputColor& input) {
     img = std::move(out);
 }
 
+std::array<double, 3> boostAndHue(const ColorParams& c, double r, double g, double b) {
+    if (c.colorBoost != 0) {  // vibrance: muted colors gain more saturation than vivid ones
+        const double l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        const double chroma = std::max({r, g, b}) - std::min({r, g, b});
+        const double s = 1.0 + c.colorBoost * (1.0 - chroma);
+        r = l + (r - l) * s;
+        g = l + (g - l) * s;
+        b = l + (b - l) * s;
+    }
+    if (c.hue != 0) {  // rotate around the gray axis, keeping luma (Rec.709 weights)
+        const double a = c.hue * 3.14159265358979323846;
+        const double cs = std::cos(a);
+        const double sn = std::sin(a);
+        const double nr = (0.2126 + 0.7874 * cs - 0.2126 * sn) * r + (0.7152 - 0.7152 * cs - 0.7152 * sn) * g +
+                          (0.0722 - 0.0722 * cs + 0.9278 * sn) * b;
+        const double ng = (0.2126 - 0.2126 * cs + 0.143 * sn) * r + (0.7152 + 0.2848 * cs + 0.140 * sn) * g +
+                          (0.0722 - 0.0722 * cs - 0.283 * sn) * b;
+        const double nb = (0.2126 - 0.2126 * cs - 0.7874 * sn) * r + (0.7152 - 0.7152 * cs + 0.7152 * sn) * g +
+                          (0.0722 + 0.9278 * cs + 0.0722 * sn) * b;
+        r = nr;
+        g = ng;
+        b = nb;
+    }
+    return {std::clamp(r, 0.0, 1.0), std::clamp(g, 0.0, 1.0), std::clamp(b, 0.0, 1.0)};
+}
+
 ColorCurves colorCurves(const ColorParams& c) {
     const double gain = std::pow(2.0, c.exposure);
     const double contrast = 1.0 + c.contrast;
@@ -488,6 +514,7 @@ ColorCurves colorCurves(const ColorParams& c) {
     const auto liftC = wheelChroma(c.lift);
     const auto gammaC = wheelChroma(c.gamma);
     const auto gainC = wheelChroma(c.gain);
+    const auto offsetC = wheelChroma(c.offset);
     ColorCurves curve{};
     for (std::size_t ch = 0; ch < 3; ++ch) {
         const double lift = 0.25 * c.lift.master + liftC[ch];
@@ -495,11 +522,16 @@ ColorCurves colorCurves(const ColorParams& c) {
         const double highlights = 1.0 + 0.5 * c.gain.master + 2.0 * gainC[ch];
         for (int v = 0; v < 256; ++v) {
             double x = v / 255.0 * gain + c.brightness * 0.3;
-            x = (x - 0.5) * contrast + 0.5;
+            x = (x - c.pivot) * contrast + c.pivot;
+            // Shadows / highlights: lift or pull only the darks / brights.
+            const double t = std::clamp(x, 0.0, 1.0);
+            x += 0.35 * c.shadows * (1.0 - t) * (1.0 - t) * (1.0 - t);
+            x += 0.35 * c.highlights * t * t * t;
             x *= channelGain[ch];
             x = x + lift * (1.0 - x);
             if (x > 0) x = std::pow(x, exponent);
             x *= highlights;
+            x += 0.25 * c.offset.master + offsetC[ch];  // Offset moves the whole signal
             curve[ch][static_cast<std::size_t>(v)] = static_cast<std::uint8_t>(std::clamp(std::lround(x * 255.0), 0L, 255L));
         }
     }
@@ -516,6 +548,7 @@ void applyColor(QImage& img, const ColorParams& c, const Lut3D* lut) {
     // Per-channel curves (everything but the LUT and saturation) as tables.
     const ColorCurves curve = colorCurves(c);
     const double sat = 1.0 + c.saturation;
+    const bool pixelOps = c.colorBoost != 0 || c.hue != 0;
     const float mix = static_cast<float>(std::clamp(c.lutAmount, 0.0, 1.0));
 
     for (int y = 0; y < img.height(); ++y) {
@@ -553,6 +586,12 @@ void applyColor(QImage& img, const ColorParams& c, const Lut3D* lut) {
                 r = static_cast<int>(std::clamp(l + (r - l) * sat, 0.0, 255.0));
                 g = static_cast<int>(std::clamp(l + (g - l) * sat, 0.0, 255.0));
                 b = static_cast<int>(std::clamp(l + (b - l) * sat, 0.0, 255.0));
+            }
+            if (pixelOps) {
+                const auto o = boostAndHue(c, r / 255.0, g / 255.0, b / 255.0);
+                r = static_cast<int>(std::lround(o[0] * 255.0));
+                g = static_cast<int>(std::lround(o[1] * 255.0));
+                b = static_cast<int>(std::lround(o[2] * 255.0));
             }
             if (a < 255) {
                 r = r * static_cast<int>(a) / 255;

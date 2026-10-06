@@ -31,6 +31,7 @@ qt_add_qml_module(lectern_ui
         qml/Theme.qml
         qml/components/IconButton.qml
         qml/components/MiniSlider.qml
+        qml/components/ScrubField.qml
         qml/components/PrimaryButton.qml
         qml/components/Card.qml
         qml/components/FieldLabel.qml
@@ -61,6 +62,8 @@ qt_add_qml_module(lectern_ui
         qml/editor/TimelinePanel.qml
         qml/editor/TrackHeader.qml
         qml/editor/ClipItem.qml
+        qml/editor/ColorPage.qml
+        qml/editor/color/ColorWheel.qml
         qml/editor/ExportDialog.qml
         qml/editor/panels/SetupPanel.qml
         qml/editor/panels/LayoutPanel.qml
@@ -86,6 +89,7 @@ qt_add_qml_module(lectern_ui
         VideoPreviewItem.h VideoPreviewItem.cpp
         ThumbnailProvider.h ThumbnailProvider.cpp
         WaveformProvider.h WaveformProvider.cpp
+        ScopeItem.h ScopeItem.cpp
         IconProvider.h IconProvider.cpp
         SerialExecutor.h
     RESOURCES

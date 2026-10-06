@@ -196,6 +196,9 @@ public:
     /// Several adjustments as one undo step (color presets).
     Q_INVOKABLE void setColorValues(const QString& clipId, const QVariantMap& values);
     /// wheel: "lift", "gamma", "gain"; (x, y) on the wheel, master: −1…1.
+    /// What a wheel does to each channel, for the Color page readouts: [Y, R, G, B]
+    /// (lift/offset: added level, gamma: exponent shift, gain: multiplier).
+    Q_INVOKABLE QVariantList wheelChannels(const QString& wheel, double x, double y, double master) const;
     Q_INVOKABLE void setColorWheel(const QString& clipId, const QString& wheel, double x, double y, double master);
     /// ref: a built-in conversion ("builtin:…"), a project LUT path, or "" for none.
     Q_INVOKABLE void setColorLut(const QString& clipId, const QString& ref);

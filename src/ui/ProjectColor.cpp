@@ -27,6 +27,7 @@ timeline::ColorAdjustments::Wheel* wheelOf(timeline::ColorAdjustments& c, const 
     if (name == QLatin1String("lift")) return &c.lift;
     if (name == QLatin1String("gamma")) return &c.gammaWheel;
     if (name == QLatin1String("gain")) return &c.gain;
+    if (name == QLatin1String("offset")) return &c.offset;
     return nullptr;
 }
 
@@ -39,7 +40,9 @@ void ProjectController::setColorValue(const QString& clipId, const QString& key,
         timeline::Clip* c = clipById(p, *id);
         if (!c) return fail(ErrorCode::NotFound, "clip not found");
         timeline::ColorAdjustments& col = c->color;
-        const double v = std::clamp(value, key == QLatin1String("exposure") ? -2.0 : -1.0, key == QLatin1String("exposure") ? 2.0 : 1.0);
+        const bool unit = key == QLatin1String("pivot");
+        const double v = std::clamp(value, key == QLatin1String("exposure") ? -2.0 : unit ? 0.0 : -1.0,
+                                    key == QLatin1String("exposure") ? 2.0 : 1.0);
         if (key == QLatin1String("exposure")) col.exposure.value = v;
         else if (key == QLatin1String("brightness")) col.brightness.value = v;
         else if (key == QLatin1String("contrast")) col.contrast.value = v;
@@ -47,6 +50,11 @@ void ProjectController::setColorValue(const QString& clipId, const QString& key,
         else if (key == QLatin1String("temperature")) col.temperature.value = v;
         else if (key == QLatin1String("tint")) col.tint.value = v;
         else if (key == QLatin1String("lutAmount")) col.lutAmount = std::clamp(value, 0.0, 1.0);
+        else if (key == QLatin1String("pivot")) col.pivot = v;
+        else if (key == QLatin1String("shadows")) col.shadows.value = v;
+        else if (key == QLatin1String("highlights")) col.highlights.value = v;
+        else if (key == QLatin1String("colorBoost")) col.colorBoost.value = v;
+        else if (key == QLatin1String("hue")) col.hue.value = v;
         else return fail(ErrorCode::InvalidArgument, "unknown adjustment " + key.toStdString());
         return ok();
     }, QStringLiteral("color:") + key + clipId);
@@ -90,6 +98,18 @@ void ProjectController::setColorValues(const QString& clipId, const QVariantMap&
         take("tint", col.tint, -1, 1);
         return ok();
     });
+}
+
+QVariantList ProjectController::wheelChannels(const QString& wheel, double x, double y, double master) const {
+    const auto c = editor::wheelChroma({x, y, master});
+    // The same formulas as editor::colorCurves, shown the way Resolve labels them.
+    if (wheel == QLatin1String("gain")) {
+        const double base = 1.0 + 0.5 * master;
+        return {base, base + 2.0 * c[0], base + 2.0 * c[1], base + 2.0 * c[2]};
+    }
+    if (wheel == QLatin1String("gamma")) return {master, master + 2.0 * c[0], master + 2.0 * c[1], master + 2.0 * c[2]};
+    const double base = 0.25 * master;  // lift, offset
+    return {base, base + c[0], base + c[1], base + c[2]};
 }
 
 void ProjectController::setColorWheel(const QString& clipId, const QString& wheel, double x, double y, double master) {

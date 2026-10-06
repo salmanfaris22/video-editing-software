@@ -22,6 +22,7 @@ layout(std140, binding = 0) uniform Params {
     vec4 gamut0;     // source gamut -> Rec.709 (linear light), rows
     vec4 gamut1;
     vec4 gamut2;
+    vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians)
 };
 
 layout(binding = 1) uniform sampler2D tex;      // source (premultiplied)
@@ -141,7 +142,20 @@ vec3 applyGrade(vec3 rgb)
         float l = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
         rgb = clamp(vec3(l) + (rgb - vec3(l)) * grade.x, 0.0, 1.0);
     }
-    return rgb;
+    if (grade2.x != 0.0) {  // color boost: muted colors gain more (mirrors editor::boostAndHue)
+        float l = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+        float chroma = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
+        rgb = vec3(l) + (rgb - vec3(l)) * (1.0 + grade2.x * (1.0 - chroma));
+    }
+    if (grade2.y != 0.0) {  // hue rotation around the gray axis
+        float c = cos(grade2.y);
+        float s = sin(grade2.y);
+        mat3 m = mat3(0.2126 + 0.7874 * c - 0.2126 * s, 0.2126 - 0.2126 * c + 0.143 * s, 0.2126 - 0.2126 * c - 0.7874 * s,
+                      0.7152 - 0.7152 * c - 0.7152 * s, 0.7152 + 0.2848 * c + 0.140 * s, 0.7152 - 0.7152 * c + 0.7152 * s,
+                      0.0722 - 0.0722 * c + 0.9278 * s, 0.0722 - 0.0722 * c - 0.283 * s, 0.0722 + 0.9278 * c + 0.0722 * s);
+        rgb = m * rgb;
+    }
+    return clamp(rgb, 0.0, 1.0);
 }
 
 vec4 gradedSource(vec2 uv)

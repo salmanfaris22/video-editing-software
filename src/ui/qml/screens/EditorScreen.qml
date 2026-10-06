@@ -30,6 +30,11 @@ Item {
     }
     property real timelineTrackHeight: root.app.workspaceValue("timelineTrackHeight", 48)
     onTimelineTrackHeightChanged: root.app.setWorkspaceValue("timelineTrackHeight", timelineTrackHeight)
+    /// Page (Resolve-style page bar at the bottom): "edit" or "color".
+    property string page: root.app.workspaceValue("editorPage", "edit")
+    onPageChanged: root.app.setWorkspaceValue("editorPage", page)
+    property string scopeMode: root.app.workspaceValue("scopeMode", "parade")
+    onScopeModeChanged: root.app.setWorkspaceValue("scopeMode", scopeMode)
     property string timelineGridMode: root.app.workspaceValue("timelineGridMode", "auto")
     onTimelineGridModeChanged: root.app.setWorkspaceValue("timelineGridMode", timelineGridMode)
 
@@ -81,12 +86,113 @@ Item {
         onExportRequested: exportDialog.open()
     }
 
+    Shortcut { sequence: "Shift+4"; context: Qt.WindowShortcut; onActivated: root.page = "edit" }
+    Shortcut { sequence: "Shift+6"; context: Qt.WindowShortcut; onActivated: root.page = "color" }
+
+    ColorPage {
+        anchors.top: topBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: pageBar.top
+        visible: root.page === "color"
+        project: root.project
+        playback: root.playback
+        editor: root
+        onActivated: root.refocus()
+    }
+
+    // ---- Page bar (bottom), like DaVinci Resolve ------------------------------
+    Rectangle {
+        id: pageBar
+        objectName: "pageBar"
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: 44
+        color: Theme.surface
+        Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 1; color: Theme.stroke }
+        Row {
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 8
+            Image {
+                width: 22
+                height: 22
+                anchors.verticalCenter: parent.verticalCenter
+                source: "qrc:/qt/qml/Lectern/UI/brand/lectern-icon-256.png"
+                sourceSize: Qt.size(44, 44)
+                mipmap: true
+            }
+            Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Lectern"
+                color: Theme.text
+                font.pixelSize: Theme.fontM
+                font.weight: Font.DemiBold
+            }
+        }
+        Row {
+            anchors.centerIn: parent
+            spacing: 4
+            Repeater {
+                model: [
+                    { id: "edit", label: "Edit", icon: "cut", keys: "⇧4" },
+                    { id: "color", label: "Color", icon: "adjust", keys: "⇧6" }
+                ]
+                delegate: AbstractButton {
+                    id: pageButton
+                    required property var modelData
+                    objectName: "page-" + modelData.id
+                    readonly property bool current: root.page === modelData.id
+                    width: 120
+                    height: pageBar.height
+                    hoverEnabled: true
+                    focusPolicy: Qt.NoFocus
+                    onClicked: { root.page = modelData.id; root.refocus() }
+                    ToolTip.visible: hovered
+                    ToolTip.text: modelData.label + " page (" + modelData.keys + ")"
+                    ToolTip.delay: 500
+                    background: Rectangle {
+                        color: pageButton.current ? "#0B0C10" : pageButton.hovered ? Theme.hover : "transparent"
+                        Rectangle {  // the current page, underlined in red like Resolve
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 2
+                            color: Theme.record
+                            visible: pageButton.current
+                        }
+                    }
+                    contentItem: Row {
+                        spacing: 6
+                        leftPadding: (pageButton.width - implicitWidth) / 2
+                        Icon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: pageButton.modelData.icon
+                            size: 16
+                            color: pageButton.current ? Theme.text : Theme.textMuted
+                        }
+                        Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: pageButton.modelData.label
+                            color: pageButton.current ? Theme.text : Theme.textMuted
+                            font.pixelSize: Theme.fontS
+                            font.weight: pageButton.current ? Font.DemiBold : Font.Normal
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     SplitView {
         id: split
         anchors.top: topBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        anchors.bottom: pageBar.top
+        visible: root.page === "edit"
         orientation: Qt.Vertical
 
         handle: Rectangle {

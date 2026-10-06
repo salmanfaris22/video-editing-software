@@ -28,11 +28,12 @@ void EditorPreviewItem::geometryChange(const QRectF& newGeometry, const QRectF& 
 
 void EditorPreviewItem::itemChange(ItemChange change, const ItemChangeData& value) {
     QQuickItem::itemChange(change, value);
-    if (change == ItemSceneChange || change == ItemDevicePixelRatioHasChanged) reportSize();
+    // The Edit and Color pages each have a preview: the visible one sets the render size.
+    if (change == ItemSceneChange || change == ItemDevicePixelRatioHasChanged || change == ItemVisibleHasChanged) reportSize();
 }
 
 void EditorPreviewItem::reportSize() {
-    if (!playback_ || width() < 2 || height() < 2) return;
+    if (!playback_ || width() < 2 || height() < 2 || !isVisible()) return;
     const qreal dpr = window() ? window()->effectiveDevicePixelRatio() : 1.0;
     // Render at the shown resolution (capped: beyond 1920 px the preview gains nothing).
     const double scale = std::min(dpr, 1920.0 / std::max(1.0, width()));

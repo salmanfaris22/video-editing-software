@@ -53,7 +53,9 @@ int main(int argc, char** argv) {
     const QCommandLineOption editorTool(QStringLiteral("editor-tool"),
                                         QStringLiteral("Editor panel to show: setup|layout|cut|effects|overlay|style|subtitles|audio|adjust."),
                                         QStringLiteral("tool"));
-    cli.addOptions({synthetic, view, project, screenshot, delay, logLevel, autoRecord, editorTool});
+    const QCommandLineOption editorPage(QStringLiteral("editor-page"), QStringLiteral("Editor page: edit|color."),
+                                        QStringLiteral("page"));
+    cli.addOptions({synthetic, view, project, screenshot, delay, logLevel, autoRecord, editorTool, editorPage});
     cli.process(app);
 
     // Logging: stderr + rotating file (docs/ARCHITECTURE.md §7).
@@ -72,6 +74,7 @@ int main(int argc, char** argv) {
 
     ui::AppController controller(ui::AppController::Options{cli.isSet(synthetic)});
     if (cli.isSet(editorTool)) controller.setWorkspaceValue(QStringLiteral("editorTool"), cli.value(editorTool));
+    if (cli.isSet(editorPage)) controller.setWorkspaceValue(QStringLiteral("editorPage"), cli.value(editorPage));
     if (cli.isSet(project)) controller.openProject(cli.value(project));
     else controller.setView(cli.value(view));
 

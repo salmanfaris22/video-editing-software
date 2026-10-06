@@ -45,8 +45,9 @@ struct Uniforms {
     float gamut0[4];
     float gamut1[4];
     float gamut2[4];
+    float grade2[4];
 };
-static_assert(sizeof(Uniforms) == 288);
+static_assert(sizeof(Uniforms) == 304);
 
 enum Mode {
     kGradient = 0,
@@ -609,6 +610,7 @@ private:
             set4(d.u.uvMap, srcPixels.x() / texW, srcPixels.y() / texH, srcPixels.width() / (texW * size.width()),
                  srcPixels.height() / (texH * size.height()));
             set4(d.u.grade, 1.0 + (grade ? l.color.saturation : 0.0), curves ? 1 : 0, l.mirror ? 1 : 0, 0);
+            set4(d.u.grade2, grade ? l.color.colorBoost : 0.0, grade ? l.color.hue * 3.14159265358979323846 : 0.0, 0, 0);
             if (lut) {
                 set4(d.u.lutScale, lut->scale[0], lut->scale[1], lut->scale[2], std::clamp(l.color.lutAmount, 0.0, 1.0));
                 set4(d.u.lutOffset, lut->offset[0], lut->offset[1], lut->offset[2], 0);
@@ -689,6 +691,7 @@ private:
         set4(layer.u.look, l.opacity, border, std::clamp(l.vignette, 0.0, 1.0), kMedia);
         if (prepare) {  // already converted, graded and mirrored
             set4(layer.u.grade, 1, 0, 0, 0);
+            set4(layer.u.grade2, 0, 0, 0, 0);
             set4(layer.u.inputColor, 0, 0, 0, 0);
             layer.lut = nullptr;
             set4(layer.u.lutScale, 0, 0, 0, 0);
