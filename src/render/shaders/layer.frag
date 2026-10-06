@@ -23,7 +23,8 @@ layout(std140, binding = 0) uniform Params {
     vec4 gamut1;
     vec4 gamut2;
     vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians), z: HSL curves (0/1)
-    vec4 fx;         // x: grain amount, y: grain size (px), z: grain seed; threshold/add modes: x threshold
+    vec4 fx;         // x: grain amount, y: grain size (px), z: grain seed; threshold: x threshold;
+                     // denoise: x luma sigma, y chroma sigma, z step (px), w spatial sigma (px); sharpen: x strength, y coring
     vec4 nodeInfo;   // x: node count, y: source aspect (w/h), z: person mask bound (0/1), w: highlighted node (-1 none)
     vec4 nodes[70];  // 7 per node (up to 10): grade, window0, window1, qual0, qual1, qual2, misc (see layer.frag)
 };
@@ -46,6 +47,8 @@ const int MODE_NV12_Y = 8;
 const int MODE_NV12_UV = 9;
 const int MODE_THRESHOLD = 10;
 const int MODE_ADD = 11;
+const int MODE_DENOISE = 12;
+const int MODE_SHARPEN = 13;
 
 // Film grain (mirrors editor::grainNoise / addGrain): value noise from an
 // integer hash, so the CPU and the GPU draw the same grain.
@@ -456,6 +459,59 @@ void main()
         vec2 uv = p / shape.xy;
         vec4 c = texture(tex, uv);
         fragColor = vec4(clamp(c.rgb + texture(aux, uv).rgb * color0.rgb, 0.0, 1.0), c.a);
+        return;
+    }
+    if (mode == MODE_DENOISE) {
+        // Bilateral filters on 9 x 9 whole pixels fx.z apart (editor::denoiseImage):
+        // luma averaged over pixels of similar luma, color (B - Y, R - Y) over
+        // pixels of similar color and luma, so edges stay sharp and colors stay put.
+        const float DENOISE_GUIDE = 0.1;  // editor::kDenoiseGuideSigma
+        const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+        vec2 texel = 1.0 / shape.xy;
+        vec2 uv = p / shape.xy;
+        vec3 c = texture(tex, uv).rgb;
+        float cy = dot(c, LUMA);
+        vec2 cc = vec2(c.b - cy, c.r - cy);
+        float s2 = 2.0 * fx.w * fx.w;
+        float y2 = 2.0 * fx.x * fx.x;
+        float c2 = 2.0 * fx.y * fx.y;
+        float g2 = 2.0 * DENOISE_GUIDE * DENOISE_GUIDE;
+        float sy = 0.0, ty = 0.0, sa = 0.0, tc = 0.0;
+        vec2 sc = vec2(0.0);
+        for (int j = -4; j <= 4; ++j) {
+            for (int i = -4; i <= 4; ++i) {
+                vec4 v = texture(tex, uv + vec2(float(i), float(j)) * fx.z * texel);
+                float y = dot(v.rgb, LUMA);
+                vec2 ch = vec2(v.b - y, v.r - y);
+                float dy = y - cy;
+                vec2 dc = ch - cc;
+                float near = -float(i * i + j * j) * fx.z * fx.z / s2;
+                float wy = exp(near - dy * dy / y2);
+                float wc = exp(near - dot(dc, dc) / c2 - dy * dy / g2);
+                sy += y * wy;
+                sa += v.a * wy;
+                ty += wy;
+                sc += ch * wc;
+                tc += wc;
+            }
+        }
+        float ny = sy / ty;
+        vec2 nc = sc / tc;
+        float r = ny + nc.y;
+        float b = ny + nc.x;
+        float g = (ny - 0.2126 * r - 0.0722 * b) / 0.7152;
+        float a = sa / ty;
+        fragColor = vec4(clamp(vec3(r, g, b), 0.0, a), a);
+        return;
+    }
+    if (mode == MODE_SHARPEN) {
+        // Unsharp mask: picture + strength * cored(picture - blurred); detail
+        // below the coring level (noise) is left alone (editor::sharpenImage).
+        vec2 uv = p / shape.xy;
+        vec4 c = texture(tex, uv);
+        vec3 detail = c.rgb - texture(aux, uv).rgb;
+        detail = sign(detail) * max(abs(detail) - fx.y, 0.0);
+        fragColor = vec4(clamp(c.rgb + detail * fx.x, 0.0, c.a), c.a);
         return;
     }
     if (mode == MODE_MASK_MIX) {

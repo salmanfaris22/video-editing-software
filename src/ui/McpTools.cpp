@@ -404,13 +404,17 @@ void registerMcpTools(Server& server, ProjectController* p) {
          "Enable/disable a built-in effect and set its parameters. zoom: scale, x, y. blur, vignette, background-blur: "
          "amount. film-grain: amount, size (0.5..4). glow and halation (red film halo around highlights): amount, "
          "threshold (luma where it starts), radius. film-emulation (print stage after the grade): amount, stock "
-         "(0 warm print, 1 cool print, 2 soft negative).",
+         "(0 warm print, 1 cool print, 2 soft negative). denoise (spatial noise reduction that keeps edges): luma "
+         "(detail and grain), chroma (color blotches), radius. sharpen (unsharp mask): amount, radius (detail size), coring (detail "
+         "below it, i.e. noise, is not sharpened).",
          object({{"clipId", text(64)},
-                 {"type", choice({"blur", "vignette", "zoom", "background-blur", "film-grain", "glow", "halation", "film-emulation"})},
+                 {"type", choice({"blur", "vignette", "zoom", "background-blur", "film-grain", "glow", "halation", "film-emulation",
+                                  "denoise", "sharpen"})},
                  {"enabled", boolean()},
                  {"params", object({{"amount", number(0, 1)}, {"scale", number(1, 8)}, {"x", number(0, 1)}, {"y", number(0, 1)},
                                     {"size", number(0.5, 4)}, {"threshold", number(0, 0.98)}, {"radius", number(0, 1)},
-                                    {"stock", number(0, 2)}})}},
+                                    {"stock", number(0, 2)}, {"luma", number(0, 1)}, {"chroma", number(0, 1)},
+                                    {"coring", number(0, 1)}})}},
                 {"clipId", "type", "enabled"}),
          [p](const Json& a) {
              const auto params = a.value("params", Json::object());
@@ -418,7 +422,8 @@ void registerMcpTools(Server& server, ProjectController* p) {
                  {"zoom", {"scale", "x", "y"}},         {"blur", {"amount"}},
                  {"vignette", {"amount"}},              {"background-blur", {"amount"}},
                  {"film-grain", {"amount", "size"}},    {"glow", {"amount", "threshold", "radius"}},
-                 {"halation", {"amount", "threshold", "radius"}}, {"film-emulation", {"amount", "stock"}}};
+                 {"halation", {"amount", "threshold", "radius"}}, {"film-emulation", {"amount", "stock"}},
+                 {"denoise", {"luma", "chroma", "radius"}},     {"sharpen", {"amount", "radius", "coring"}}};
              const auto& allowed = kParams.at(a["type"].get<std::string>());
              for (const auto& [key, value] : params.items()) {
                  (void)value;

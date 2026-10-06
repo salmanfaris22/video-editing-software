@@ -37,6 +37,9 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
   My Looks.
 - Film effects: grain, halation, glow, film print emulation (3 stocks),
   vignette, lens blur, background blur.
+- Repair: spatial noise reduction (separate Luma and Chroma thresholds,
+  Radius) and Sharpen (Amount, Radius, Coring) — identical on CPU and GPU,
+  real time at 1080p.
 - Grade management: copy / paste (⌘C / ⌘V), grade of the previous clip (=),
   to next / all clips, gallery stills (grab, apply, wipe against).
 - 3D LUTs (.cube with mix) plus 4 camera-log conversions; input color
@@ -50,7 +53,7 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | # | Gap | P |
 |---|---|---|
 | 1 | Float, scene-linear, managed pipeline (ACES / RCM working space, HDR output) | P0 |
-| 2 | Sharpen and noise reduction (temporal + spatial) | P1 |
+| 2 | Temporal noise reduction, and noise reduction in a chosen node (spatial NR with luma / chroma and sharpen with coring are done) | P1 |
 | 3 | Tracking, so windows follow the subject | P1 |
 | 4 | Grade keyframes (wheels, curves and nodes animated over time) | P1 |
 | 5 | Soft clip, ganged curves, curve intensity | P2 |
@@ -62,7 +65,7 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | 11 | HDR zone wheels, Log wheels, Primaries bars, Mid/Detail | P2 |
 | 12 | Color Warper, Color Slice, RGB Mixer | P2 / P3 |
 
-**Score vs Resolve's color features** (the 152 rows in §2): **53 ✅ · 18 🟡 · 81 ⬜** — about 35 % fully and 41 % counting partial rows as half (this morning: 12 % / 18 %). For everyday grading Lectern now covers far more than the number suggests: the rows it has are the ones colorists use on every shot.
+**Score vs Resolve's color features** (the 152 rows in §2): **54 ✅ · 19 🟡 · 79 ⬜** — about 36 % fully and 42 % counting partial rows as half (on the morning of 2026-10-06: 12 % / 18 %). For everyday grading Lectern now covers far more than the number suggests: the rows it has are the ones colorists use on every shot.
 
 ---
 
@@ -216,8 +219,8 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | # | Resolve | Lectern now | P | Step |
 |---|---|---|---|---|
 | 2.10.1 | Temporal noise reduction | ⬜ | P1 | – |
-| 2.10.2 | Spatial noise reduction | ⬜ | P1 | – |
-| 2.10.3 | Sharpen (radius, coring, level) | ⬜ a field exists in the model but is not rendered | P1 | – |
+| 2.10.2 | Spatial noise reduction | 🟡 edge-preserving bilateral with Luma and Chroma thresholds and Radius, identical on CPU and GPU, real time at 1080p; no Faster / Better / Enhanced modes or Blend, and it runs after the grade instead of in a chosen node | P1 | – |
+| 2.10.3 | Sharpen (radius, coring, level) | ✅ unsharp mask with Amount, Radius and Coring (noise is not sharpened), identical on CPU and GPU | – | – |
 | 2.10.4 | Blur palette (per-channel radius, H/V ratio) | 🟡 Lens Blur (uniform) on the Color page | P2 | – |
 | 2.10.5 | Mist / diffusion | ⬜ | P2 | – |
 | 2.10.6 | Motion blur (synthetic) | ⬜ | P3 | – |
@@ -303,12 +306,12 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | 2.7 Tracking | 6 | 0 | 0 | 6 |
 | 2.8 AI tools | 12 | 2 | 1 | 9 |
 | 2.9 Nodes and structure | 13 | 4 | 1 | 8 |
-| 2.10 Repair, texture, sizing | 12 | 0 | 2 | 10 |
+| 2.10 Repair, texture, sizing | 12 | 1 | 3 | 8 |
 | 2.11 Looks and film | 9 | 6 | 0 | 3 |
 | 2.12 Grade management | 12 | 5 | 2 | 5 |
 | 2.13 Viewer and scopes | 14 | 5 | 4 | 5 |
 | 2.14 Hardware and workflow | 7 | 2 | 0 | 5 |
-| **Total** | **152** | **53** | **18** | **81** |
+| **Total** | **152** | **54** | **19** | **79** |
 
 
 ---
@@ -353,7 +356,7 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 | Gallery / stills / grade library | ● | ● | ◐ | ● | ● | ◐ | ● |
 | Split-screen compare | ● | ● | ● | ● | ● | ● | ● |
 | Grade keyframes | ● | ● | ● | ● | ● | ● | – |
-| Noise reduction | ● | ● | ● | ◐ | ● | – | – |
+| Noise reduction | ● | ● | ● | ◐ | ● | – | ◐ (spatial, luma / chroma) |
 | Film grain / halation / glow | ● | ● | ◐ | ◐ | ◐ | – | ● |
 | ACES / scene-linear pipeline | ● | ● (Truelight) | ● (OCIO) | ● | ● | ● (ACES) | – |
 | Input color management from metadata | ● | ● | ● | ● | ● | ● | ● |
@@ -426,7 +429,8 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 
 ## 5. Order of work for color (what to build next)
 
-Done on 2026-10-07: all six HSL curves with picker and six vectors.
+Done on 2026-10-07: all six HSL curves with picker and six vectors; spatial
+noise reduction (luma / chroma) and sharpen with coring.
 Done on 2026-10-06: cinematic looks with Amount and My Looks; copy / paste
 and spread grades; wipe, side by side, bypass; nodes with windows, a color
 key and person / background; gallery stills; grain, halation, glow and film
@@ -434,12 +438,12 @@ print emulation; the Resolve-style Color page.
 
 | Order | What | Rows | Step |
 |---|---|---|---|
-| 1 | Sharpen and spatial / temporal noise reduction | 2.10.1–2.10.3 | – |
-| 2 | Tracking for windows (point / cloud), magic mask follows already | 2.7 | 1.9 |
-| 3 | Grade keyframes (correction, nodes, windows) | 2.12.10 | 1.14 |
-| 4 | Float linear pipeline, working / output space, ACES | 2.1.1–2.1.5 | 1.2 |
-| 5 | Polygon / Bézier windows, several windows per node | 2.6.2, 2.6.5 | 1.8 |
-| 6 | Shot match, chart match | 2.8.3, 2.8.4 | 1.12 |
-| 7 | Timeline grade, color groups, parallel / layer mixer / shared nodes | 2.9.2–2.9.8 | 1.13 |
-| 8 | Viewer zoom, scopes % / nits / 4-up | 2.13.4, 2.13.9, 2.13.11 | 1.5 / 1.14 |
-| 9 | HDR zone wheels, Log wheels, Primaries bars, Mid/Detail | 2.2.5, 2.2.13–2.2.15 | 1.4 |
+| 1 | Tracking for windows (point / cloud), magic mask follows already | 2.7 | 1.9 |
+| 2 | Grade keyframes (correction, nodes, windows) | 2.12.10 | 1.14 |
+| 3 | Float linear pipeline, working / output space, ACES | 2.1.1–2.1.5 | 1.2 |
+| 4 | Polygon / Bézier windows, several windows per node | 2.6.2, 2.6.5 | 1.8 |
+| 5 | Shot match, chart match | 2.8.3, 2.8.4 | 1.12 |
+| 6 | Timeline grade, color groups, parallel / layer mixer / shared nodes | 2.9.2–2.9.8 | 1.13 |
+| 7 | Viewer zoom, scopes % / nits / 4-up | 2.13.4, 2.13.9, 2.13.11 | 1.5 / 1.14 |
+| 8 | HDR zone wheels, Log wheels, Primaries bars, Mid/Detail | 2.2.5, 2.2.13–2.2.15 | 1.4 |
+| 9 | Temporal noise reduction; noise reduction in a chosen node (before the grade) | 2.10.1, 2.10.2 | – |

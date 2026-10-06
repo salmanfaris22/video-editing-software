@@ -405,6 +405,29 @@ TEST(McpUi, FilmEffectsThroughSetEffect) {
     EXPECT_EQ(p.controller.filmStocks().size(), 3);
 }
 
+TEST(McpUi, NoiseReductionAndSharpenThroughSetEffect) {
+    Project p;
+    const auto clip = p.clip();
+    auto r = p.call("set_effect", {{"clipId", clip}, {"type", "denoise"}, {"enabled", true}, {"params", {{"chroma", 0.7}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    r = p.call("set_effect", {{"clipId", clip}, {"type", "sharpen"}, {"enabled", true}, {"params", {{"amount", 0.5}, {"radius", 0.6}, {"coring", 0.4}}}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    const QVariantMap s = p.controller.selection();
+    EXPECT_TRUE(s.value("denoiseOn").toBool());
+    EXPECT_DOUBLE_EQ(s.value("denoiseChroma").toDouble(), 0.7);
+    EXPECT_DOUBLE_EQ(s.value("denoiseLuma").toDouble(), 0.3);  // the defaults stay
+    EXPECT_DOUBLE_EQ(s.value("denoiseRadius").toDouble(), 0.5);
+    EXPECT_DOUBLE_EQ(s.value("sharpen").toDouble(), 0.5);
+    EXPECT_DOUBLE_EQ(s.value("sharpenRadius").toDouble(), 0.6);
+    EXPECT_DOUBLE_EQ(s.value("sharpenCoring").toDouble(), 0.4);
+    EXPECT_TRUE(p.call("set_effect", {{"clipId", clip}, {"type", "sharpen"}, {"enabled", true}, {"params", {{"threshold", 0.5}}}})["result"]["isError"].get<bool>());
+    r = p.call("set_effect", {{"clipId", clip}, {"type", "denoise"}, {"enabled", false}});
+    ASSERT_FALSE(r["result"]["isError"].get<bool>()) << r;
+    p.controller.selectClip(QString::fromStdString(clip));
+    EXPECT_FALSE(p.controller.selection().value("denoiseOn").toBool());
+}
+
 TEST(McpUi, HslCurveThroughTools) {
     Project p;
     const auto clip = p.clip();

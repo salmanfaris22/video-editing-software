@@ -42,5 +42,5 @@ if __name__ == "__main__":
     ups = {}
     for arg in sys.argv[2:]:
         parts = arg.split("|", 2)
-        ups[parts[0]] = (parts[1], parts[2] if len(parts) > 2 else None)
+        ups[parts[0]] = (parts[1], parts[2] if len(parts) > 2 and parts[2] != "" else None)  # empty: keep the note
     print(len(set_status(doc, ups)), "rows updated in", doc)

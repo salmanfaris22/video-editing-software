@@ -49,6 +49,14 @@ void applyEffects(VisualLayer& l, const Clip& c, Time local) {
             l.zoomY = std::clamp(param(e, "y", 0.5, local), 0.0, 1.0);
         } else if (e.type == kEffectBackgroundBlur) {
             l.backgroundBlur = std::clamp(param(e, "amount", 0.6, local), 0.0, 1.0);
+        } else if (e.type == kEffectDenoise) {
+            l.denoiseLuma = std::clamp(param(e, "luma", 0.3, local), 0.0, 1.0);
+            l.denoiseChroma = std::clamp(param(e, "chroma", 0.5, local), 0.0, 1.0);
+            l.denoiseRadius = std::clamp(param(e, "radius", 0.5, local), 0.0, 1.0);
+        } else if (e.type == kEffectSharpen) {
+            l.sharpen = std::clamp(param(e, "amount", 0.3, local), 0.0, 1.0);
+            l.sharpenRadius = std::clamp(param(e, "radius", 0.3, local), 0.0, 1.0);
+            l.sharpenCoring = std::clamp(param(e, "coring", 0.2, local), 0.0, 1.0);
         } else if (e.type == kEffectFilmGrain) {
             l.grain = std::clamp(param(e, "amount", 0.35, local), 0.0, 1.0);
             l.grainSize = std::clamp(param(e, "size", 1.0, local), 0.5, 4.0);
@@ -263,6 +271,9 @@ RenderPlan ungraded(RenderPlan plan) {
         l.nodes.clear();
         l.highlightNode = -1;
         l.grain = 0;
+        l.denoiseLuma = 0;
+        l.denoiseChroma = 0;
+        l.sharpen = 0;
         l.glow = 0;
         l.halation = 0;
         l.vignette = 0;

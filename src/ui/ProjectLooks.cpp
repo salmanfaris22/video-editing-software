@@ -34,6 +34,8 @@ const char* effectType(const QString& type) {
     if (type == QLatin1String("glow")) return editor::kEffectGlow;
     if (type == QLatin1String("halation")) return editor::kEffectHalation;
     if (type == QLatin1String("film-emulation")) return editor::kEffectFilmEmulation;
+    if (type == QLatin1String("denoise")) return editor::kEffectDenoise;
+    if (type == QLatin1String("sharpen")) return editor::kEffectSharpen;
     return nullptr;
 }
 
@@ -361,6 +363,14 @@ void ProjectController::setEffectEnabled(const QString& clipId, const QString& t
             } else if (type == QLatin1String("film-emulation")) {
                 e.params["amount"] = 1.0;
                 e.params["stock"] = 0.0;
+            } else if (type == QLatin1String("denoise")) {
+                e.params["luma"] = 0.3;
+                e.params["chroma"] = 0.5;
+                e.params["radius"] = 0.5;
+            } else if (type == QLatin1String("sharpen")) {
+                e.params["amount"] = 0.3;
+                e.params["radius"] = 0.3;
+                e.params["coring"] = 0.2;
             } else {
                 e.params["amount"] = type == QLatin1String("background-blur") ? 0.6 : 0.5;
             }

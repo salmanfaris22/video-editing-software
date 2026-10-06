@@ -373,6 +373,24 @@ TEST(ColorPage, EffectsSwitchOnAndStillsKeepGrades) {
     EXPECT_DOUBLE_EQ(p.project.selection().value("exposure").toDouble(), 0.4);
 }
 
+TEST(ColorPage, NoiseReductionAndSharpenSwitchOnWithDefaults) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    const QString clip = p.project.selectedClip();
+    p.ui->click(p.center("fx-denoise-switch"));
+    p.ui->click(p.center("fx-sharpen-switch"));
+    const QVariantMap s = p.project.selection();
+    EXPECT_TRUE(s.value("denoiseOn").toBool());
+    EXPECT_TRUE(s.value("sharpenOn").toBool());
+    const auto layer = shownLayer(p.project, clip);
+    EXPECT_DOUBLE_EQ(layer.denoiseLuma, 0.3);
+    EXPECT_DOUBLE_EQ(layer.denoiseChroma, 0.5);
+    EXPECT_DOUBLE_EQ(layer.sharpen, 0.3);
+    p.ui->click(p.center("fx-sharpen-switch"));  // and off again
+    EXPECT_FALSE(p.project.selection().value("sharpenOn").toBool());
+    EXPECT_EQ(shownLayer(p.project, clip).sharpen, 0.0);
+}
+
 TEST(ColorPage, CopyAndPasteGradeWithTheKeyboard) {
     Page p;
     ASSERT_TRUE(p.ui->ok());

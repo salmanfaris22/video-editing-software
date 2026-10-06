@@ -71,7 +71,9 @@ enum Mode {
     kNv12Y = 8,
     kNv12Uv = 9,
     kThreshold = 10,
-    kAdd = 11
+    kAdd = 11,
+    kDenoise = 12,
+    kSharpen = 13
 };
 
 void set4(float* dst, double a, double b, double c, double d) {
@@ -572,7 +574,11 @@ private:
 
     /// Blurs `src` (size `size`) with a separable Gaussian; returns the result target.
     Target* blur(std::vector<Pass>& passes, QRhiTexture* src, QSize size, double radiusPx) {
-        const double sigma = std::max(0.3, blurSigma(radiusPx));
+        return gaussian(passes, src, size, std::max(0.3, blurSigma(radiusPx)));
+    }
+
+    /// A separable Gaussian of `sigma` pixels (editor::gaussianBlurImage on the CPU).
+    Target* gaussian(std::vector<Pass>& passes, QRhiTexture* src, QSize size, double sigma) {
         // Up to 48 taps per side; wider blurs sample every few texels.
         const double stride = std::max(1.0, std::ceil(3.0 * sigma / 48.0));
         const int taps = static_cast<int>(std::ceil(3.0 * sigma / stride));
@@ -695,7 +701,8 @@ private:
             model.translate(-size.width() / 2.0f, -size.height() / 2.0f);
         }
 
-        const bool prepare = l.blur > 0 || mask || l.glow > 0 || l.halation > 0;
+        const bool denoise = l.denoiseLuma > 0 || l.denoiseChroma > 0;
+        const bool prepare = l.blur > 0 || mask || l.glow > 0 || l.halation > 0 || denoise || l.sharpen > 0;
         if (prepare) {
             // Grade into a layer-sized image, then soften it on the GPU.
             const QMatrix4x4 proj = projection(size);
@@ -726,6 +733,30 @@ private:
                 passes.push_back({sum, Qt::transparent, {a}});
                 current = sum->texture.get();
             };
+            if (denoise) {  // edge-preserving: bilateral filters on luma and color (editor::denoiseImage)
+                const double sigma = editor::denoiseSigmaPixels(l.denoiseRadius, H);
+                Target* clean = acquire(size);
+                Draw n = draw(proj, QRectF(QPointF(0, 0), QSizeF(size)), kDenoise);
+                set4(n.u.shape, size.width(), size.height(), 0, 0);
+                set4(n.u.fx, std::max(editor::denoiseLumaSigma(l.denoiseLuma), 1e-4),
+                     std::max(editor::denoiseChromaSigma(l.denoiseChroma), 1e-4), editor::denoiseStep(sigma), sigma);
+                n.tex = current;
+                n.blend = false;
+                passes.push_back({clean, Qt::transparent, {n}});
+                current = clean->texture.get();
+            }
+            if (l.sharpen > 0) {  // unsharp mask (editor::sharpenImage)
+                Target* soft = gaussian(passes, current, size, editor::sharpenSigmaPixels(l.sharpenRadius, H));
+                Target* crisp = acquire(size);
+                Draw k = draw(proj, QRectF(QPointF(0, 0), QSizeF(size)), kSharpen);
+                set4(k.u.shape, size.width(), size.height(), 0, 0);
+                set4(k.u.fx, editor::sharpenStrength(l.sharpen), editor::sharpenCoring(l.sharpenCoring), 0, 0);
+                k.tex = current;
+                k.aux = soft->texture.get();
+                k.blend = false;
+                passes.push_back({crisp, Qt::transparent, {k}});
+                current = crisp->texture.get();
+            }
             if (l.glow > 0) glowPass(l.glow, l.glowThreshold, editor::glowRadiusPixels(l.glowRadius, H), editor::kGlowTint);
             if (l.halation > 0) {
                 glowPass(l.halation, l.halationThreshold, editor::halationRadiusPixels(l.halationRadius, H), editor::kHalationTint);

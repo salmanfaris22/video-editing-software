@@ -119,6 +119,12 @@ struct VisualLayer {
     double halation = 0;         ///< 0…1 red-orange film halo around highlights
     double halationThreshold = 0.8;
     double halationRadius = 0.4;
+    double denoiseLuma = 0;      ///< 0…1 spatial noise reduction of the luma (detail, grain)
+    double denoiseChroma = 0;    ///< 0…1 spatial noise reduction of the color (blotches)
+    double denoiseRadius = 0.5;  ///< 0…1 → how far it looks
+    double sharpen = 0;          ///< 0…1 unsharp mask
+    double sharpenRadius = 0.3;  ///< 0…1 → detail size
+    double sharpenCoring = 0.2;  ///< 0…1 → detail below this (noise) is not sharpened
     double grain = 0;            ///< 0…1 film grain
     double grainSize = 1;        ///< grain size (1 = fine 35 mm at 1080p)
     std::uint32_t grainSeed = 0; ///< changes 24 times a second (the grain moves)
@@ -178,6 +184,10 @@ inline constexpr const char* kEffectGlow = "lectern.glow";             ///< para
 inline constexpr const char* kEffectHalation = "lectern.halation";     ///< params: amount, threshold, radius
 /// A film print stage after the nodes; params: amount, stock (filmStocks() index).
 inline constexpr const char* kEffectFilmEmulation = "lectern.film-emulation";
+/// Repair: unsharp-mask sharpening (amount, radius) and edge-preserving spatial
+/// noise reduction (amount, radius).
+inline constexpr const char* kEffectSharpen = "lectern.sharpen";
+inline constexpr const char* kEffectDenoise = "lectern.denoise";
 
 /// Layout slots for `preset` with the project's hand-placed slots for the
 /// canvas aspect applied (RenderPlan and the canvas tools share this).

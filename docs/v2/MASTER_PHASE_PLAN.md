@@ -4,8 +4,8 @@ Every open item from the v2 checklists (COLOR_EFFECTS_PARITY,
 PRO_INTERFACE_PARITY, DAVINCI_COLOR_PAGE, FULL_GAP_AUDIT) placed into one
 small phase. Generated 2026-10-05 from those documents by `scripts/` in this folder
 (`python3 scripts/build_master_plan.py`), so
-**each of the 603 open items (⬜ missing or 🟡 partly done) appears exactly
-once**; the 133 done items (✅) are listed in the appendix.
+**each of the 601 open items (⬜ missing or 🟡 partly done) appears exactly
+once**; the 135 done items (✅) are listed in the appendix.
 
 How it is organised:
 - **Stages 0–8** follow the order of work: ship basics in parallel; color
@@ -54,17 +54,17 @@ Model: P0 item ≈ 0.6M, P1 ≈ 0.5M, P2 ≈ 0.4M, P3 ≈ 0.8M (specialist work 
 | Stage | Tokens processed (est.) | Output tokens (≈ 5 %) |
 |---|---|---|
 | Stage 0 — Ship, privacy and recorder (parallel track) | ~16M | ~0.8M |
-| Stage 1 — Color grading like DaVinci (ROADMAP Phase 1) | ~78M | ~3.9M |
+| Stage 1 — Color grading like DaVinci (ROADMAP Phase 1) | ~77M | ~3.9M |
 | Stage 2 — Deep MCP and the pro-editor agent (ROADMAP Phase 2) | ~61M | ~3.1M |
-| Stage 3 — Effects, compositing, animation, text | ~45M | ~2.2M |
+| Stage 3 — Effects, compositing, animation, text | ~44M | ~2.2M |
 | Stage 4 — Editing, audio, captions | ~20M | ~1.0M |
 | Stage 5 — Pro workspace UI | ~56M | ~2.8M |
 | Stage 6 — Delivery and collaboration | ~9.8M | ~0.5M |
 | Stage 7 — Project, performance, platform | ~7.2M | ~0.4M |
 | Stage 8 — Specialist (P3, on demand) | ~105M | ~5.2M |
-| **All stages** | **~398M** (≈ 199M–795M) | **~20M** |
+| **All stages** | **~397M** (≈ 198M–793M) | **~20M** |
 
-Wave 1 only (all **a** phases + new-work phases): ~222M tokens processed.
+Wave 1 only (all **a** phases + new-work phases): ~221M tokens processed.
 
 ## All phases (table of contents)
 
@@ -100,7 +100,7 @@ Wave 1 only (all **a** phases + new-work phases): ~222M tokens processed.
 - **1.13b** Nodes · power users (P2) · 4 items · ~1.6M tokens
 - **1.14a** Color workspace · must-have (P0/P1) · 10 items · ~5.1M tokens
 - **1.14b** Color workspace · power users (P2) · 13 items · ~5.2M tokens
-- **1.15a** Image repair · must-have (P0/P1) · 6 items · ~3.0M tokens
+- **1.15a** Image repair · must-have (P0/P1) · 5 items · ~2.5M tokens
 - **1.15b** Image repair · power users (P2) · 7 items · ~2.8M tokens
 
 **Stage 2 — Deep MCP and the pro-editor agent (ROADMAP Phase 2)**
@@ -126,7 +126,7 @@ Wave 1 only (all **a** phases + new-work phases): ~222M tokens processed.
 
 - **3.1a** Effect system and Effect Controls · must-have (P0/P1) · 16 items · ~8.3M tokens
 - **3.1b** Effect system and Effect Controls · power users (P2) · 2 items · ~0.8M tokens
-- **3.2a** Blur, sharpen, redaction effects · must-have (P0/P1) · 5 items · ~2.5M tokens
+- **3.2a** Blur, sharpen, redaction effects · must-have (P0/P1) · 4 items · ~2.0M tokens
 - **3.2b** Blur, sharpen, redaction effects · power users (P2) · 3 items · ~1.2M tokens
 - **3.3a** Transform and distort · must-have (P0/P1) · 5 items · ~2.5M tokens
 - **3.3b** Transform and distort · power users (P2) · 3 items · ~1.2M tokens
@@ -579,17 +579,16 @@ Items: 13. User-facing features ship with their MCP tool and a test.
 ### 1.15a — Image repair · must-have (P0/P1)
 
 Goal: Noise reduction, sharpen, deflicker, stabilize, lens fixes.  
-Claude estimate: ~3.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 6. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~2.5M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 5. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
 | COLOR §8.1 | Temporal noise reduction | ⬜ | P1 |
-| COLOR §8.2 | Spatial noise reduction | ⬜ | P1 |
-| COLOR §8.3 | Sharpen / unsharp mask | ⬜ | P1 |
+| COLOR §8.2 | Spatial noise reduction | 🟡 | P1 |
 | COLOR §8.4 | Soften & sharpen, midtone detail / clarity | ⬜ | P1 |
 | COLOR §8.14 | Stabilizer (warp stabilizer) | ⬜ | P1 |
-| DAVINCI §4.6 | 6 | ⬜ | P1 |
+| DAVINCI §4.6 | 6 | 🟡 | P1 |
 
 ### 1.15b — Image repair · power users (P2)
 
@@ -823,15 +822,14 @@ Items: 2. User-facing features ship with their MCP tool and a test.
 ### 3.2a — Blur, sharpen, redaction effects · must-have (P0/P1)
 
 Goal: Blur family, mosaic, tracked redaction.  
-Claude estimate: ~2.5M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 5. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~2.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 4. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
 | AUDIT §17.2 | Tracked manual redaction box (follows a window or element) | ⬜ | P1 |
 | COLOR §9.10 | Mosaic / pixelate (redaction) | ⬜ | P1 |
 | COLOR §9.11 | Face / region blur with tracking (redact) | ⬜ | P1 |
-| COLOR §9.13 | Sharpen / Unsharp Mask | ⬜ | P1 |
 | DAVINCI §4.14 | 14 | 🟡 | P1 |
 
 ### 3.2b — Blur, sharpen, redaction effects · power users (P2)
@@ -1806,7 +1804,7 @@ Items: 29. User-facing features ship with their MCP tool and a test.
 
 ## Appendix — already done (✅)
 
-**COLOR_EFFECTS_PARITY:** §1.1 GPU render pipeline (preview + export), §1.5 Per-clip input color space / gamma tagging, §1.15 Real-time playback at full rate with grades and effects, §2.1 Exposure, §2.2 Contrast with pivot, §2.3 Highlights / Shadows, §2.5 Temperature / Tint, §2.6 Saturation, §2.7 Vibrance, §2.8 Brightness, §2.11 Lift / Gamma / Gain wheels, §2.12 Offset wheel, §2.13 Shadows / Midtones / Highlights wheels (Lumetri style), §2.23 Grade presets / looks gallery with thumbnails, §2.25 Copy / paste grade, apply to all of a source, §2.27 Bypass / compare (before-after, split screen, wipe), §3.1 RGB / Luma custom curves (spline points), §3.2 Per-channel R, G, B curves, §3.3 Luma vs. Saturation, §3.4 Hue vs. Hue, §3.5 Hue vs. Saturation, §3.6 Hue vs. Luma, §3.7 Saturation vs. Saturation, §3.8 Saturation vs. Luma, §3.10 Curve eyedropper (pick a color in the viewer to add points), §4.1 HSL qualifier (key by hue/sat/luma, soften, denoise), §4.3 Luma qualifier, §4.11 Combine qualifier + window (intersect, subtract), §5.1 Several correction layers per clip (stacked corrections), §5.8 Stills gallery, PowerGrades, grab still, wipe against still, §6.1 Waveform (luma, RGB overlay), §6.2 RGB Parade, §6.3 Vectorscope (with skin-tone line, 75%/100% targets), §6.4 Histogram, §6.8 Reference wipe / split-screen compare, §7.1 3D LUT import (.cube), §7.2 LUT mix / intensity, §7.6 Creative looks library (film emulations, teal & orange, etc.), §9.1 Gaussian Blur, §9.12 Background blur by person mask, §10.11 Digital zoom / punch-in (Ken Burns), §11.1 Vignette, §11.2 Glow / bloom, §11.3 Film grain / add noise, §11.4 Halation, §13.1 Opacity per layer, keyframable, §13.8 Picture-in-picture layouts, §17.1 Text layers with font, size, weight, color, background, §19.9 Undo per parameter, merge slider drags
+**COLOR_EFFECTS_PARITY:** §1.1 GPU render pipeline (preview + export), §1.5 Per-clip input color space / gamma tagging, §1.15 Real-time playback at full rate with grades and effects, §2.1 Exposure, §2.2 Contrast with pivot, §2.3 Highlights / Shadows, §2.5 Temperature / Tint, §2.6 Saturation, §2.7 Vibrance, §2.8 Brightness, §2.11 Lift / Gamma / Gain wheels, §2.12 Offset wheel, §2.13 Shadows / Midtones / Highlights wheels (Lumetri style), §2.23 Grade presets / looks gallery with thumbnails, §2.25 Copy / paste grade, apply to all of a source, §2.27 Bypass / compare (before-after, split screen, wipe), §3.1 RGB / Luma custom curves (spline points), §3.2 Per-channel R, G, B curves, §3.3 Luma vs. Saturation, §3.4 Hue vs. Hue, §3.5 Hue vs. Saturation, §3.6 Hue vs. Luma, §3.7 Saturation vs. Saturation, §3.8 Saturation vs. Luma, §3.10 Curve eyedropper (pick a color in the viewer to add points), §4.1 HSL qualifier (key by hue/sat/luma, soften, denoise), §4.3 Luma qualifier, §4.11 Combine qualifier + window (intersect, subtract), §5.1 Several correction layers per clip (stacked corrections), §5.8 Stills gallery, PowerGrades, grab still, wipe against still, §6.1 Waveform (luma, RGB overlay), §6.2 RGB Parade, §6.3 Vectorscope (with skin-tone line, 75%/100% targets), §6.4 Histogram, §6.8 Reference wipe / split-screen compare, §7.1 3D LUT import (.cube), §7.2 LUT mix / intensity, §7.6 Creative looks library (film emulations, teal & orange, etc.), §8.3 Sharpen / unsharp mask, §9.1 Gaussian Blur, §9.12 Background blur by person mask, §9.13 Sharpen / Unsharp Mask, §10.11 Digital zoom / punch-in (Ken Burns), §11.1 Vignette, §11.2 Glow / bloom, §11.3 Film grain / add noise, §11.4 Halation, §13.1 Opacity per layer, keyframable, §13.8 Picture-in-picture layouts, §17.1 Text layers with font, size, weight, color, background, §19.9 Undo per parameter, merge slider drags
 
 **PRO_INTERFACE_PARITY:** §1.1 ① Menu bar: File, Edit, Composition, Layer, Effect, Animation, View, Window, Help, §1.15 Resize frames by dragging dividers, §2.1 Home (start screen), §2.2 Selection [V], §2.16 Snapping toggle with options (edges, centers, guides), §3.1 Fit to window, §3.16 Bounding box with corner/edge handles, §3.20 Esc cancels a drag, §3.21 Double-click text to edit in place, §3.22 Right-click context menu on layers, §6.5 Time ruler with current-time indicator (drag to scrub), §6.9 Snapping (Shift while dragging in AE), §6.11 Auto-scroll during playback, edge scroll while dragging, §6.12 Video eye (hide), Audio speaker (mute), Solo, Lock, §6.15 Source name / layer name, rename (Enter), §6.28 Layer selection highlight; select layer by clicking the header, §6.30 Add, delete, rename layers / tracks, §6.40 Audio waveform under a layer (LL), §6.41 Drag layer bar to move in time, §6.43 Split layer (Ctrl+Shift+D), §6.44 Move a clip to another layer by dragging vertically, §6.45 Box select, Shift/⌘ add to selection, §8.4 Font size, §8.13 Background box / rounded pill with padding, §9.3 Audio (levels meter, volume), §9.15 Render Queue / Export settings, §12.1 Dark UI, one accent color, compact density, §12.5 Hover, pressed and selected states on every control
 
@@ -1816,4 +1814,4 @@ Items: 29. User-facing features ship with their MCP tool and a test.
 
 ---
 
-Totals: 603 open items in 86 phases with items (33 sub-phases) plus 8 new-work phases; 133 items done.
+Totals: 601 open items in 86 phases with items (33 sub-phases) plus 8 new-work phases; 135 items done.

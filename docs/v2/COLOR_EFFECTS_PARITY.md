@@ -192,8 +192,8 @@ these. They are the P0 work.
 | # | Feature | AE | PR | DR | Lectern | P | Notes |
 |---|---|---|---|---|---|---|---|
 | 8.1 | Temporal noise reduction | ● (Remove Grain) | ◐ | ● | ⬜ | P1 | Webcam noise in low light |
-| 8.2 | Spatial noise reduction | ● | ● (Median, Reduce Noise) | ● | ⬜ | P1 | |
-| 8.3 | Sharpen / unsharp mask | ● | ● | ● | ⬜ | P1 | |
+| 8.2 | Spatial noise reduction | ● | ● (Median, Reduce Noise) | ● | 🟡 | P1 | Luma / Chroma thresholds + Radius (bilateral, CPU = GPU); no modes / blend; after the grade |
+| 8.3 | Sharpen / unsharp mask | ● | ● | ● | ✅ | – | Amount, Radius, Coring |
 | 8.4 | Soften & sharpen, midtone detail / clarity | – | ● (Sharpen in Lumetri) | ● | ⬜ | P1 | |
 | 8.5 | Deflicker | – | ◐ | ● | ⬜ | P2 | LED / screen flicker in recordings |
 | 8.6 | Dead pixel fixer | – | – | ● | ⬜ | P3 | |
@@ -225,7 +225,7 @@ these. They are the P0 work.
 | 9.10 | Mosaic / pixelate (redaction) | ● | ● | ● | ⬜ | P1 |
 | 9.11 | Face / region blur with tracking (redact) | ◐ | ◐ | ● | ⬜ | P1 |
 | 9.12 | Background blur by person mask | ◐ | ◐ | ● | ✅ | – |
-| 9.13 | Sharpen / Unsharp Mask | ● | ● | ● | ⬜ | P1 |
+| 9.13 | Sharpen / Unsharp Mask | ● | ● | ● | ✅ | – |
 | 9.14 | Pixel motion blur (from motion vectors) | ● | – | ● | ⬜ | P3 |
 
 ## 10. Effects — distort and transform

@@ -22,7 +22,7 @@ other industry tools, and what exists today. The original design documents
 | [ROADMAP_PHASES.md](ROADMAP_PHASES.md) | **The order of work in small phases.** Phase 1: DaVinci-style color grading in 14 steps. Phase 2: deep MCP and a pro-editor agent in 12 steps (cinematic color, speed ramps, smooth transitions, focus, editor recipes, self-review) — 3 diagrams | – | – |
 | [MASTER_PHASE_PLAN.md](MASTER_PHASE_PLAN.md) | **Every feature, phase by phase:** all open checklist items (636 open as of 2026-10-06) placed into small phases (Stages 0–8, each phase split into must-have **a** / power-user **b**, specialist P3 last); each item exactly once; Claude token estimate per phase and stage; regenerate with `python3 scripts/build_master_plan.py` | 636 open | – |
 
-**Total: 736 checklist items — 133 done, 139 partly done, 464 missing** (recounted 2026-10-06: GPU renderer, MCP, input color, menu bar, and the Resolve-style Color page — nodes with windows / color key / person, 16 looks, film effects, gallery, wipe / bypass, grade copy). COLOR_GRADING_COMPARISON.md is a cross-cutting view of the color rows and is not added to this total.
+**Total: 736 checklist items — 135 done, 141 partly done, 460 missing** (recounted 2026-10-07: GPU renderer, MCP, input color, menu bar, the Resolve-style Color page — nodes with windows / color key / person, 16 looks, film effects, gallery, wipe / bypass, grade copy, HSL curves — and spatial noise reduction + sharpen). COLOR_GRADING_COMPARISON.md is a cross-cutting view of the color rows and is not added to this total.
 
 **Delivery decision:** the engine and every effect, transition and color tool
 are built in (small, never missing from a project); AI models, look/LUT

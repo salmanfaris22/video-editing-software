@@ -89,6 +89,27 @@ Rectangle {
             Label { text: "Effects"; color: Theme.text; font.pixelSize: 12; font.weight: Font.DemiBold }
 
             EffectRow {
+                objectName: "fx-denoise"
+                title: "Noise Reduction"
+                type: "denoise"
+                onSwitched: on => root.on(type, on)
+                checked: root.sel.denoiseOn === true
+                FxSlider { label: "Luma"; value: root.sel.denoiseLuma; onMoved: v => root.set("denoise", "luma", v) }
+                FxSlider { label: "Chroma"; value: root.sel.denoiseChroma; onMoved: v => root.set("denoise", "chroma", v) }
+                FxSlider { label: "Radius"; value: root.sel.denoiseRadius; onMoved: v => root.set("denoise", "radius", v) }
+            }
+            EffectRow {
+                objectName: "fx-sharpen"
+                title: "Sharpen"
+                type: "sharpen"
+                onSwitched: on => root.on(type, on)
+                checked: root.sel.sharpenOn === true
+                FxSlider { label: "Amount"; value: root.sel.sharpen; onMoved: v => root.set("sharpen", "amount", v) }
+                FxSlider { label: "Radius"; value: root.sel.sharpenRadius; onMoved: v => root.set("sharpen", "radius", v) }
+                FxSlider { label: "Coring"; value: root.sel.sharpenCoring; onMoved: v => root.set("sharpen", "coring", v) }
+            }
+
+            EffectRow {
                 objectName: "fx-film"
                 title: "Film Emulation"
                 type: "film-emulation"

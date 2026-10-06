@@ -381,9 +381,9 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
         RenderPlan plan = buildRenderPlan(*project, frameTime);
         if (!highlightNode.empty()) {
             if (const timeline::Clip* clip = project->timeline.findClip(highlightClip)) {
-                const int index = enabledNodeIndex(clip->color, highlightNode);
+                const int node = enabledNodeIndex(clip->color, highlightNode);
                 for (auto& l : plan.layers) {
-                    if (l.clip == highlightClip) l.highlightNode = index;
+                    if (l.clip == highlightClip) l.highlightNode = node;
                 }
             }
         }

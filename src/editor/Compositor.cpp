@@ -10,6 +10,7 @@
 #include <array>
 #include <cmath>
 #include <mutex>
+#include <thread>
 #include <vector>
 
 namespace lectern::editor {
@@ -218,6 +219,187 @@ void blurImage(QImage& img, double radius) {
     for (int pass = 0; pass < 3; ++pass) boxBlurPass(work, r);  // three box passes ≈ Gaussian
     if (factor > 1.0) work = work.scaled(img.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     img = work.convertToFormat(img.format());
+}
+
+double denoiseLumaSigma(double amount) { return std::clamp(amount, 0.0, 1.0) * 0.12; }
+double denoiseChromaSigma(double amount) { return std::clamp(amount, 0.0, 1.0) * 0.25; }
+double denoiseSigmaPixels(double radius, double height) { return std::max(0.8, (1.0 + std::clamp(radius, 0.0, 1.0) * 3.0) * height / 1080.0); }
+int denoiseStep(double sigmaPixels) { return std::max(1, static_cast<int>(std::lround(sigmaPixels / 2.0))); }
+double sharpenStrength(double amount) { return std::clamp(amount, 0.0, 1.0) * 1.5; }
+double sharpenCoring(double coring) { return std::clamp(coring, 0.0, 1.0) * 0.05; }
+double sharpenSigmaPixels(double radius, double height) { return std::max(0.5, (0.5 + std::clamp(radius, 0.0, 1.0) * 2.0) * height / 1080.0); }
+
+namespace {
+
+/// Runs body(firstRow, endRow) over bands of `rows` on up to 8 threads (the rows are independent).
+template <typename Body>
+void forRowBands(int rows, Body&& body) {
+    const int threads = std::clamp(static_cast<int>(std::thread::hardware_concurrency()), 1, 8);
+    if (threads == 1 || rows < 64) {
+        body(0, rows);
+        return;
+    }
+    const int band = (rows + threads - 1) / threads;
+    std::vector<std::thread> pool;
+    for (int y0 = band; y0 < rows; y0 += band) pool.emplace_back([&body, y0, y1 = std::min(rows, y0 + band)] { body(y0, y1); });
+    body(0, std::min(rows, band));
+    for (auto& t : pool) t.join();
+}
+
+QImage& rgb32OrPremultiplied(QImage& img) {
+    if (img.format() != QImage::Format_RGB32 && img.format() != QImage::Format_ARGB32_Premultiplied) {
+        img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
+    return img;
+}
+
+}  // namespace
+
+void gaussianBlurImage(QImage& img, double sigma) {
+    if (img.isNull() || sigma <= 0) return;
+    rgb32OrPremultiplied(img);
+    // Same taps and weights as the GPU blur pass (GpuRenderer::gaussian).
+    const double stride = std::max(1.0, std::ceil(3.0 * sigma / 48.0));
+    const int taps = static_cast<int>(std::ceil(3.0 * sigma / stride));
+    const double s = sigma / stride;
+    const int step = static_cast<int>(stride);
+    std::vector<double> weight(static_cast<std::size_t>(taps) + 1, 1.0);
+    double total = 1.0;
+    for (int i = 1; i <= taps; ++i) {
+        weight[static_cast<std::size_t>(i)] = std::exp(-static_cast<double>(i * i) / (2.0 * s * s));
+        total += 2.0 * weight[static_cast<std::size_t>(i)];
+    }
+    const int w = img.width();
+    const int h = img.height();
+    auto pass = [&](const QImage& in, QImage& out, bool horizontal) {
+        for (int y = 0; y < h; ++y) {
+            auto* dst = reinterpret_cast<std::uint32_t*>(out.scanLine(y));
+            for (int x = 0; x < w; ++x) {
+                auto at = [&](int o) {
+                    const int xx = horizontal ? std::clamp(x + o, 0, w - 1) : x;
+                    const int yy = horizontal ? y : std::clamp(y + o, 0, h - 1);
+                    return reinterpret_cast<const std::uint32_t*>(in.constScanLine(yy))[xx];
+                };
+                double sum[4] = {0, 0, 0, 0};
+                for (int i = -taps; i <= taps; ++i) {
+                    const std::uint32_t v = at(i * step);
+                    const double k = weight[static_cast<std::size_t>(std::abs(i))];
+                    for (int c = 0; c < 4; ++c) sum[c] += ((v >> (c * 8)) & 0xFF) * k;
+                }
+                std::uint32_t px = 0;
+                for (int c = 0; c < 4; ++c) {
+                    px |= static_cast<std::uint32_t>(std::clamp(std::lround(sum[c] / total), 0L, 255L)) << (c * 8);
+                }
+                dst[x] = px;
+            }
+        }
+    };
+    QImage across(img.size(), img.format());
+    pass(img, across, true);
+    pass(across, img, false);
+}
+
+void denoiseImage(QImage& img, double lumaSigma, double chromaSigma, int step, double sigma) {
+    if (img.isNull() || (lumaSigma <= 0 && chromaSigma <= 0)) return;
+    rgb32OrPremultiplied(img);
+    const QImage src = img.copy();
+    const int w = img.width();
+    const int h = img.height();
+    // The shader's weights, in 8-bit units:
+    //   luma:  exp(-distance² / 2σs² − ΔY² / 2σy²)
+    //   color: exp(-distance² / 2σs² − ΔC² / 2σc² − ΔY² / 2σguide²), C = (B − Y, R − Y)
+    // with exp(−x) from a table in 1/256 steps up to x = 30.
+    float spatial[9][9];
+    for (int j = -4; j <= 4; ++j) {
+        for (int i = -4; i <= 4; ++i) {
+            spatial[j + 4][i + 4] = static_cast<float>(std::exp(-static_cast<double>((i * i + j * j) * step * step) / (2.0 * sigma * sigma)));
+        }
+    }
+    constexpr int kSteps = 256;
+    constexpr int kTable = 30 * kSteps;
+    std::vector<float> expTable(kTable + 1);
+    for (int k = 0; k <= kTable; ++k) expTable[static_cast<std::size_t>(k)] = static_cast<float>(std::exp(-static_cast<double>(k) / kSteps));
+    auto inverse = [](double s) { return static_cast<float>(kSteps / std::max(2.0 * s * s * 255.0 * 255.0, 1e-12)); };
+    const float ky = inverse(std::max(lumaSigma, 1e-4));    // 0: only the center counts
+    const float kc = inverse(std::max(chromaSigma, 1e-4));
+    const float kg = inverse(kDenoiseGuideSigma);
+    const float* table = expTable.data();
+    auto weight = [table](float x) { return x < static_cast<float>(kTable) ? table[static_cast<int>(x + 0.5f)] : 0.0f; };
+    uchar* const outBits = img.bits();  // detached once, before the threads write rows
+    const qsizetype outStride = img.bytesPerLine();
+    forRowBands(h, [&](int y0, int y1) {
+        std::vector<int> columns(static_cast<std::size_t>(w) * 9);  // clamped x of the 9 taps, per pixel
+        for (int x = 0; x < w; ++x) {
+            for (int i = 0; i < 9; ++i) columns[static_cast<std::size_t>(x) * 9 + i] = std::clamp(x + (i - 4) * step, 0, w - 1);
+        }
+        const std::uint32_t* rows[9];
+        for (int y = y0; y < y1; ++y) {
+            for (int j = 0; j < 9; ++j) {
+                rows[j] = reinterpret_cast<const std::uint32_t*>(src.constScanLine(std::clamp(y + (j - 4) * step, 0, h - 1)));
+            }
+            auto* out = reinterpret_cast<std::uint32_t*>(outBits + y * outStride);
+            for (int x = 0; x < w; ++x) {
+                const std::uint32_t c = rows[4][x];
+                const float cy = 0.2126f * ((c >> 16) & 0xFF) + 0.7152f * ((c >> 8) & 0xFF) + 0.0722f * (c & 0xFF);
+                const float ccb = static_cast<float>(c & 0xFF) - cy;
+                const float ccr = static_cast<float>((c >> 16) & 0xFF) - cy;
+                const int* xs = &columns[static_cast<std::size_t>(x) * 9];
+                float sy = 0, ty = 0, sa = 0, scb = 0, scr = 0, tc = 0;
+                for (int j = 0; j < 9; ++j) {
+                    const std::uint32_t* row = rows[j];
+                    const float* sw = spatial[j];
+                    for (int i = 0; i < 9; ++i) {
+                        const std::uint32_t v = row[xs[i]];
+                        const float r = static_cast<float>((v >> 16) & 0xFF);
+                        const float b = static_cast<float>(v & 0xFF);
+                        const float luma = 0.2126f * r + 0.7152f * static_cast<float>((v >> 8) & 0xFF) + 0.0722f * b;
+                        const float dy = luma - cy;
+                        const float dcb = b - luma - ccb;
+                        const float dcr = r - luma - ccr;
+                        const float wy = sw[i] * weight(dy * dy * ky);
+                        const float wc = sw[i] * weight((dcb * dcb + dcr * dcr) * kc + dy * dy * kg);
+                        sy += luma * wy;
+                        sa += static_cast<float>(v >> 24) * wy;
+                        ty += wy;
+                        scb += (b - luma) * wc;
+                        scr += (r - luma) * wc;
+                        tc += wc;
+                    }
+                }
+                const float ny = sy / ty;
+                const float nr = ny + scr / tc;
+                const float nb = ny + scb / tc;
+                const float ng = (ny - 0.2126f * nr - 0.0722f * nb) / 0.7152f;
+                const long alpha = std::clamp(std::lround(sa / ty), 0L, 255L);
+                auto q = [alpha](float v) { return static_cast<std::uint32_t>(std::clamp(std::lround(v), 0L, alpha)); };
+                out[x] = (static_cast<std::uint32_t>(alpha) << 24) | (q(nr) << 16) | (q(ng) << 8) | q(nb);
+            }
+        }
+    });
+}
+
+void sharpenImage(QImage& img, double strength, double sigma, double coring) {
+    if (img.isNull() || strength <= 0) return;
+    rgb32OrPremultiplied(img);
+    QImage soft = img.copy();
+    gaussianBlurImage(soft, sigma);
+    const double t = std::max(0.0, coring) * 255.0;
+    for (int y = 0; y < img.height(); ++y) {
+        auto* px = reinterpret_cast<std::uint32_t*>(img.scanLine(y));
+        const auto* b = reinterpret_cast<const std::uint32_t*>(soft.constScanLine(y));
+        for (int x = 0; x < img.width(); ++x) {
+            const std::uint32_t c = px[x];
+            const std::uint32_t d = b[x];
+            const long alpha = c >> 24;  // premultiplied: color stays within alpha
+            auto channel = [&](int shift) {
+                const double v = (c >> shift) & 0xFF;
+                const double detail = v - ((d >> shift) & 0xFF);
+                const double cored = detail > t ? detail - t : detail < -t ? detail + t : 0.0;
+                return static_cast<std::uint32_t>(std::clamp(std::lround(v + cored * strength), 0L, alpha)) << shift;
+            };
+            px[x] = (c & 0xFF000000u) | channel(16) | channel(8) | channel(0);
+        }
+    }
 }
 
 double glowRadiusPixels(double radius, double height) { return (0.004 + std::clamp(radius, 0.0, 1.0) * 0.05) * height; }
@@ -481,6 +663,11 @@ void Compositor::drawMedia(QPainter& p, const VisualLayer& l, double W, double H
         const QImage mask = subjects ? personMask(layer, l) : QImage();
         applyNodes(layer, l.nodes, map, mask.isNull() ? nullptr : &mask, l.highlightNode);
     }
+    if (l.denoiseLuma > 0 || l.denoiseChroma > 0) {
+        const double sigma = denoiseSigmaPixels(l.denoiseRadius, H);
+        denoiseImage(layer, denoiseLumaSigma(l.denoiseLuma), denoiseChromaSigma(l.denoiseChroma), denoiseStep(sigma), sigma);
+    }
+    if (l.sharpen > 0) sharpenImage(layer, sharpenStrength(l.sharpen), sharpenSigmaPixels(l.sharpenRadius, H), sharpenCoring(l.sharpenCoring));
     if (l.glow > 0) addGlow(layer, l.glow, l.glowThreshold, glowRadiusPixels(l.glowRadius, H), kGlowTint);
     if (l.halation > 0) addGlow(layer, l.halation, l.halationThreshold, halationRadiusPixels(l.halationRadius, H), kHalationTint);
     if (l.backgroundBlur > 0) blurBackground(layer, l, H);

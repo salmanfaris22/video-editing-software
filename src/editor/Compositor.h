@@ -106,6 +106,27 @@ void addGlow(QImage& image, double amount, double threshold, double radiusPixels
 [[nodiscard]] double grainNoise(double x, double y, double sizePixels, std::uint32_t seed);
 /// Adds monochrome grain, strongest in the midtones.
 void addGrain(QImage& image, double amount, double sizePixels, std::uint32_t seed);
+/// The GPU renderer's blur pass on the CPU: a separable Gaussian (8-bit between
+/// the passes, edge pixels repeated, at most 48 taps per side).
+void gaussianBlurImage(QImage& image, double sigmaPixels);
+/// Edge-preserving noise reduction: 9 × 9 bilateral filters on whole pixels
+/// `step` apart (spatial sigma `sigmaPixels`). Luma is averaged over pixels of
+/// similar luma (`lumaSigma`, 0…1 units; 0 leaves it), color over pixels of
+/// similar color (`chromaSigma`) and luma (kDenoiseGuideSigma), so colors do not
+/// bleed across edges.
+void denoiseImage(QImage& image, double lumaSigma, double chromaSigma, int step, double sigmaPixels);
+inline constexpr double kDenoiseGuideSigma = 0.1;  ///< layer.frag's DENOISE_GUIDE must match
+/// Unsharp mask: image + strength · cored(image − gaussian(sigma)); detail
+/// smaller than `coring` (0…1 units) is left alone, so noise is not sharpened.
+void sharpenImage(QImage& image, double strength, double sigmaPixels, double coring = 0.0);
+/// Parameters of the repair effects for a canvas `height` pixels high (shared with the GPU renderer).
+[[nodiscard]] double denoiseLumaSigma(double amount);
+[[nodiscard]] double denoiseChromaSigma(double amount);
+[[nodiscard]] double denoiseSigmaPixels(double radius, double height);
+[[nodiscard]] int denoiseStep(double sigmaPixels);
+[[nodiscard]] double sharpenStrength(double amount);
+[[nodiscard]] double sharpenSigmaPixels(double radius, double height);
+[[nodiscard]] double sharpenCoring(double coring);
 /// Pixel sizes of the effects for a canvas `height` pixels high (shared with the GPU renderer).
 [[nodiscard]] double glowRadiusPixels(double radius, double height);
 [[nodiscard]] double halationRadiusPixels(double radius, double height);

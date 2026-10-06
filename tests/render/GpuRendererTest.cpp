@@ -24,6 +24,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 
@@ -124,6 +125,36 @@ void useDetailImage(test::EditorFixture& f) {
     m.role = project::MediaRole::Imported;
     m.name = "Detail";
     m.path = "detail.png";
+    m.info.video = project::VideoMetadata{"png", 640, 360, FrameRate(30, 1), "rgb", "", "", 0, false};
+    f.project.media.push_back(m);
+    clipOf(f, "Screen").media = m.id;
+    clipOf(f, "Camera").media = m.id;
+}
+
+/// Replaces the screen and camera media with a noisy still (flat areas with
+/// ±14 levels of noise, a hard edge, a dark disc) for noise reduction and sharpening.
+void useNoisyImage(test::EditorFixture& f) {
+    QImage img(640, 360, QImage::Format_RGB32);
+    std::uint32_t seed = 99;
+    for (int y = 0; y < 360; ++y) {
+        for (int x = 0; x < 640; ++x) {
+            const bool disc = (x - 470) * (x - 470) + (y - 180) * (y - 180) < 90 * 90;
+            const QColor base = disc ? QColor(35, 40, 50) : x < 300 ? QColor(90, 110, 140) : QColor(210, 190, 160);
+            auto n = [&seed] {
+                seed = seed * 1664525u + 1013904223u;
+                return static_cast<int>((seed >> 24) % 29) - 14;
+            };
+            img.setPixel(x, y, qRgb(std::clamp(base.red() + n(), 0, 255), std::clamp(base.green() + n(), 0, 255),
+                                    std::clamp(base.blue() + n(), 0, 255)));
+        }
+    }
+    ASSERT_TRUE(img.save(QString::fromStdString((f.dir / "noisy.png").string())));
+    project::MediaSource m;
+    m.id = project::MediaId::generate();
+    m.kind = project::MediaKind::Image;
+    m.role = project::MediaRole::Imported;
+    m.name = "Noisy";
+    m.path = "noisy.png";
     m.info.video = project::VideoMetadata{"png", 640, 360, FrameRate(30, 1), "rgb", "", "", 0, false};
     f.project.media.push_back(m);
     clipOf(f, "Screen").media = m.id;
@@ -297,7 +328,7 @@ TEST_F(GpuRenderer, OtherCanvasSizesAndPortraitMatch) {
 
 namespace {
 /// Mean milliseconds per 1080p frame for `gpu` and the CPU on project `f` at 1 s.
-std::pair<double, double> benchmark(test::EditorFixture& f) {
+std::pair<double, double> benchmark(test::EditorFixture& f, int cpuFrames = 30) {
     Both r(f);
     const RenderPlan plan = buildRenderPlan(f.project, sec(1.0));
     // Decode once; every frame hands over a fresh copy, as a playing video
@@ -310,14 +341,13 @@ std::pair<double, double> benchmark(test::EditorFixture& f) {
     };
     r.frames.setProject(f.snapshot());
     QImage target(1920, 1080, QImage::Format_RGB32);
-    auto time = [&](FrameRenderer& renderer) {
+    auto time = [&](FrameRenderer& renderer, int frames) {
         renderer.render(plan, target, images);  // warm up
         const auto start = std::chrono::steady_clock::now();
-        constexpr int kFrames = 30;
-        for (int i = 0; i < kFrames; ++i) renderer.render(plan, target, images);
-        return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count() / kFrames;
+        for (int i = 0; i < frames; ++i) renderer.render(plan, target, images);
+        return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count() / frames;
     };
-    return {time(*r.gpu), time(*r.cpu)};
+    return {time(*r.gpu, 30), time(*r.cpu, cpuFrames)};
 }
 }  // namespace
 
@@ -331,6 +361,16 @@ TEST_F(GpuRenderer, RendersAStyled1080pFrameFastEnoughForRealTime) {
     const auto [gpuMs, cpuMs] = benchmark(f);
     std::printf("styled 1080p frame: GPU %.2f ms, CPU %.2f ms\n", gpuMs, cpuMs);
     EXPECT_LT(gpuMs, 16.0);  // comfortably inside a 30 fps frame (and 60 fps)
+}
+
+TEST_F(GpuRenderer, NoiseReductionAndSharpenStayRealTimeAt1080p) {
+    test::EditorFixture f({.seconds = 3.0});
+    // The widest noise reduction (a 9 x 9 bilateral filter) plus sharpening on the screen.
+    clipOf(f, "Screen").effects = {effect(kEffectDenoise, {{"luma", 1.0}, {"chroma", 1.0}, {"radius", 1.0}}),
+                                   effect(kEffectSharpen, {{"amount", 0.5}, {"radius", 0.5}})};
+    const auto [gpuMs, cpuMs] = benchmark(f, 2);
+    std::printf("1080p frame with noise reduction + sharpen: GPU %.2f ms, CPU %.2f ms\n", gpuMs, cpuMs);
+    EXPECT_LT(gpuMs, 25.0);  // inside a 30 fps frame
 }
 
 TEST_F(GpuRenderer, PlainFramesCostLittle) {
@@ -617,4 +657,39 @@ TEST_F(GpuRenderer, HslCurvesMatchTheCpu) {
     const Difference d = r.at(f.project, 0.5);
     EXPECT_GT(compare(plain, r.cpuImage).mean, 2.0);
     EXPECT_CLOSE(d, 1.0, 0.003);
+}
+
+TEST_F(GpuRenderer, NoiseReductionAndSharpenMatchTheCpu) {
+    test::EditorFixture f;
+    useNoisyImage(f);
+    Both r(f);
+    // At the still's own size the picture is drawn 1:1, so both renderers start
+    // from the same pixels and must agree exactly. (At 0.5 s the camera clip
+    // fills the frame, on top of the screen.)
+    const QSize native(640, 360);
+    const Difference base = r.at(f.project, 0.5, native);
+    const QImage plain = r.cpuImage;
+    auto& camera = clipOf(f, "Camera");
+    camera.effects.push_back(effect(kEffectDenoise, {{"luma", 0.6}, {"chroma", 0.8}, {"radius", 0.5}}));
+    Difference d = r.at(f.project, 0.5, native);
+    EXPECT_GT(compare(plain, r.cpuImage).mean, 2.0);
+    EXPECT_LT(d.mean, base.mean + 0.05);
+    EXPECT_LE(d.worst, base.worst + 1);
+    camera.effects.push_back(effect(kEffectSharpen, {{"amount", 0.7}, {"radius", 0.4}, {"coring", 0.3}}));
+    d = r.at(f.project, 0.5, native);
+    EXPECT_LT(d.mean, base.mean + 0.05);
+    EXPECT_LE(d.worst, base.worst + 2);
+    // With a grade before them: the grade's ±1 rounding differences, which the
+    // sharpening amplifies (about ×2 here).
+    camera.color.contrast = timeline::Animated<double>{0.2};
+    camera.color.saturation = timeline::Animated<double>{0.3};
+    d = r.at(f.project, 0.5, native);
+    EXPECT_LT(d.mean, 1.0);
+    EXPECT_LE(d.worst, 6);
+    // Scaled up to 1080p (a wider noise-reduction step): sharpening amplifies the
+    // small resampling difference between the renderers too, nothing more.
+    camera.effects.front().params["radius"] = timeline::Animated<double>{1.0};
+    camera.effects.back().params["amount"] = timeline::Animated<double>{1.0};
+    d = r.at(f.project, 0.5, {1920, 1080});
+    EXPECT_CLOSE(d, 2.0, 0.001);
 }
