@@ -681,6 +681,10 @@ Result<Timeline> timelineFromJson(const Json& j, const std::string& path) {
     return tl;
 }
 
+json::Json toJson(const ColorAdjustments& c) { return colorJson(c); }
+
+Result<ColorAdjustments> colorAdjustmentsFromJson(const Json& j, const std::string& path) { return colorFrom(j, path); }
+
 json::Json toJson(const ColorAdjustments::Look& l) {
     Json j{{"id", l.id}, {"name", l.name}, {"amount", l.amount}};
     writeGrade(j, l);

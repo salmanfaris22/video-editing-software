@@ -64,6 +64,25 @@ version.
 | Double-click text | Edit in place |
 | Right-click | Layer menu (edit text, reset, delete) |
 
+### A.4 Color page (DaVinci Resolve style)
+
+| Keys / gesture | Action |
+|---|---|
+| ⇧6 / ⇧4 | Color page / Edit page |
+| ⌘C / ⌘V | Copy the clip's grade / paste it on the selected clips |
+| = | Take the grade of the previous clip |
+| ⌥S | Add a serial node after the last one |
+| ⇧D | Bypass all grades (before / after) |
+| ⌘W | Wipe before / after (drag the divider) |
+| ⇧H | Highlight what the selected node changes |
+| ⌥⌘G | Grab a still into the Gallery |
+| ↑ / ↓ | Previous / next clip in the strip |
+| Hover a look | Preview it in the viewer; click applies |
+| Double-click a still | Apply its grade to the clip |
+| Window on the viewer | Drag inside to move, edge handles to resize, the top dot to rotate (⇧ fine) |
+| Qualifier → Pick | Click a color in the viewer to key it (e.g. only the pen) |
+| Right-click a clip / node | Grade copy, previous / next / all, grab still · enable, reset, invert, reorder, delete |
+
 ---
 
 ## B. Planned Lectern keymap

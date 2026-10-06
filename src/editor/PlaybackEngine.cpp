@@ -280,6 +280,15 @@ void PlaybackEngine::setCompare(Compare mode, double split) {
     videoCv_.notify_all();
 }
 
+void PlaybackEngine::setReference(QImage image) {
+    {
+        std::lock_guard lock(mutex_);
+        reference_ = std::move(image);
+        renderRequested_ = true;
+    }
+    videoCv_.notify_all();
+}
+
 void PlaybackEngine::setHighlight(timeline::ClipId clip, std::string nodeId) {
     {
         std::lock_guard lock(mutex_);
@@ -325,6 +334,7 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
         double split = 0.5;
         timeline::ClipId highlightClip;
         std::string highlightNode;
+        QImage reference;
         Time t;
         {
             std::unique_lock lock(mutex_);
@@ -339,6 +349,7 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
             split = compareSplit_;
             highlightClip = highlightClip_;
             highlightNode = highlightNode_;
+            reference = reference_;
             requested = renderRequested_;
             renderRequested_ = false;
             t = positionLocked();
@@ -385,7 +396,11 @@ void PlaybackEngine::videoLoop(std::stop_token stop) {
             const QSize part = compare == Compare::SideBySide ? QSize(std::max(2, size.width() / 2), std::max(2, size.height() / 2)) : size;
             QImage before(part, QImage::Format_RGB32);
             QImage after(part, QImage::Format_RGB32);
-            renderer->render(ungraded(plan), before, source);
+            if (!reference.isNull()) {  // against a gallery still
+                before = reference.scaled(part, Qt::IgnoreAspectRatio, Qt::SmoothTransformation).convertToFormat(QImage::Format_RGB32);
+            } else {
+                renderer->render(ungraded(plan), before, source);
+            }
             renderer->render(plan, after, source);
             composeComparison(image, before, after, compare, split);
         }

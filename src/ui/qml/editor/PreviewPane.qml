@@ -10,6 +10,12 @@ Rectangle {
 
     property ProjectController project
     property PlaybackController playback
+    /// Edit-page tools on the picture (select, move, resize layers, edit text).
+    /// The Color page turns them off and draws its own overlay.
+    property bool canvasTools: true
+    /// Children go on top of the picture, sized to it (the Color page's wipe
+    /// divider, window handles and color picker).
+    default property alias overlay: overlayHost.data
     signal activated()
 
     readonly property real aspect: root.project.canvasWidth / Math.max(1, root.project.canvasHeight)
@@ -52,6 +58,8 @@ Rectangle {
         // its handles reachable around it.
         CanvasOverlay {
             objectName: "canvasOverlay"
+            visible: root.canvasTools
+            enabled: root.canvasTools
             x: canvas.x
             y: canvas.y
             width: canvas.width
@@ -60,6 +68,13 @@ Rectangle {
             playback: root.playback
             onActivated: root.activated()
             onEmptyClicked: root.playback.toggle()
+        }
+        Item {
+            id: overlayHost
+            x: canvas.x
+            y: canvas.y
+            width: canvas.width
+            height: canvas.height
         }
     }
 

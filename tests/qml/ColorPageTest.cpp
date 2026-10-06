@@ -2,6 +2,7 @@
 // scrubby number fields, double-click reset, scope modes and undo.
 
 #include "editor/EditorFixture.h"
+#include "editor/RenderPlan.h"
 #include "project/ProjectStore.h"
 #include "qml/QmlHarness.h"
 #include "ui/PlaybackController.h"
@@ -199,10 +200,222 @@ TEST(ColorPage, AutoBalanceRemovesAColorCast) {
         const double m = (r + g + b) / 3;
         return std::abs(r - m) + std::abs(g - m) + std::abs(b - m);
     };
-    ASSERT_TRUE(test::waitFor([&] { return cast() > 0.05; }, 5000)) << "cast " << cast();
+    // Wait until the scopes show the final grade (both edits rendered): the same numbers twice.
+    double last = -1;
+    ASSERT_TRUE(test::waitFor([&] {
+        test::settle(150);
+        const double c = cast();
+        const bool stable = c > 0.05 && std::abs(c - last) < 1e-9;
+        last = c;
+        return stable;
+    }, 8000)) << "cast " << cast();
     const double before = cast();
     p.ui->click(p.center("autoBalance"));
-    // The test picture is strongly colored by design, so Temp/Tint reach their limits: at least halved.
-    EXPECT_TRUE(test::waitFor([&] { return cast() < before * 0.5; }, 5000)) << before << " -> " << cast();
+    EXPECT_EQ(p.project.undoLabel(), "Auto balance");
+    // The scopes measure the whole frame (a purple screen, an orange camera, the
+    // background) and only the selected clip is balanced, so the frame keeps
+    // part of its cast; exact recovery of a known cast is tested in
+    // ControllerTest AutoBalanceRecoversAKnownCast.
+    EXPECT_TRUE(test::waitFor([&] { return cast() < before * 0.85; }, 5000)) << before << " -> " << cast();
+}
+
+namespace {
+/// The rendered plan's layer of a clip in the shown snapshot.
+editor::VisualLayer shownLayer(ProjectController& project, const QString& clipId) {
+    for (const auto& l : editor::buildRenderPlan(*project.snapshot(), Time::fromSeconds(1)).layers) {
+        if (QString::fromStdString(l.clip.toString()) == clipId) return l;
+    }
+    return {};
+}
+}  // namespace
+
+TEST(ColorPage, LooksPreviewOnHoverApplyWithAmountAndSpreadToAllClips) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    const QString clip = p.project.selectedClip();
+    ASSERT_TRUE(test::waitFor([&] { return p.project.lookPreviewRevision() > 0; }, 5000)) << "look thumbnails";
+    // Hovering a look previews it in the viewer without an edit.
+    p.ui->move(p.center("look-dark-green"));
+    ASSERT_TRUE(test::waitFor([&] { return shownLayer(p.project, clip).color.tint < -0.3; }, 3000));
+    EXPECT_EQ(p.project.selection().value("look").toString(), "");
+    EXPECT_FALSE(p.project.canUndo());
+    // Clicking applies it.
+    p.ui->click(p.center("look-dark-green"));
+    EXPECT_EQ(p.project.selection().value("look").toString(), "dark-green");
     EXPECT_TRUE(p.project.canUndo());
+    // Amount: drag the slider to the left.
+    QQuickItem* slider = p.ui->find("lookAmount");
+    ASSERT_TRUE(slider);
+    p.ui->drag(QmlHarness::at(slider, {slider->width() - 6, slider->height() / 2}),
+               QmlHarness::at(slider, {slider->width() * 0.4, slider->height() / 2}));
+    EXPECT_LT(p.project.selection().value("lookAmount").toDouble(), 0.6);
+    // Apply to all clips.
+    p.ui->click(p.center("lookToAll"));
+    for (const QString& id : p.project.gradableClips()) {
+        p.project.selectClip(id);
+        EXPECT_EQ(p.project.selection().value("look").toString(), "dark-green") << id.toStdString();
+    }
+}
+
+TEST(ColorPage, AddedNodeGradesOnlyItsWindowShapedOnTheViewer) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    const QString clip = p.project.selectedClip();
+    QTest::keyClick(&p.ui->window(), Qt::Key_S, Qt::AltModifier);  // ⌥S: add a serial node
+    test::settle(80);
+    ASSERT_EQ(p.project.selection().value("nodes").toList().size(), 1);
+    QQuickItem* chip = p.ui->find("editingNode");
+    ASSERT_TRUE(chip);
+    // The wheels now grade the new node, not the clip's correction.
+    const QPoint jog = p.center("master-gain");
+    p.ui->drag(jog, jog + QPoint(100, 0));
+    const QVariantMap node = p.project.selection().value("nodes").toList()[0].toMap();
+    EXPECT_GT(node.value("gain").toMap().value("master").toDouble(), 0.2);
+    EXPECT_NEAR(p.wheel("gain").value("master").toDouble(), 0.0, 1e-9);
+    // Give it a circle window and shape it with the handles.
+    p.ui->click(p.center("palette-window"));
+    p.ui->click(p.center("window-circle"));
+    auto window = [&] { return p.project.selection().value("nodes").toList()[0].toMap().value("window").toMap(); };
+    ASSERT_EQ(window().value("shape").toString(), "circle");
+    QQuickItem* right = p.ui->find("windowHandle-right");
+    ASSERT_TRUE(right && right->isVisible());
+    const double width0 = window().value("width").toDouble();
+    const QPoint r0 = p.center("windowHandle-right");
+    p.ui->drag(r0, r0 + QPoint(40, 0));
+    EXPECT_GT(window().value("width").toDouble(), width0 + 0.02);
+    // Drag inside the shape to move it.
+    QQuickItem* shape = right->parentItem();
+    const QPoint inside = QmlHarness::at(shape, {shape->width() / 2, shape->height() / 2});
+    const double x0 = window().value("x").toDouble();
+    p.ui->drag(inside, inside + QPoint(-50, 0));
+    EXPECT_LT(window().value("x").toDouble(), x0 - 0.03);
+    // The renderers get the node with its window.
+    const editor::VisualLayer layer = shownLayer(p.project, clip);
+    ASSERT_EQ(layer.nodes.size(), 1u);
+    EXPECT_EQ(layer.nodes[0].window.shape, "circle");
+    // Back to node 01 from the graph.
+    p.ui->click(p.center("node-01"));
+    const QPoint jog01 = p.center("master-gain");
+    p.ui->drag(jog01, jog01 + QPoint(60, 0));
+    EXPECT_GT(p.wheel("gain").value("master").toDouble(), 0.1);
+}
+
+TEST(ColorPage, ColorKeyIsPickedOnTheViewer) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    p.ui->click(p.center("palette-qualifier"));
+    p.ui->click(p.center("addColorKey"));
+    QQuickItem* pick = p.ui->find("pickArea");
+    ASSERT_TRUE(pick && pick->isVisible()) << "picking starts with the new node";
+    // Click the screen recording in the middle of the picture.
+    p.ui->click(QmlHarness::at(pick, {pick->width() * 0.35, pick->height() * 0.4}));
+    const QVariantList nodes = p.project.selection().value("nodes").toList();
+    ASSERT_EQ(nodes.size(), 1);
+    const QVariantMap q = nodes[0].toMap().value("qualifier").toMap();
+    EXPECT_TRUE(q.value("enabled").toBool());
+    EXPECT_EQ(p.project.undoLabel(), "Pick color");
+    EXPECT_FALSE(pick->isVisible());  // one pick, then back to normal
+    // The hue range bar is live: drag its middle to move the hue.
+    QQuickItem* hue = p.ui->find("hueRange");
+    ASSERT_TRUE(hue);
+    const double hue0 = q.value("hue").toDouble();
+    const double lowX = std::fmod(std::fmod(hue0 - q.value("hueWidth").toDouble(), 1.0) + 1.0, 1.0);
+    const double highX = std::fmod(std::fmod(hue0 + q.value("hueWidth").toDouble(), 1.0) + 1.0, 1.0);
+    if (lowX < highX) {  // not wrapping around the bar ends
+        const QPoint mid = QmlHarness::at(hue, {(lowX + highX) / 2 * hue->width(), hue->height() / 2});
+        p.ui->drag(mid, mid + QPoint(30, 0));
+        EXPECT_NE(p.project.selection().value("nodes").toList()[0].toMap().value("qualifier").toMap().value("hue").toDouble(), hue0);
+    }
+}
+
+TEST(ColorPage, WipeSideBySideAndBypassCompareTheGrade) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    p.ui->click(p.center("compareWipe"));
+    EXPECT_EQ(p.playback->compareMode(), "wipe");
+    QQuickItem* handle = p.ui->find("wipeHandle");
+    ASSERT_TRUE(handle && handle->isVisible());
+    const QPoint h = p.center("wipeHandle");
+    p.ui->drag(h, h - QPoint(120, 0));
+    EXPECT_LT(p.playback->compareSplit(), 0.4);
+    QTest::keyClick(&p.ui->window(), Qt::Key_D, Qt::ShiftModifier);  // ⇧D: bypass all grades
+    test::settle(40);
+    EXPECT_EQ(p.playback->compareMode(), "bypass");
+    QTest::keyClick(&p.ui->window(), Qt::Key_D, Qt::ShiftModifier);
+    test::settle(40);
+    EXPECT_EQ(p.playback->compareMode(), "wipe");
+    p.ui->click(p.center("compareSide"));
+    EXPECT_EQ(p.playback->compareMode(), "side");
+    // Leaving the Color page shows the normal picture again.
+    p.ui->find("colorPage")->setVisible(false);
+    test::settle(40);
+    EXPECT_EQ(p.playback->compareMode(), "off");
+}
+
+TEST(ColorPage, EffectsSwitchOnAndStillsKeepGrades) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    const QString clip = p.project.selectedClip();
+    p.ui->click(p.center("fx-grain-switch"));
+    EXPECT_TRUE(p.project.selection().value("grainOn").toBool());
+    p.ui->click(p.center("fx-halation-switch"));
+    EXPECT_TRUE(p.project.selection().value("halationOn").toBool());
+    EXPECT_GT(shownLayer(p.project, clip).grain, 0.0);
+    // Grab a still of a graded frame, change the grade, then take the grade back from the still.
+    p.project.setColorValue(clip, "exposure", 0.4);
+    p.ui->click(p.center("galleryTab-gallery"));
+    p.ui->click(p.center("grabStill"));
+    ASSERT_EQ(p.project.stills().size(), 1);
+    p.project.setColorValue(clip, "exposure", -0.2);
+    ASSERT_TRUE(test::waitFor([&] { return p.ui->find("still-0") != nullptr; }, 2000));
+    QTest::mouseDClick(&p.ui->window(), Qt::LeftButton, {}, p.center("still-0"));
+    test::settle(60);
+    EXPECT_DOUBLE_EQ(p.project.selection().value("exposure").toDouble(), 0.4);
+}
+
+TEST(ColorPage, CopyAndPasteGradeWithTheKeyboard) {
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    const QString first = p.project.selectedClip();
+    p.project.setColorValue(first, "contrast", 0.35);
+    QTest::keyClick(&p.ui->window(), Qt::Key_C, Qt::ControlModifier);
+    test::settle(40);
+    EXPECT_TRUE(p.project.hasCopiedGrade());
+    // Another clip from the strip, then paste.
+    QString other;
+    for (const QString& id : p.project.gradableClips()) if (id != first) other = id;
+    ASSERT_FALSE(other.isEmpty());
+    p.project.selectClip(other);
+    QTest::keyClick(&p.ui->window(), Qt::Key_V, Qt::ControlModifier);
+    test::settle(40);
+    EXPECT_DOUBLE_EQ(p.project.selection().value("contrast").toDouble(), 0.35);
+}
+
+// Screenshots of the Color page in typical states, for reviewing the design
+// (runs only with LECTERN_DUMP_DIR set).
+TEST(ColorPage, DumpScreens) {
+    const char* dump = std::getenv("LECTERN_DUMP_DIR");
+    if (!dump) GTEST_SKIP() << "set LECTERN_DUMP_DIR to write screenshots";
+    Page p;
+    ASSERT_TRUE(p.ui->ok());
+    const QString dir = QString::fromLocal8Bit(dump);
+    const QString clip = p.project.selectedClip();
+    auto shot = [&](const char* name) {
+        test::settle(500);
+        p.ui->window().grabWindow().save(dir + "/" + name + ".png");
+    };
+    ASSERT_TRUE(test::waitFor([&] { return p.project.lookPreviewRevision() > 0; }, 5000));
+    p.project.applyLook(clip, "teal-orange", 0.8);
+    shot("color-looks");
+    const QString node = p.project.addNode(clip, "circle");
+    p.project.setNodeValue(clip, node, "exposure", 0.5);
+    p.ui->click(p.center("node-n2"));
+    p.ui->click(p.center("palette-window"));
+    shot("color-window");
+    p.ui->click(p.center("palette-qualifier"));
+    shot("color-qualifier");
+    p.ui->click(p.center("compareWipe"));
+    p.ui->click(p.center("fx-grain-switch"));
+    p.ui->click(p.center("fx-film-switch"));
+    shot("color-wipe-effects");
 }

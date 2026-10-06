@@ -147,7 +147,11 @@ each, labelled "Assistant: …" in the undo history.
 | `import_subtitles` / `export_subtitles` | `path` | `importSubtitles`, `exportSubtitles` |
 | `set_color` | `clipId` or `role`, values (exposure, contrast, saturation, temperature, tint, wheels) | `setColorValues`, `setColorWheel`, `applyToRole` |
 | `apply_lut` | `clipId`, `lut`, `amount` | `setColorLut` |
-| `set_effect` | `clipId`, `type`, `params` | `setEffectEnabled`, `setEffectValue` |
+| `list_looks` / `apply_look` | `clipIds`, `look` (oppenheimer, dark-green, teal-orange …, or "none"), `amount` | `looks`, `applyLook` — a look on top of the clip's correction |
+| `copy_grade` | `fromClipId`, `toClipIds` | `copyGradeTo` (the user's copied grade is untouched) |
+| `add_node` | `clipId`, `select` (whole, person, background, circle, rectangle, gradient, color), `window?`, `qualifier?`, `pick? {x, y, time}`, `grade?`, `invert?` → `nodeId` | `addNode`, `setNodeWindow`, `setNodeQualifier`, `pickNodeColor`, `setNodeValue` — grade only part of the picture |
+| `set_node` / `remove_node` | `clipId`, `nodeId`, any of the above, `enabled`, `label` | node setters, `removeNode` |
+| `set_effect` | `clipId`, `type` (blur, vignette, zoom, background-blur, film-grain, glow, halation, film-emulation), `params` | `setEffectEnabled`, `setEffectValue` |
 | `set_style` | key/value (padding, radius, camera shape …) | `setStyleValue` |
 | `set_audio` | `clipId` or `trackId`, gain/mute/fades | `setClipAudio`, `setTrackValue` |
 | `clean_voice` | `clipId?` | voice cleanup (planned, FULL_GAP_AUDIT §3.23) |

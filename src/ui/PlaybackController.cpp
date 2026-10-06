@@ -48,6 +48,7 @@ void PlaybackController::follow() {
         editor::PlaybackEngine::Listener& listener = *this;
         engine_ = std::make_unique<editor::PlaybackEngine>(dir_, std::move(output), listener);
         engine_->setPreviewSize(previewSize_);
+        engine_->setReference(reference_);
         applyCompare();
         position_ = 0;
         emit positionChanged();
@@ -83,6 +84,19 @@ void PlaybackController::setHighlight(const QString& clipId, const QString& node
     highlightClip_ = nodeId.isEmpty() ? QString() : clipId;
     highlightNode_ = nodeId;
     applyCompare();
+    emit compareChanged();
+}
+
+void PlaybackController::setReferenceStill(const QString& imagePath) {
+    if (imagePath == referenceStill_) return;
+    QImage image;
+    if (!imagePath.isEmpty() && !image.load(imagePath)) {
+        LEC_WARN("playback", "could not load still {}", imagePath.toStdString());
+        return;
+    }
+    referenceStill_ = imagePath;
+    reference_ = image;
+    if (engine_) engine_->setReference(reference_);
     emit compareChanged();
 }
 

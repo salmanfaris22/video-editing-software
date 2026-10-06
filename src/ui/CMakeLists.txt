@@ -65,6 +65,19 @@ qt_add_qml_module(lectern_ui
         qml/editor/ColorPage.qml
         qml/editor/color/ColorWheel.qml
         qml/editor/color/CurveEditor.qml
+        qml/editor/color/RangeBar.qml
+        qml/editor/color/PaletteButton.qml
+        qml/editor/color/QualifierPalette.qml
+        qml/editor/color/WindowPalette.qml
+        qml/editor/color/MagicMaskPalette.qml
+        qml/editor/color/NodeGraph.qml
+        qml/editor/color/GalleryPanel.qml
+        qml/editor/color/ColorSettings.qml
+        qml/editor/color/ViewerOverlay.qml
+        qml/editor/color/PrimariesPalette.qml
+        qml/editor/color/CurvesPalette.qml
+        qml/editor/color/ScopesPanel.qml
+        qml/editor/color/DarkCombo.qml
         qml/editor/ExportDialog.qml
         qml/editor/panels/SetupPanel.qml
         qml/editor/panels/LayoutPanel.qml

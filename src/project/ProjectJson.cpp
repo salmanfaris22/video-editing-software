@@ -244,6 +244,11 @@ Json toJson(const Project& p) {
                                   {"duration", json::toJson(r.duration)},
                                   {"state", r.state}});
     }
+    Json gallery = Json::array();
+    for (const auto& st : p.gallery) {
+        gallery.push_back(Json{{"id", st.id}, {"label", st.label}, {"image", st.image}, {"clipName", st.clipName},
+                               {"time", st.time}, {"grade", timeline::toJson(st.grade)}});
+    }
     const auto& e = p.exportSettings;
     return Json{{"format", "lectern.project"},
                 {"formatVersion", Project::kFormatVersion},
@@ -264,6 +269,7 @@ Json toJson(const Project& p) {
                 {"media", std::move(media)},
                 {"timeline", timeline::toJson(p.timeline)},
                 {"recordings", std::move(recordings)},
+                {"gallery", std::move(gallery)},
                 {"export", Json{{"container", e.container},
                                 {"videoCodec", e.videoCodec},
                                 {"width", e.width},
@@ -343,6 +349,23 @@ Result<Project> projectFromJson(const json::Json& raw) {
             if (auto d = json::timeFrom(rj.value("duration", Json(0)), "project.recordings.duration")) r.duration = *d;
             r.state = rj.value("state", "");
             p.recordings.push_back(std::move(r));
+        }
+    }
+    if (const auto it = j.find("gallery"); it != j.end() && it->is_array()) {
+        for (const auto& sj : *it) {
+            if (!sj.is_object()) continue;
+            Still st;
+            st.id = sj.value("id", "");
+            st.label = sj.value("label", "");
+            st.image = sj.value("image", "");
+            st.clipName = sj.value("clipName", "");
+            st.time = sj.value("time", 0.0);
+            if (const auto g = sj.find("grade"); g != sj.end()) {
+                auto grade = timeline::colorAdjustmentsFromJson(*g, "project.gallery.grade");
+                if (!grade) continue;  // a damaged still is dropped, the project still opens
+                st.grade = std::move(*grade);
+            }
+            if (!st.id.empty()) p.gallery.push_back(std::move(st));
         }
     }
     if (const auto it = j.find("export"); it != j.end() && it->is_object()) {

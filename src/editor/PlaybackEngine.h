@@ -59,6 +59,9 @@ public:
     /// it; SideBySide shows ungraded left and graded right at half size.
     enum class Compare { Off, Bypass, Wipe, SideBySide };
     void setCompare(Compare mode, double split = 0.5);
+    /// A still to compare against: when set, Wipe and SideBySide show it as
+    /// "before" instead of the ungraded picture. Null image: off.
+    void setReference(QImage image);
     /// Shows what node `nodeId` of `clip` selects — in color over mid gray —
     /// instead of the graded picture (Color page "highlight"). Empty id: off.
     void setHighlight(timeline::ClipId clip, std::string nodeId);
@@ -97,6 +100,7 @@ private:
     double compareSplit_ = 0.5;
     timeline::ClipId highlightClip_;
     std::string highlightNode_;
+    QImage reference_;
     bool playing_ = false;
     bool deviceRunning_ = false;
     bool renderRequested_ = true;

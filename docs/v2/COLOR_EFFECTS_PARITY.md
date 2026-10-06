@@ -63,7 +63,7 @@ these. They are the P0 work.
 | 1.8 | HDR timelines (PQ, HLG) and HDR export | ● | ● | ● | 🟡 | P2 | HLG/PQ sources are tone-mapped to SDR (BT.2408 reference white, highlight roll-off); HDR output not yet |
 | 1.9 | Camera log/RAW decode: Apple Log, S-Log3, V-Log, LogC3/4, C-Log, N-Log, F-Log, BRAW, ProRes RAW, R3D | ◐ | ● | ● | 🟡 | P1 | 4 log curves today; RAW decode is P3 |
 | 1.10 | Effect plug-in architecture (parameters, keyframes, GPU shader per effect) | ● | ● | ● | 🟡 | P0 | `effects[]` with type + params exists; needs a registry and a shader per effect (../RENDERING_PIPELINE.md §12) |
-| 1.11 | Effect stack per clip (order, enable/disable, duplicate, copy/paste attributes) | ● | ● | ● | 🟡 | P1 | Fixed set today; no reordering or copy/paste |
+| 1.11 | Effect stack per clip (order, enable/disable, duplicate, copy/paste attributes) | ● | ● | ● | 🟡 | P1 | Grades copy/paste on the Color page (⌘C/⌘V, =, to next/all); effect order still fixed |
 | 1.12 | Adjustment layers (effects apply to everything below) | ● | ● | ● (adjustment clips) | ⬜ | P1 | |
 | 1.13 | Render caching (smart cache, pre-render, cache to disk) | ● | ● | ● | ⬜ | P1 | |
 | 1.14 | Proxy / optimized media | ● | ● | ● | ⬜ | P1 | Planned in ../RENDERING_PIPELINE.md §8 |
@@ -97,13 +97,13 @@ these. They are the P0 work.
 | 2.18 | Channel mixer (RGB matrix) | ● | – | ● (RGB Mixer) | ⬜ | P2 | Also B&W conversion |
 | 2.19 | Levels (input/output black/white, gamma, per channel) | ● | ◐ | ◐ | ⬜ | P1 | |
 | 2.20 | Invert / Negative | ● | ● | ● | ⬜ | P3 | |
-| 2.21 | Black & White / Tint / Tritone | ● | ◐ | ● | ⬜ | P1 | Common look |
+| 2.21 | Black & White / Tint / Tritone | ● | ◐ | ● | 🟡 | P1 | Noir, Oppenheimer B&W and Sepia looks; no tritone |
 | 2.22 | Photo Filter (warming/cooling) | ● | – | ◐ | ⬜ | P2 | |
-| 2.23 | Grade presets / looks gallery with thumbnails | ● (Lumetri Looks) | ● (Creative Looks) | ● (Gallery stills) | 🟡 | P1 | Presets exist; no thumbnails gallery |
+| 2.23 | Grade presets / looks gallery with thumbnails | ● (Lumetri Looks) | ● (Creative Looks) | ● (Gallery stills) | ✅ | – | 16 tuned cinematic looks with live thumbnails, hover preview, Amount, apply to all, save to My Looks |
 | 2.24 | Match color between clips (shot match) | ● (Color Match) | ● (Color Match, AI) | ● (Shot Match) | ⬜ | P1 | Match the camera to the screen recording look |
-| 2.25 | Copy / paste grade, apply to all of a source | ● | ● | ● | ✅ | – | `applyToRole` |
+| 2.25 | Copy / paste grade, apply to all of a source | ● | ● | ● | ✅ | – | Copy/paste grade (⌘C/⌘V), grade of previous clip (=), to next / all clips, applyToRole |
 | 2.26 | Reset per section / per control | ● | ● | ● | 🟡 | P1 | Full reset only |
-| 2.27 | Bypass / compare (before-after, split screen, wipe) | ◐ | ● | ● | ⬜ | P1 | |
+| 2.27 | Bypass / compare (before-after, split screen, wipe) | ◐ | ● | ● | ✅ | – | Bypass all grades (⇧D), wipe with a draggable divider, side by side, wipe against a gallery still |
 
 ## 3. Color — curves
 
@@ -124,17 +124,17 @@ these. They are the P0 work.
 
 | # | Feature | AE | PR | DR | Lectern | P | Notes |
 |---|---|---|---|---|---|---|---|
-| 4.1 | HSL qualifier (key by hue/sat/luma, soften, denoise) | ◐ (Change to Color / keys) | ● (HSL Secondary) | ● | ⬜ | P1 | Skin, sky, brand color |
+| 4.1 | HSL qualifier (key by hue/sat/luma, soften, denoise) | ◐ (Change to Color / keys) | ● (HSL Secondary) | ● | ✅ | – | Pick on the viewer; hue / sat / lum ranges with softness; invert; highlight view; no matte denoise yet |
 | 4.2 | RGB qualifier | – | – | ● | ⬜ | P3 | |
-| 4.3 | Luma qualifier | – | ◐ | ● | ⬜ | P2 | |
+| 4.3 | Luma qualifier | – | ◐ | ● | ✅ | – | Luma-only key: all hues plus a luminance range |
 | 4.4 | 3D qualifier | – | – | ● | ⬜ | P3 | |
 | 4.5 | Highlight / show matte view | – | ● | ● | ⬜ | P1 | |
-| 4.6 | Power windows / masks: circle, linear, polygon, curve (bezier), gradient | ● (masks) | ● (masks on effects) | ● | ⬜ | P1 | |
-| 4.7 | Mask feather, expansion, invert, opacity | ● | ● | ● | ⬜ | P1 | |
+| 4.6 | Power windows / masks: circle, linear, polygon, curve (bezier), gradient | ● (masks) | ● (masks on effects) | ● | 🟡 | P1 | Circle, rectangle and gradient windows with on-viewer handles (move, size, rotate); polygon and Bézier missing |
+| 4.7 | Mask feather, expansion, invert, opacity | ● | ● | ● | 🟡 | P1 | Softness and invert; no opacity or expansion |
 | 4.8 | Mask tracking (planar / point) | ● (Mask tracking, Mocha) | ● | ● | ⬜ | P1 | Track a face or a window for blur/grade |
-| 4.9 | Object / person mask (AI) | ● (Roto Brush) | ◐ | ● (Magic Mask) | 🟡 | P1 | Person segmentation exists (background blur only) |
+| 4.9 | Object / person mask (AI) | ● (Roto Brush) | ◐ | ● (Magic Mask) | 🟡 | P1 | Person / background as a node selection (Magic Mask style, per-frame segmentation); objects missing |
 | 4.10 | Depth map (AI) | – | – | ● | ⬜ | P3 | |
-| 4.11 | Combine qualifier + window (intersect, subtract) | ◐ | ◐ | ● | ⬜ | P2 | |
+| 4.11 | Combine qualifier + window (intersect, subtract) | ◐ | ◐ | ● | ✅ | – | Window × color key × person in one node; invert (outside node) |
 | 4.12 | Skin tone protection / face refinement | – | ◐ | ● (Face Refinement) | ⬜ | P1 | Talking-head videos |
 | 4.13 | Vector / hue-range secondary (Hue/Saturation per range) | ● (Hue/Saturation) | ◐ | ● (Color Warper) | ⬜ | P2 | |
 | 4.14 | Color Warper (hue-saturation and chroma-luma mesh) | – | – | ● | ⬜ | P3 | |
@@ -145,17 +145,17 @@ these. They are the P0 work.
 
 | # | Feature | AE | PR | DR | Lectern | P | Notes |
 |---|---|---|---|---|---|---|---|
-| 5.1 | Several correction layers per clip (stacked corrections) | ● (effect stack) | ● (multiple Lumetri) | ● (serial nodes) | ⬜ | P1 | Start with an ordered list of correctors |
-| 5.2 | Node graph: serial, parallel, layer mixer nodes | – | – | ● | ⬜ | P2 | |
+| 5.1 | Several correction layers per clip (stacked corrections) | ● (effect stack) | ● (multiple Lumetri) | ● (serial nodes) | ✅ | – | Up to 8 serial nodes after node 01, each with its own grade and selection |
+| 5.2 | Node graph: serial, parallel, layer mixer nodes | – | – | ● | 🟡 | P2 | Serial chain with outside nodes (invert); parallel and layer mixer missing |
 | 5.3 | Splitter / combiner (per-channel) nodes | – | – | ● | ⬜ | P3 | |
 | 5.4 | Key mixer, external matte | – | – | ● | ⬜ | P3 | |
 | 5.5 | Shared nodes / group grades (pre-clip, post-clip, timeline) | ◐ | ◐ | ● | ⬜ | P2 | Lectern equivalent: grade per source + timeline grade |
 | 5.6 | Timeline-level grade | ◐ (adjustment layer) | ◐ | ● | ⬜ | P1 | |
 | 5.7 | Versions of a grade per clip (local / remote) | – | – | ● | ⬜ | P3 | |
-| 5.8 | Stills gallery, PowerGrades, grab still, wipe against still | – | – | ● | ⬜ | P2 | |
+| 5.8 | Stills gallery, PowerGrades, grab still, wipe against still | – | – | ● | ✅ | – | Grab still (⌥⌘G), apply grade from still (double-click), wipe against still; My Looks as PowerGrades |
 | 5.9 | Keyframing grades (dynamic, static, dissolve) | ● | ● | ● | 🟡 | P1 | Model supports animated values; UI does not |
 | 5.10 | Grade copy between projects / export as LUT | ◐ | ● (export .cube) | ● (Generate LUT) | ⬜ | P2 | |
-| 5.11 | Color Space Transform node / effect | ● | ◐ | ● | ⬜ | P1 | Needs §1 |
+| 5.11 | Color Space Transform node / effect | ● | ◐ | ● | 🟡 | P1 | CST panel: input color space and camera log; output fixed to Rec.709 / Gamma 2.4 |
 | 5.12 | Tone mapping and gamut mapping | ● | ● | ● | ⬜ | P1 | |
 
 ## 6. Color — scopes and monitoring
@@ -169,7 +169,7 @@ these. They are the P0 work.
 | 6.5 | CIE chromaticity | – | – | ● | ⬜ | P3 | |
 | 6.6 | False color / exposure warnings / clip indicators | ◐ | ◐ | ● | ⬜ | P2 | |
 | 6.7 | Highlight out-of-gamut / broadcast safe | ● | ● | ● | ⬜ | P2 | |
-| 6.8 | Reference wipe / split-screen compare | ◐ | ● | ● | ⬜ | P1 | Same as 2.27 |
+| 6.8 | Reference wipe / split-screen compare | ◐ | ● | ● | ✅ | – | Wipe and side by side against the ungraded picture or a still |
 | 6.9 | Color picker readout (RGB/HSL values under cursor) | ● (Info panel) | – | ● | ⬜ | P2 | |
 | 6.10 | External reference monitor output | ● | ● | ● | ⬜ | P3 | |
 
@@ -182,8 +182,8 @@ these. They are the P0 work.
 | 7.3 | Other LUT formats (.3dl, .csp, .look) | ● | ◐ | ● | ⬜ | P3 | |
 | 7.4 | 1D LUTs / shaper LUTs | ● | – | ● | ⬜ | P3 | |
 | 7.5 | Camera manufacturer conversions | ◐ | ● | ● | 🟡 | P1 | 4 built in; add Canon C-Log2/3, Nikon N-Log, Fujifilm F-Log/F-Log2, DJI D-Log/D-Log M, LogC4, Blackmagic Film Gen5 |
-| 7.6 | Creative looks library (film emulations, teal & orange, etc.) | ● | ● | ● (Film Look Creator) | 🟡 | P1 | Presets exist; need a curated library |
-| 7.7 | Film Look Creator (halation, bloom, grain, gate weave, print density) | – | – | ● | ⬜ | P2 | |
+| 7.6 | Creative looks library (film emulations, teal & orange, etc.) | ● | ● | ● (Film Look Creator) | ✅ | – | 16 looks in Film, Cinematic, Mood, Black & White, Clean; My Looks |
+| 7.7 | Film Look Creator (halation, bloom, grain, gate weave, print density) | – | – | ● | 🟡 | P2 | Halation, glow, film grain and film print emulation (3 stocks); no gate weave or breath |
 | 7.8 | LUT placed before or after the grade | ● | ● (Input LUT / Creative) | ● | 🟡 | P1 | Fixed position today |
 | 7.9 | Export grade as .cube | – | ● | ● | ⬜ | P2 | |
 
@@ -252,9 +252,9 @@ these. They are the P0 work.
 | # | Effect | AE | PR | DR | Lectern | P |
 |---|---|---|---|---|---|---|
 | 11.1 | Vignette | ● | ● | ● | ✅ | – |
-| 11.2 | Glow / bloom | ● | ● | ● | ⬜ | P1 |
-| 11.3 | Film grain / add noise | ● | ● | ● | ⬜ | P1 |
-| 11.4 | Halation | – | – | ● | ⬜ | P2 |
+| 11.2 | Glow / bloom | ● | ● | ● | ✅ | Glow on the Color page (amount, threshold, spread); GPU and CPU |
+| 11.3 | Film grain / add noise | ● | ● | ● | ✅ | Film grain from an integer hash (identical CPU/GPU), moves 24×/s, strongest in mids |
+| 11.4 | Halation | – | – | ● | ✅ | Red-orange halation around highlights |
 | 11.5 | Lens flare / light rays / aperture diffraction | ● | ● | ● | ⬜ | P3 |
 | 11.6 | Light leaks / prism / chromatic aberration (stylize) | ◐ | ◐ | ● | ⬜ | P2 |
 | 11.7 | Emboss, find edges, posterize, threshold, cartoon, mosaic | ● | ● | ● | ⬜ | P3 |
@@ -370,9 +370,9 @@ these. They are the P0 work.
 | 19.1 | Effects browser with search, categories, favorites | ● | ● | ● | ⬜ | P1 |
 | 19.2 | Drag an effect onto a clip or adjustment layer | ● | ● | ● | ⬜ | P1 |
 | 19.3 | Effect controls panel: per-parameter keyframe toggles, reset | ● | ● | ● | 🟡 (Color page fields; per-parameter keyframes pending) | P1 |
-| 19.4 | Copy / paste attributes (choose which) | ● | ● | ● | ⬜ | P1 |
+| 19.4 | Copy / paste attributes (choose which) | ● | ● | ● | 🟡 | Grades: copy/paste, previous, next, all; other attributes not yet |
 | 19.5 | Save presets of effects and grades | ● | ● | ● | 🟡 | P1 |
-| 19.6 | Viewer overlays for effect controls (zoom center, mask points, crop) | ● | ● | ● | 🟡 | P1 |
+| 19.6 | Viewer overlays for effect controls (zoom center, mask points, crop) | ● | ● | ● | 🟡 | Window handles, wipe divider and color picker on the Color page viewer; zoom center, crop |
 | 19.7 | Dedicated color page / workspace with thumbnails of clips | – | ◐ | ● | ⬜ | P2 |
 | 19.8 | Control-surface support (Tangent, DaVinci panels) | – | ◐ | ● | ⬜ | P3 |
 | 19.9 | Undo per parameter, merge slider drags | ● | ● | ● | ✅ | – |

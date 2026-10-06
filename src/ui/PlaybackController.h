@@ -32,6 +32,8 @@ class PlaybackController : public QObject, private editor::PlaybackEngine::Liste
     Q_PROPERTY(QString compareMode READ compareMode WRITE setCompareMode NOTIFY compareChanged)
     /// Wipe position, 0…1 of the picture width (ungraded to the left).
     Q_PROPERTY(double compareSplit READ compareSplit WRITE setCompareSplit NOTIFY compareChanged)
+    /// The still the wipe compares against (setReferenceStill); "" = the ungraded picture.
+    Q_PROPERTY(QString referenceStill READ referenceStill NOTIFY compareChanged)
     /// The node whose selection the viewer shows (setHighlight); "" = off.
     Q_PROPERTY(QString highlightNode READ highlightNode NOTIFY compareChanged)
 
@@ -59,6 +61,9 @@ public:
     /// Shows what a node selects (in color over gray); nodeId "" turns it off.
     Q_INVOKABLE void setHighlight(const QString& clipId, const QString& nodeId);
     [[nodiscard]] QString highlightNode() const { return highlightNode_; }
+    /// Compares against a still's image (a file path); "" compares against the ungraded picture.
+    Q_INVOKABLE void setReferenceStill(const QString& imagePath);
+    [[nodiscard]] QString referenceStill() const { return referenceStill_; }
 
     /// Latest rendered canvas (any thread).
     [[nodiscard]] QImage frame() const;
@@ -96,6 +101,8 @@ private:
     double compareSplit_ = 0.5;
     QString highlightClip_;
     QString highlightNode_;
+    QString referenceStill_;
+    QImage reference_;
 };
 
 }  // namespace lectern::ui

@@ -93,7 +93,7 @@ stable). Steps 2.1–2.2 wrap the features that already exist today.
 - **Still to do for 1.2:** RGBA16F canvas with linear-light blending,
   OpenColorIO / ACES working spaces, display and HDR output transforms.
 
-### 1.3 Corrector layers (project format v3) — **M** · ~5M Claude tokens
+### 1.3 Corrector layers (project format v3) — **M** · ~5M Claude tokens · 🟡 serial nodes done 2026-10-06 (optional fields, no v3 migration needed)
 - **Goal:** several corrections per clip, like Resolve's serial nodes.
 - **Ships:** `Corrector[]` per clip + timeline grade; enable, label,
   reorder, copy/paste grade; v2 → v3 migration.
@@ -131,13 +131,13 @@ stable). Steps 2.1–2.2 wrap the features that already exist today.
 - **MCP:** `set_curve` (points per curve).
 - **Tests:** curve math unit tests; golden images.
 
-### 1.7 HSL qualifier — **M** · ~5M Claude tokens
+### 1.7 HSL qualifier — **M** · ~5M Claude tokens · ✅ done 2026-10-06
 - **Ships:** HSL/Luma qualifier, matte finesse (blur, clean black/white,
   denoise), invert, highlight view, picker add/subtract.
 - **MCP:** `qualify` (hue/sat/lum ranges or "pick at x,y,t").
 - **Tests:** matte accuracy on synthetic color patches.
 
-### 1.8 Power windows — **M** · ~5M Claude tokens
+### 1.8 Power windows — **M** · ~5M Claude tokens · 🟡 circle, rectangle, gradient with viewer handles 2026-10-06
 - **Ships:** linear, circle, polygon, curve, gradient windows; softness,
   inside/outside, invert; on-viewer handles; combine with the qualifier.
 - **MCP:** `add_window` (shape, rect, softness).
@@ -149,13 +149,13 @@ stable). Steps 2.1–2.2 wrap the features that already exist today.
 - **MCP:** `track_window` (window id, range).
 - **Tests:** synthetic moving-target accuracy (< 1 px drift over 10 s).
 
-### 1.10 Magic mask (AI) — **M** · ~5M Claude tokens
+### 1.10 Magic mask (AI) — **M** · ~5M Claude tokens · 🟡 person / background nodes 2026-10-06
 - **Ships:** person/object mask with add/subtract strokes, tracked through
   the clip (Vision on macOS, ONNX model pack on Windows); used as a window.
 - **MCP:** `mask_subject` (person / face / object at point).
 - **Tests:** IoU against hand-made masks on a small test set.
 
-### 1.11 Looks, LUTs and gallery — **S** · ~2.5M Claude tokens
+### 1.11 Looks, LUTs and gallery — **S** · ~2.5M Claude tokens · ✅ done 2026-10-06
 - **Ships:** looks gallery with thumbnails; grab still, wipe compare,
   apply grade from still; LUT before/after grade; export grade as .cube;
   more camera log conversions.
@@ -167,14 +167,14 @@ stable). Steps 2.1–2.2 wrap the features that already exist today.
 - **MCP:** `match_shot` (clip → reference).
 - **Tests:** ΔE between matched clips below a threshold on test pairs.
 
-### 1.13 Nodes lite — **M** · ~5M Claude tokens
+### 1.13 Nodes lite — **M** · ~5M Claude tokens · 🟡 serial + outside nodes 2026-10-06
 - **Ships:** node view of correctors: serial, parallel, layer mixer,
   outside node; node labels; shared correctors across clips (group grade).
 - **MCP:** `add_node` (type, after), `connect_nodes`.
 - **Tests:** graph evaluation equals the equivalent serial stack where it
   should.
 
-### 1.14 Color workspace — **M** · ~5M Claude tokens
+### 1.14 Color workspace — **M** · ~5M Claude tokens · 🟡 Resolve layout + shortcuts 2026-10-06; grade keyframes next
 - **Ships:** Color mode layout (gallery, viewer, nodes, clip strip,
   palette bar, scopes, keyframes); keyframed grades; shortcuts from
   SHORTCUTS.md B.6.

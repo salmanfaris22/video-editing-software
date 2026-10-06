@@ -6,7 +6,7 @@ other products come from general product knowledge (Resolve 19–21, Baselight 6
 Premiere Pro 25, Final Cut Pro 11, …) and are version-dependent: verify against
 the vendor's manual before building an item, as with every v2 document.
 
-Marks: ✅ Lectern has it · 🟡 partly · ⬜ missing · 🔨 being built now.
+Marks: ✅ Lectern has it · 🟡 partly · ⬜ missing.
 In the comparison matrices: ● full · ◐ basic / partial / via add-on · – none.
 **P** = priority (P0 first … P3 specialist). **Step** = the step in
 [ROADMAP_PHASES.md](ROADMAP_PHASES.md) Phase 1 that delivers it.
@@ -19,43 +19,50 @@ control by control), [COLOR_EFFECTS_PARITY.md](COLOR_EFFECTS_PARITY.md)
 
 ## 1. In one minute
 
-**Lectern has today:**
+**Lectern has today** (after the Color page rebuild, 2026-10-06):
+- A Resolve-style Color page: Gallery / Looks / LUTs, the viewer with wipe,
+  side by side, bypass (⇧D) and highlight (⇧H), the node graph, a Color
+  Space Transform and effects panel, the clip strip, Primaries wheels,
+  Curves over the histogram, Qualifier, Window, Magic Mask and Scopes (2-up).
 - Primaries: Lift / Gamma / Gain / Offset wheels with master jog wheels, Temp,
   Tint, Contrast + Pivot, Exposure, Brightness, Shadows, Highlights, Color
-  Boost, Saturation, Hue, and a one-click Auto Balance.
-- Custom curves (Y, R, G, B).
-- 3D LUTs (.cube with mix amount) plus 4 camera-log conversions (Apple Log,
-  S-Log3, V-Log, LogC3).
-- Input color management: Rec.709, sRGB, Display P3, Rec.2020, and HLG/PQ HDR
-  tone-mapped to SDR, decoded at 10 bits.
-- Scopes: parade, waveform, vectorscope, histogram.
-- A Color page with a clip strip, palette bar and page switcher.
-- Vignette, blur and person-segmentation background blur.
-- GPU rendering (Metal) that matches the CPU reference.
-- An AI assistant (MCP) that can grade, read scopes and render frames.
+  Boost, Saturation, Hue, one-click Auto Balance; custom curves Y, R, G, B.
+- **Grade only part of the picture:** up to 8 serial nodes per clip, each
+  with its own grade and a selection — circle / rectangle / gradient windows
+  (handles on the viewer), an HSL color key picked on the viewer (e.g. only
+  the pen), the person or the background (AI segmentation), or the outside
+  of any of these.
+- 16 tuned cinematic looks (Oppenheimer, Dark Green, Teal & Orange, Bleach
+  Bypass …) with Amount, live thumbnails, hover preview, apply to all, and
+  My Looks.
+- Film effects: grain, halation, glow, film print emulation (3 stocks),
+  vignette, lens blur, background blur.
+- Grade management: copy / paste (⌘C / ⌘V), grade of the previous clip (=),
+  to next / all clips, gallery stills (grab, apply, wipe against).
+- 3D LUTs (.cube with mix) plus 4 camera-log conversions; input color
+  management incl. HLG/PQ HDR tone-mapped to SDR at 10 bits.
+- GPU rendering (Metal) that matches the CPU reference for every feature.
+- An AI assistant (MCP) that grades, adds nodes, applies looks, reads scopes
+  and renders frames.
 
-**The 12 biggest gaps vs Resolve, in the order they matter:**
+**The 12 biggest gaps vs Resolve now, in the order they matter:**
 
 | # | Gap | P |
 |---|---|---|
-| 1 | Several corrections per clip (nodes / layers) and a timeline grade | P0 |
-| 2 | Float, scene-linear, managed pipeline (ACES / RCM working space, HDR output) | P0 |
-| 3 | Copy / paste grade and before/after compare 🔨 | P0 |
-| 4 | Looks with strength (cinematic presets) 🔨 | P1 |
-| 5 | HSL curves: Hue vs Hue / Sat / Lum, Lum vs Sat, Sat vs Sat | P1 |
-| 6 | Qualifier: HSL / Luma key with matte finesse | P1 |
-| 7 | Power windows: circle, linear, polygon, curve, gradient | P1 |
-| 8 | Tracking, so windows follow the subject | P1 |
-| 9 | Gallery: stills, wipe against a still, apply grade from a still | P1 |
-| 10 | Grade keyframes (wheels and curves animated over time) | P1 |
-| 11 | Noise reduction (temporal + spatial) and sharpen | P1 |
-| 12 | Film look tools: grain, halation, glow, print emulation | P1 |
+| 1 | Float, scene-linear, managed pipeline (ACES / RCM working space, HDR output) | P0 |
+| 2 | HSL curves: Hue vs Hue / Sat / Lum, Lum vs Sat, Sat vs Sat | P1 |
+| 3 | Tracking, so windows follow the subject | P1 |
+| 4 | Grade keyframes (wheels, curves and nodes animated over time) | P1 |
+| 5 | Noise reduction (temporal + spatial) and sharpen | P1 |
+| 6 | Polygon and Bézier windows; several windows per node | P1 |
+| 7 | Shot match and chart match | P1 |
+| 8 | Viewer zoom; scopes in % and nits; 4-up | P1 |
+| 9 | Timeline grade, color groups, shared and parallel / layer-mixer nodes | P2 |
+| 10 | Qualifier matte finesse (clean, blur, shrink / grow); RGB and 3D keys | P2 |
+| 11 | HDR zone wheels, Log wheels, Primaries bars, Mid/Detail | P2 |
+| 12 | Color Warper, Color Slice, RGB Mixer | P2 / P3 |
 
-**Score vs Resolve's color features** (the 152 rows in §2):
-**19 ✅ · 16 🟡 · 117 ⬜** (8 rows are 🔨 being built now). That is about
-12 % fully and 18 % counting partial rows as half. For everyday grading
-Lectern covers more than the number suggests, because the rows it has are
-the most-used ones (primaries, curves, LUTs, scopes, input color).
+**Score vs Resolve's color features** (the 152 rows in §2): **45 ✅ · 18 🟡 · 89 ⬜** — about 30 % fully and 36 % counting partial rows as half (this morning: 12 % / 18 %). For everyday grading Lectern now covers far more than the number suggests: the rows it has are the ones colorists use on every shot.
 
 ---
 
@@ -70,7 +77,7 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 | 2.1.3 | Resolve Color Management: input space per clip from metadata | ✅ from file tags, with a per-clip override | – | 1.2 |
 | 2.1.4 | RCM timeline (working) space and output space choice | ⬜ always Rec.709 out | P0 | 1.2 |
 | 2.1.5 | ACES (ACEScct / ACEScc, IDT / ODT) | ⬜ | P1 | 1.2 |
-| 2.1.6 | Color Space Transform per node (gamut + tone mapping options) | 🟡 4 fixed log → Rec.709 conversions | P1 | 1.2 |
+| 2.1.6 | Color Space Transform per node (gamut + tone mapping options) | 🟡 CST panel: input color space + camera log (4 logs); output fixed Rec.709 / Gamma 2.4 | P1 | 1.2 |
 | 2.1.7 | Camera log formats (ARRI LogC3/4, RED Log3G10, Sony, Canon, Panasonic, Blackmagic, Fujifilm, Nikon, DJI, Apple) | 🟡 Apple Log, S-Log3, V-Log, LogC3 | P1 | 1.11 |
 | 2.1.8 | HDR sources tone-mapped for SDR | ✅ HLG and PQ with highlight roll-off | – | 1.2 |
 | 2.1.9 | HDR grading and HDR timelines (PQ / HLG, up to 10 000 nits) | ⬜ | P2 | 1.2 |
@@ -136,25 +143,25 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 
 | # | Resolve | Lectern now | P | Step |
 |---|---|---|---|---|
-| 2.5.1 | HSL qualifier (hue / sat / lum ranges with softness) | ⬜ | P1 | 1.7 |
-| 2.5.2 | Luma qualifier | ⬜ | P1 | 1.7 |
+| 2.5.1 | HSL qualifier (hue / sat / lum ranges with softness) | ✅ hue / sat / lum ranges with softness, picked on the viewer | – | 1.7 |
+| 2.5.2 | Luma qualifier | ✅ all hues + a luminance range | – | 1.7 |
 | 2.5.3 | RGB qualifier | ⬜ | P2 | 1.7 |
 | 2.5.4 | 3D qualifier (stroke-pick in 3D color space) | ⬜ | P2 | 1.7 |
-| 2.5.5 | Picker add / subtract / feather on the viewer | ⬜ | P1 | 1.7 |
-| 2.5.6 | Matte finesse: pre-filter, clean black / white, clip, blur, in/out ratio, shrink / grow, denoise | ⬜ | P1 | 1.7 |
-| 2.5.7 | Highlight view (matte on gray / black / white, high contrast) | ⬜ | P1 | 1.7 |
-| 2.5.8 | Invert the key | ⬜ | P1 | 1.7 |
+| 2.5.5 | Picker add / subtract / feather on the viewer | 🟡 pick (one click); no add / subtract strokes | P1 | 1.7 |
+| 2.5.6 | Matte finesse: pre-filter, clean black / white, clip, blur, in/out ratio, shrink / grow, denoise | 🟡 softness only; no clean black/white, blur, shrink/grow | P1 | 1.7 |
+| 2.5.7 | Highlight view (matte on gray / black / white, high contrast) | ✅ Highlight (⇧H): the selection in color over gray | – | 1.7 |
+| 2.5.8 | Invert the key | ✅ | – | 1.7 |
 
 ### 2.6 Windows and masks
 
 | # | Resolve | Lectern now | P | Step |
 |---|---|---|---|---|
-| 2.6.1 | Circle and linear (rectangle) windows | ⬜ only the vignette effect | P1 | 1.8 |
+| 2.6.1 | Circle and linear (rectangle) windows | ✅ circle and rectangle | – | 1.8 |
 | 2.6.2 | Polygon and curve (Bézier) windows | ⬜ | P1 | 1.8 |
-| 2.6.3 | Gradient window | ⬜ | P1 | 1.8 |
-| 2.6.4 | Softness (inside / outside, per edge), opacity, invert | ⬜ | P1 | 1.8 |
-| 2.6.5 | Combine windows (add / subtract / intersect) and with the qualifier | ⬜ | P1 | 1.8 |
-| 2.6.6 | On-viewer handles | ⬜ | P1 | 1.8 |
+| 2.6.3 | Gradient window | ✅ | – | 1.8 |
+| 2.6.4 | Softness (inside / outside, per edge), opacity, invert | ✅ softness, invert (no opacity) | – | 1.8 |
+| 2.6.5 | Combine windows (add / subtract / intersect) and with the qualifier | 🟡 one window per node, multiplied with the key and the person mask | P1 | 1.8 |
+| 2.6.6 | On-viewer handles | ✅ move, resize, rotate on the viewer | – | 1.8 |
 | 2.6.7 | Window presets | ⬜ | P3 | 1.8 |
 | 2.6.8 | External matte / alpha as a key input | ⬜ | P2 | 1.13 |
 
@@ -173,12 +180,12 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 
 | # | Resolve | Lectern now | P | Step |
 |---|---|---|---|---|
-| 2.8.1 | Magic Mask — person | 🟡 person segmentation, used for background blur only | P1 | 1.10 |
+| 2.8.1 | Magic Mask — person | ✅ person / background as a node selection, segmented every frame | – | 1.10 |
 | 2.8.2 | Magic Mask — objects and features (face, hair, clothes) | ⬜ | P2 | 1.10 |
 | 2.8.3 | Shot Match (match one clip to another) | ⬜ | P1 | 1.12 |
 | 2.8.4 | Color Match to a chart (ColorChecker) | ⬜ | P2 | 1.12 |
 | 2.8.5 | Auto color / auto balance | ✅ Auto Balance | – | 1.12 |
-| 2.8.6 | Film Look Creator (one effect for a whole film look) | 🔨 cinematic Looks palette (presets with strength) | P1 | 1.11 |
+| 2.8.6 | Film Look Creator (one effect for a whole film look) | 🟡 looks + film print emulation + grain, halation, glow | P1 | 1.11 |
 | 2.8.7 | Depth Map (depth-based fog and grades) | ⬜ | P2 | – |
 | 2.8.8 | Face Refinement (skin smoothing, eyes, lips) | ⬜ | P2 | – |
 | 2.8.9 | Relight (virtual lights from surface normals) | ⬜ | P3 | – |
@@ -190,13 +197,13 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 
 | # | Resolve | Lectern now | P | Step |
 |---|---|---|---|---|
-| 2.9.1 | Several corrections per clip (serial nodes) | ⬜ one grade per clip | P0 | 1.3 |
+| 2.9.1 | Several corrections per clip (serial nodes) | ✅ up to 8 serial nodes after node 01 | – | 1.3 |
 | 2.9.2 | Timeline grade (one grade over the whole timeline) | ⬜ | P1 | 1.3 |
 | 2.9.3 | Color groups (group pre-clip / post-clip grades) | 🟡 "apply to the whole recording" copies a grade to all screen or all camera clips (a copy, not a live link) | P1 | 1.13 |
-| 2.9.4 | Enable / disable a node (⌘D), labels, reset | ⬜ grade reset only | P1 | 1.3 |
-| 2.9.5 | Bypass all grades (⇧D) | 🔨 | P0 | 1.14 |
+| 2.9.4 | Enable / disable a node (⌘D), labels, reset | ✅ enable / disable, rename, reset, reorder | – | 1.3 |
+| 2.9.5 | Bypass all grades (⇧D) | ✅ ⇧D | – | 1.14 |
 | 2.9.6 | Parallel node, layer mixer (with blend modes) | ⬜ | P2 | 1.13 |
-| 2.9.7 | Outside node | ⬜ | P2 | 1.13 |
+| 2.9.7 | Outside node | ✅ invert (grade outside the selection) | – | 1.13 |
 | 2.9.8 | Shared nodes (one node used by many clips) | ⬜ | P2 | 1.13 |
 | 2.9.9 | Splitter / combiner, key mixer | ⬜ | P3 | 1.13 |
 | 2.9.10 | Compound nodes | ⬜ | P3 | 1.13 |
@@ -211,7 +218,7 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 | 2.10.1 | Temporal noise reduction | ⬜ | P1 | – |
 | 2.10.2 | Spatial noise reduction | ⬜ | P1 | – |
 | 2.10.3 | Sharpen (radius, coring, level) | ⬜ a field exists in the model but is not rendered | P1 | – |
-| 2.10.4 | Blur palette (per-channel radius, H/V ratio) | 🟡 uniform blur effect | P2 | – |
+| 2.10.4 | Blur palette (per-channel radius, H/V ratio) | 🟡 Lens Blur (uniform) on the Color page | P2 | – |
 | 2.10.5 | Mist / diffusion | ⬜ | P2 | – |
 | 2.10.6 | Motion blur (synthetic) | ⬜ | P3 | – |
 | 2.10.7 | Input sizing (zoom, pan, tilt, rotate, flip) | 🟡 clip transform on the Edit page | – | – |
@@ -225,11 +232,11 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 
 | # | Resolve | Lectern now | P | Step |
 |---|---|---|---|---|
-| 2.11.1 | Look presets with strength | 🔨 14 tuned cinematic looks | P1 | 1.11 |
-| 2.11.2 | Film grain | ⬜ | P1 | – |
-| 2.11.3 | Halation | ⬜ | P1 | – |
-| 2.11.4 | Glow / bloom | ⬜ | P2 | – |
-| 2.11.5 | Print film emulation (e.g. Kodak 2383 LUTs) | ⬜ | P2 | 1.11 |
+| 2.11.1 | Look presets with strength | ✅ 16 tuned looks, Amount, apply to all | – | 1.11 |
+| 2.11.2 | Film grain | ✅ same noise on CPU and GPU, moves 24×/s | – | – |
+| 2.11.3 | Halation | ✅ | – | – |
+| 2.11.4 | Glow / bloom | ✅ | – | – |
+| 2.11.5 | Print film emulation (e.g. Kodak 2383 LUTs) | ✅ Warm Print, Cool Print, Soft Negative | – | 1.11 |
 | 2.11.6 | Vignette | ✅ | – | – |
 | 2.11.7 | Lens blur, aperture diffraction, chromatic aberration | ⬜ | P3 | – |
 | 2.11.8 | Film damage, gate weave | ⬜ | P3 | – |
@@ -239,13 +246,13 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 
 | # | Resolve | Lectern now | P | Step |
 |---|---|---|---|---|
-| 2.12.1 | Copy / paste grade | 🔨 | P0 | 1.3 |
-| 2.12.2 | Apply the previous clip's grade (=) | 🔨 | P1 | 1.3 |
-| 2.12.3 | Apply a grade to many clips at once | 🟡 apply to the whole recording (screen / camera) | P1 | 1.3 |
+| 2.12.1 | Copy / paste grade | ✅ ⌘C / ⌘V, right-click menu, Color menu | – | 1.3 |
+| 2.12.2 | Apply the previous clip's grade (=) | ✅ = | – | 1.3 |
+| 2.12.3 | Apply a grade to many clips at once | ✅ to next, to all, paste to selected clips | – | 1.3 |
 | 2.12.4 | Append a node to selected clips | ⬜ | P2 | 1.13 |
-| 2.12.5 | Gallery: grab still, label, compare | ⬜ | P1 | 1.11 |
-| 2.12.6 | Apply a grade from a still | ⬜ | P1 | 1.11 |
-| 2.12.7 | PowerGrades (shared across projects) | 🔨 save the current grade as a custom look | P2 | 1.11 |
+| 2.12.5 | Gallery: grab still, label, compare | ✅ Grab Still ⌥⌘G | – | 1.11 |
+| 2.12.6 | Apply a grade from a still | ✅ double-click a still | – | 1.11 |
+| 2.12.7 | PowerGrades (shared across projects) | 🟡 My Looks (saved grades across projects; correction + look, not nodes) | P2 | 1.11 |
 | 2.12.8 | Memories (⌥1 … 8 save, ⌃1 … 8 recall) | ⬜ | P2 | 1.11 |
 | 2.12.9 | Import / export grades (.drx) and stills | ⬜ | P2 | 1.11 |
 | 2.12.10 | Grade keyframes (dynamic / static, per node, per window) | 🟡 the data model can animate scalar color values; no UI; wheels and curves are not animatable | P1 | 1.14 |
@@ -256,9 +263,9 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 
 | # | Resolve | Lectern now | P | Step |
 |---|---|---|---|---|
-| 2.13.1 | Split-screen wipe (graded vs ungraded, still, previous clip, version) | 🔨 graded vs ungraded | P0 | 1.11 |
-| 2.13.2 | Side-by-side compare | 🔨 | P1 | 1.11 |
-| 2.13.3 | Highlight (matte) view | ⬜ | P1 | 1.7 |
+| 2.13.1 | Split-screen wipe (graded vs ungraded, still, previous clip, version) | ✅ against the ungraded picture or a still | – | 1.11 |
+| 2.13.2 | Side-by-side compare | ✅ | – | 1.11 |
+| 2.13.3 | Highlight (matte) view | ✅ | – | 1.7 |
 | 2.13.4 | Viewer zoom and pan (fit, 100 %, 200 %) | ⬜ | P1 | 1.14 |
 | 2.13.5 | Enhanced / cinema viewer | ⬜ | P2 | 1.14 |
 | 2.13.6 | Loop playback, J K L on the Color page | 🟡 play / pause only | P1 | 1.14 |
@@ -266,7 +273,7 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 | 2.13.8 | Vectorscope skin-tone line, 75 % / 100 % targets | ✅ | – | 1.5 |
 | 2.13.9 | Scope scale in % and HDR nits | 🟡 10-bit (0–1023) only | P1 | 1.5 |
 | 2.13.10 | Scopes computed on the GPU at full resolution in real time | 🟡 CPU on the preview frame | P1 | 1.5 |
-| 2.13.11 | 1-up / 2-up / 4-up scopes | ⬜ | P2 | 1.5 |
+| 2.13.11 | 1-up / 2-up / 4-up scopes | 🟡 1-up and 2-up | P2 | 1.5 |
 | 2.13.12 | Scope settings (low-pass, brightness, extents, graticule) | ⬜ | P2 | 1.5 |
 | 2.13.13 | CIE chromaticity scope | ⬜ | P3 | 1.5 |
 | 2.13.14 | Safe areas and guides | ⬜ | P3 | 1.14 |
@@ -291,20 +298,18 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 | 2.2 Primaries | 17 | 9 | 1 | 7 |
 | 2.3 Curves | 11 | 1 | 0 | 10 |
 | 2.4 Hue / channel tools | 5 | 0 | 0 | 5 |
-| 2.5 Qualifier | 8 | 0 | 0 | 8 |
-| 2.6 Windows | 8 | 0 | 0 | 8 |
+| 2.5 Qualifier | 8 | 4 | 2 | 2 |
+| 2.6 Windows | 8 | 4 | 1 | 3 |
 | 2.7 Tracking | 6 | 0 | 0 | 6 |
-| 2.8 AI tools | 12 | 1 | 2 | 9 |
-| 2.9 Nodes and structure | 13 | 0 | 1 | 12 |
+| 2.8 AI tools | 12 | 2 | 1 | 9 |
+| 2.9 Nodes and structure | 13 | 4 | 1 | 8 |
 | 2.10 Repair, texture, sizing | 12 | 0 | 2 | 10 |
-| 2.11 Looks and film | 9 | 1 | 0 | 8 |
-| 2.12 Grade management | 12 | 0 | 3 | 9 |
-| 2.13 Viewer and scopes | 14 | 2 | 3 | 9 |
+| 2.11 Looks and film | 9 | 6 | 0 | 3 |
+| 2.12 Grade management | 12 | 5 | 2 | 5 |
+| 2.13 Viewer and scopes | 14 | 5 | 4 | 5 |
 | 2.14 Hardware and workflow | 7 | 2 | 0 | 5 |
-| **Total** | **152** | **19** | **16** | **117** |
+| **Total** | **152** | **45** | **18** | **89** |
 
-🔨 rows count as ⬜ until they ship, except 2.8.6 and 2.12.7, which count as
-🟡 because part of them already works.
 
 ---
 
@@ -338,18 +343,18 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 | Custom RGB curves | ● | ● | ● | ● | ● | ● | ● |
 | Hue / sat curves | ● | ● | ● | ● | ● | ◐ | – |
 | Mesh warper (hue-sat / chroma-luma) | ● | ● (X Grade) | ● (Color Warper) | – | – | – | – |
-| Qualifier / keyer | ● | ● | ● | ● | ● | ◐ (vectors) | – |
-| Power windows / shapes | ● | ● | ● | ● | ● | – | – |
+| Qualifier / keyer | ● | ● | ● | ● | ● | ◐ (vectors) | ● (HSL) |
+| Power windows / shapes | ● | ● | ● | ● | ● | – | ◐ (circle, rectangle, gradient) |
 | Tracking | ● | ● | ● | ● | ● | – | – |
-| AI masks (person / object) | ● | ◐ (Face Track) | ● (ML keys) | – | – | – | ◐ |
-| Several corrections per clip | ● nodes | ● layers | ● nodes | ● layers | ● | ◐ | – |
+| AI masks (person / object) | ● | ◐ (Face Track) | ● (ML keys) | – | – | – | ◐ (person / background) |
+| Several corrections per clip | ● nodes | ● layers | ● nodes | ● layers | ● | ◐ | ● (serial nodes) |
 | Group / timeline grades | ● | ● | ● | ● | ● | ● (relational) | ◐ |
 | Shot match / chart match | ● | ◐ | – | ◐ | ◐ | ◐ | – |
-| Gallery / stills / grade library | ● | ● | ◐ | ● | ● | ◐ | 🔨 |
-| Split-screen compare | ● | ● | ● | ● | ● | ● | 🔨 |
+| Gallery / stills / grade library | ● | ● | ◐ | ● | ● | ◐ | ● |
+| Split-screen compare | ● | ● | ● | ● | ● | ● | ● |
 | Grade keyframes | ● | ● | ● | ● | ● | ● | – |
 | Noise reduction | ● | ● | ● | ◐ | ● | – | – |
-| Film grain / halation / glow | ● | ● | ◐ | ◐ | ◐ | – | – |
+| Film grain / halation / glow | ● | ● | ◐ | ◐ | ◐ | – | ● |
 | ACES / scene-linear pipeline | ● | ● (Truelight) | ● (OCIO) | ● | ● | ● (ACES) | – |
 | Input color management from metadata | ● | ● | ● | ● | ● | ● | ● |
 | HDR grading + Dolby Vision | ● | ● | ● | ● | ● | ◐ | – |
@@ -366,16 +371,16 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 | 3-way wheels | ● | ● | ● | – | – | ◐ | – | ● (4 wheels + jog) |
 | Custom RGB curves | ● | ● | ● | – | ◐ | ◐ | ● | ● |
 | Hue / sat curves | ● | ● | ● | – | – | – | ◐ (HSL) | – |
-| HSL secondary / color key | ● | ● | ● | – | – | – | – | – |
-| Shape masks with tracking | ● | ◐ | ◐ | – | – | – | ◐ | – |
-| AI subject mask | ◐ | ● (Magnetic Mask) | – | – | – | – | ● | ◐ |
-| Look presets with intensity | ● | ◐ (LUTs, presets) | ● | ● | ● | ● | ● (filters) | 🔨 |
-| Real film-stock emulation (negative + print) | – | – | ◐ | ● | ● | ● | – | – |
-| Grain / halation / bloom | ◐ (faded film, no halation) | – | ● (grain, diffusion) | ● | ● | ◐ | ◐ | – |
+| HSL secondary / color key | ● | ● | ● | – | – | – | – | ● |
+| Shape masks with tracking | ● | ◐ | ◐ | – | – | – | ◐ | ◐ (no tracking) |
+| AI subject mask | ◐ | ● (Magnetic Mask) | – | – | – | – | ● | ● (person / background) |
+| Look presets with intensity | ● | ◐ (LUTs, presets) | ● | ● | ● | ● | ● (filters) | ● |
+| Real film-stock emulation (negative + print) | – | – | ◐ | ● | ● | ● | – | ◐ (print stage) |
+| Grain / halation / bloom | ◐ (faded film, no halation) | – | ● (grain, diffusion) | ● | ● | ◐ | ◐ | ● |
 | Auto color / white balance | ● | ● | ● (guided) | – | – | ● | ● | ● |
 | Shot / color match | ● | ● | – | – | ◐ (CineMatch) | ● (AI) | – | – |
-| Compare view (before / after) | ● | ● | ◐ | ● | ◐ | ● | ◐ | 🔨 |
-| Copy / paste grade | ● | ● | ● | ● | ● | ● | ● | 🔨 |
+| Compare view (before / after) | ● | ● | ◐ | ● | ◐ | ● | ◐ | ● |
+| Copy / paste grade | ● | ● | ● | ● | ● | ● | ● | ● |
 | Scopes | ● | ● | ◐ | – | – | ◐ | – | ● |
 | Log camera input | ● | ● | ● | ● | ● (camera profiles) | ● | ◐ | ◐ (4 logs) |
 | HDR | ● | ● | ◐ | ◐ | ◐ | ◐ | ◐ | ◐ (input only) |
@@ -385,20 +390,20 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 
 | Tool | Standout idea | Lectern item |
 |---|---|---|
-| DaVinci Resolve | Nodes; Magic Mask; HDR zone wheels; Color Warper; Film Look Creator | 2.9, 2.8.1, 2.2.15, 2.4.1, 🔨 Looks |
+| DaVinci Resolve | Nodes; Magic Mask; HDR zone wheels; Color Warper; Film Look Creator | Nodes ✅, Magic Mask ✅ (person / background), Looks + film tools ✅; 2.2.15, 2.4.1 next |
 | Baselight | **Base Grade**: exposure-based balancing that keeps colors natural when pushed hard; **X Grade**: change a color by pinning points on the picture; **Chromogen**: a look-development tool; **Texture Equalizer**: contrast by detail frequency | Make the primaries photometric (stops) in the float pipeline; viewer pins for HSL curves (2.3.10); look builder; Mid/Detail (2.2.5) |
 | Flame | Grading inside a compositor: the matte from any node feeds the grade | Key input for correctors (2.6.8) |
 | SCRATCH | Live grading on set and real-time dailies | Live grade in the recorder preview (later) |
 | Mistika | Stereo and 360 finishing | Not planned (specialist) |
 | Avid Symphony | **Relational grading**: one correction per source file reused wherever that source appears | Grade per media source as well as per clip (color groups, 2.9.3) |
-| Lumetri | **Basic + Creative** split: correct first, then a look with an Intensity slider; Faded Film; Shadow / Highlight tint | 🔨 Looks with Amount; add a Fade and split-tone control |
+| Lumetri | **Basic + Creative** split: correct first, then a look with an Intensity slider; Faded Film; Shadow / Highlight tint | Looks with Amount ✅; add a Fade and split-tone control |
 | Final Cut Pro | **Balance Color** and **Match Color** as one-click actions; Magnetic Mask | Auto Balance ✅; shot match (2.8.3); magic mask (2.8.1) |
 | Colorista | **Guided correction** and a skin overlay on the scopes | Guided first-time grade in the Color page; skin-tone line ✅ |
 | Magic Bullet Looks | Looks built from real-world "tools": lens, filter, film, diffusion | Looks palette groups by stage (lens, film, print) |
 | Dehancer | **Film chain**: negative → print, halation, bloom, grain, film breath, gate weave | Film look tools (2.11.2–2.11.8) as one "Film" palette |
 | FilmConvert | Profiles per camera model so the same stock looks the same on every camera | Camera profiles in input color management |
 | Colourlab Ai | **AI match a whole timeline** to a reference | `match_shot` MCP tool + Shot Match (2.8.3) |
-| CapCut | One-tap filters with an amount slider, HSL for beginners | 🔨 Looks thumbnails with Amount; simple HSL tab |
+| CapCut | One-tap filters with an amount slider, HSL for beginners | Looks thumbnails with Amount ✅; simple HSL tab |
 
 ---
 
@@ -421,17 +426,20 @@ the most-used ones (primaries, curves, LUTs, scopes, input color).
 
 ## 5. Order of work for color (what to build next)
 
+Done on 2026-10-06: cinematic looks with Amount and My Looks; copy / paste
+and spread grades; wipe, side by side, bypass; nodes with windows, a color
+key and person / background; gallery stills; grain, halation, glow and film
+print emulation; the Resolve-style Color page.
+
 | Order | What | Rows | Step |
 |---|---|---|---|
-| 1 🔨 | Cinematic looks with Amount, apply to all, save custom look | 2.11.1, 2.8.6, 2.12.7 | 1.11 |
-| 2 🔨 | Copy / paste grade, apply previous clip's grade | 2.12.1, 2.12.2 | 1.3 |
-| 3 🔨 | Before / after: split wipe, side by side, bypass all grades | 2.13.1, 2.13.2, 2.9.5 | 1.11 / 1.14 |
-| 4 | HSL curves (Hue vs Hue / Sat / Lum, Lum vs Sat, Sat vs Sat) + viewer picker | 2.3.4–2.3.10 | 1.6 |
-| 5 | Corrector layers (several grades per clip) + timeline grade | 2.9.1, 2.9.2, 2.9.4 | 1.3 |
-| 6 | Float linear pipeline, working / output space, ACES | 2.1.1–2.1.5 | 1.2 |
-| 7 | Qualifier + power windows | 2.5, 2.6 | 1.7, 1.8 |
-| 8 | Tracking + magic mask as a window | 2.7, 2.8.1 | 1.9, 1.10 |
-| 9 | Gallery stills, wipe against a still, grade keyframes | 2.12.5, 2.12.6, 2.12.10 | 1.11, 1.14 |
-| 10 | Film tools (grain, halation, glow, print), sharpen, noise reduction | 2.11, 2.10.1–2.10.3 | – |
-| 11 | Shot match, chart match | 2.8.3, 2.8.4 | 1.12 |
-| 12 | Nodes lite (parallel, layer mixer, outside, shared) | 2.9.6–2.9.8 | 1.13 |
+| 1 | HSL curves (Hue vs Hue / Sat / Lum, Lum vs Sat, Sat vs Sat) + viewer picker | 2.3.4–2.3.10 | 1.6 |
+| 2 | Sharpen and spatial / temporal noise reduction | 2.10.1–2.10.3 | – |
+| 3 | Tracking for windows (point / cloud), magic mask follows already | 2.7 | 1.9 |
+| 4 | Grade keyframes (correction, nodes, windows) | 2.12.10 | 1.14 |
+| 5 | Float linear pipeline, working / output space, ACES | 2.1.1–2.1.5 | 1.2 |
+| 6 | Polygon / Bézier windows, several windows per node | 2.6.2, 2.6.5 | 1.8 |
+| 7 | Shot match, chart match | 2.8.3, 2.8.4 | 1.12 |
+| 8 | Timeline grade, color groups, parallel / layer mixer / shared nodes | 2.9.2–2.9.8 | 1.13 |
+| 9 | Viewer zoom, scopes % / nits / 4-up | 2.13.4, 2.13.9, 2.13.11 | 1.5 / 1.14 |
+| 10 | HDR zone wheels, Log wheels, Primaries bars, Mid/Detail | 2.2.5, 2.2.13–2.2.15 | 1.4 |

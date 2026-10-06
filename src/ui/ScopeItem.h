@@ -21,6 +21,9 @@ class ScopeItem : public QQuickPaintedItem {
     QML_ELEMENT
     Q_PROPERTY(PlaybackController* playback READ playback WRITE setPlayback NOTIFY playbackChanged)
     Q_PROPERTY(QString mode READ mode WRITE setMode NOTIFY modeChanged)
+    /// Only the histogram, faint, over the whole item and no graticule — the
+    /// backdrop of the curve editor (as in Resolve's Curves palette).
+    Q_PROPERTY(bool bare READ bare WRITE setBare NOTIFY bareChanged)
     /// Summary numbers (for tests and the MCP agent): black/white levels, clipping.
     Q_PROPERTY(QVariantMap stats READ stats NOTIFY statsChanged)
 
@@ -31,6 +34,8 @@ public:
     [[nodiscard]] QString mode() const { return mode_; }
     void setMode(const QString& mode);
     [[nodiscard]] QVariantMap stats() const { return stats_; }
+    [[nodiscard]] bool bare() const { return bare_; }
+    void setBare(bool bare);
     void paint(QPainter* painter) override;
 
     /// Computes the scope data for `frame` (exposed for tests).
@@ -40,12 +45,14 @@ signals:
     void playbackChanged();
     void modeChanged();
     void statsChanged();
+    void bareChanged();
 
 private:
     static constexpr int kColumns = 320;
     static constexpr int kLevels = 256;
     QPointer<PlaybackController> playback_;
     QString mode_ = QStringLiteral("parade");
+    bool bare_ = false;
     QVariantMap stats_;
     // Per column, counts per level: luma and R, G, B.
     std::vector<std::array<std::uint16_t, kLevels>> luma_;

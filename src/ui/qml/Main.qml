@@ -87,6 +87,39 @@ ApplicationWindow {
             MenuItem { text: "Next Frame"; onTriggered: window.playback.step(1) }
         }
         Menu {
+            id: colorMenu
+            title: "Color"
+            enabled: window.editor !== null
+            readonly property var page: window.editor ? window.editor.colorPage : null
+            readonly property bool ready: !!page && window.project.selectedClip.length > 0
+            MenuItem { text: "Open Color Page"; onTriggered: window.editor.page = "color" }
+            MenuSeparator {}
+            Menu {
+                title: "Add Node"
+                enabled: colorMenu.ready
+                MenuItem { text: "Serial Node (whole picture)"; onTriggered: { window.editor.page = "color"; window.editor.colorPage.addNode("") } }
+                MenuItem { text: "Circle Window"; onTriggered: { window.editor.page = "color"; window.editor.colorPage.addNode("circle") } }
+                MenuItem { text: "Rectangle Window"; onTriggered: { window.editor.page = "color"; window.editor.colorPage.addNode("rectangle") } }
+                MenuItem { text: "Gradient Window"; onTriggered: { window.editor.page = "color"; window.editor.colorPage.addNode("gradient") } }
+                MenuItem { text: "Color Key"; onTriggered: { window.editor.page = "color"; window.editor.colorPage.addNode("color") } }
+                MenuItem { text: "Person"; enabled: window.project.segmentationAvailable; onTriggered: { window.editor.page = "color"; window.editor.colorPage.addNode("person") } }
+                MenuItem { text: "Background"; enabled: window.project.segmentationAvailable; onTriggered: { window.editor.page = "color"; window.editor.colorPage.addNode("background") } }
+            }
+            MenuSeparator {}
+            MenuItem { text: "Copy Grade"; enabled: colorMenu.ready; onTriggered: window.project.copyGrade(window.project.selectedClip) }
+            MenuItem { text: "Paste Grade"; enabled: colorMenu.ready && window.project.hasCopiedGrade; onTriggered: window.project.pasteGrade(window.project.selectedClips) }
+            MenuItem { text: "Apply Grade of Previous Clip"; enabled: colorMenu.ready; onTriggered: window.project.applyPreviousGrade(window.project.selectedClip) }
+            MenuItem { text: "Apply Grade to Next Clip"; enabled: colorMenu.ready; onTriggered: window.project.applyGradeToNext(window.project.selectedClip) }
+            MenuItem { text: "Apply Grade to All Clips"; enabled: colorMenu.ready; onTriggered: window.project.applyGradeToAll(window.project.selectedClip) }
+            MenuItem { text: "Grab Still"; enabled: colorMenu.ready; onTriggered: window.project.grabStill(window.project.selectedClip, window.playback.position) }
+            MenuItem { text: "Reset Grade"; enabled: colorMenu.ready; onTriggered: window.project.resetColor(window.project.selectedClip) }
+            MenuSeparator {}
+            MenuItem { text: "Bypass All Grades"; checkable: true; enabled: !!colorMenu.page; checked: !!colorMenu.page && colorMenu.page.bypass; onTriggered: { window.editor.page = "color"; window.editor.colorPage.bypass = !window.editor.colorPage.bypass } }
+            MenuItem { text: "Wipe Before / After"; checkable: true; enabled: !!colorMenu.page; checked: !!colorMenu.page && colorMenu.page.compare === "wipe"; onTriggered: { window.editor.page = "color"; window.editor.colorPage.compare = window.editor.colorPage.compare === "wipe" ? "off" : "wipe" } }
+            MenuItem { text: "Side by Side"; checkable: true; enabled: !!colorMenu.page; checked: !!colorMenu.page && colorMenu.page.compare === "side"; onTriggered: { window.editor.page = "color"; window.editor.colorPage.compare = window.editor.colorPage.compare === "side" ? "off" : "side" } }
+            MenuItem { text: "Highlight Node Selection"; checkable: true; enabled: !!colorMenu.page && colorMenu.page.nodeId.length > 0; checked: !!colorMenu.page && colorMenu.page.highlight; onTriggered: window.editor.colorPage.setHighlight(!window.editor.colorPage.highlight) }
+        }
+        Menu {
             title: "View"
             enabled: window.editor !== null
             MenuItem { text: "Edit Page"; checkable: true; checked: !!window.editor && window.editor.page === "edit"; onTriggered: window.editor.page = "edit" }

@@ -112,8 +112,16 @@ void ScopeItem::analyze(const QImage& frame) {
     update();
 }
 
+void ScopeItem::setBare(bool bare) {
+    if (bare == bare_) return;
+    bare_ = bare;
+    if (bare_) mode_ = QStringLiteral("histogram");
+    emit bareChanged();
+    update();
+}
+
 void ScopeItem::paint(QPainter* p) {
-    const QRectF area = boundingRect().adjusted(34, 8, -8, -8);
+    const QRectF area = bare_ ? boundingRect() : boundingRect().adjusted(34, 8, -8, -8);
     p->setRenderHint(QPainter::Antialiasing, false);
     QFont f = p->font();
     f.setPixelSize(10);
@@ -158,6 +166,7 @@ void ScopeItem::paint(QPainter* p) {
 
     // Graticule: 0 … 1023 like Resolve.
     for (int v : {0, 128, 256, 384, 512, 640, 768, 896, 1023}) {
+        if (bare_) break;
         const double y = levelY(v / 1023.0);
         p->setPen(kGraticule);
         p->drawLine(QPointF(area.left(), y), QPointF(area.right(), y));
@@ -167,8 +176,9 @@ void ScopeItem::paint(QPainter* p) {
     if (columns_ == 0) return;
 
     if (mode_ == QLatin1String("histogram")) {
-        const std::array<QColor, 4> colors{QColor(220, 220, 220, 140), QColor(240, 70, 70, 140), QColor(70, 220, 90, 140),
-                                           QColor(80, 130, 255, 140)};
+        const int alpha = bare_ ? 60 : 140;
+        const std::array<QColor, 4> colors{QColor(220, 220, 220, alpha), QColor(240, 70, 70, alpha), QColor(70, 220, 90, alpha),
+                                           QColor(80, 130, 255, alpha)};
         std::uint32_t peak = 1;
         for (int c = 1; c < 4; ++c) peak = std::max(peak, *std::max_element(histogram_[static_cast<std::size_t>(c)].begin(), histogram_[static_cast<std::size_t>(c)].end()));
         p->setRenderHint(QPainter::Antialiasing, true);

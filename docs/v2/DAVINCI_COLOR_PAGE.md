@@ -34,12 +34,12 @@ other v2 documents.
 
 | # | Area | Lectern now | P | Notes |
 |---|---|---|---|---|
-| 1.1 | Gallery (stills, PowerGrades, memories) — left top | ⬜ | P2 | Screenshot shows "No stills created" |
+| 1.1 | Gallery (stills, PowerGrades, memories) — left top | ✅ | – | Screenshot shows "No stills created" |
 | 1.2 | Viewer — centre top | 🟡 (Color page viewer) | P0 | Lectern preview exists, no color-page tools |
-| 1.3 | Node editor — right top | ⬜ | P2 | Lectern starts with an ordered list of corrector layers (COLOR_EFFECTS_PARITY §5.1) |
+| 1.3 | Node editor — right top | 🟡 | P2 | Lectern starts with an ordered list of corrector layers (COLOR_EFFECTS_PARITY §5.1) |
 | 1.4 | Clips strip (thumbnail per clip, version, codec) + mini timeline | ✅ (clip strip) | P1 | Fast clip-to-clip grading |
 | 1.5 | Left palette area (one palette at a time) | ✅ (Primaries palette) | P1 | Adjust panel today |
-| 1.6 | Right palette area (Keyframes, Scopes, Info) | 🟡 (Primaries + Curves palettes) | P1 | |
+| 1.6 | Right palette area (Keyframes, Scopes, Info) | 🟡 | P1 |  |
 | 1.7 | Page bar along the bottom | ✅ (Edit | Color page bar) | P2 | Lectern: Simple / Pro / Color modes |
 
 ### 1.1 Page bar *(screenshot, image 4)*
@@ -67,7 +67,7 @@ highlighted with a red underline.
 
 | # | Control | What it does | Lectern | P |
 |---|---|---|---|---|
-| 2.1 | Gallery toggle (sidebar icon) | Show/hide the gallery | ⬜ | P2 |
+| 2.1 | Gallery toggle (sidebar icon) | Show/hide the gallery | ✅ | – |
 | 2.2 | Import/download icon | Import stills / PowerGrades | ⬜ | P2 |
 | 2.3 | Thumbnail size slider | Gallery thumbnail size | ⬜ | P3 |
 | 2.4 | Sort, grid view, list view | Gallery display | ⬜ | P3 |
@@ -75,9 +75,9 @@ highlighted with a red underline.
 | 2.6 | Expand (fullscreen gallery) | | ⬜ | P3 |
 | 2.7 | ··· menu | Gallery options | ⬜ | P3 |
 | 2.8 | Zoom "49 %" ▾ | Viewer magnification | ⬜ | P1 |
-| 2.9 | Split-screen / wipe ▾ | Compare with still, previous clip, versions | ⬜ | P1 |
+| 2.9 | Split-screen / wipe ▾ | Compare with still, previous clip, versions | ✅ | – |
 | 2.10 | Clip name / timecode field ▾ | Current clip, timeline timecode | 🟡 | P1 |
-| 2.11 | Highlight toggle (color sparkle icon) | Show the qualifier/window matte on the viewer | ⬜ | P1 |
+| 2.11 | Highlight toggle (color sparkle icon) | Show the qualifier/window matte on the viewer | ✅ | – |
 | 2.12 | ··· menu | Viewer options (unmix, guides, safe area) | ⬜ | P2 |
 | 2.13 | Pointer / selection ▾ | Node editor tool | ⬜ | P2 |
 | 2.14 | Node layout ▾ | Arrange / clean up nodes | ⬜ | P2 |
@@ -89,14 +89,14 @@ highlighted with a red underline.
 | # | Control | Lectern | P |
 |---|---|---|---|
 | 3.1 | Picture, scrubber bar under it | ✅ | – |
-| 3.2 | Picker ▾ (qualifier pick / add / subtract / feather) | ⬜ | P1 |
+| 3.2 | Picker ▾ (qualifier pick / add / subtract / feather) | 🟡 | P1 |
 | 3.3 | Layers icon (matte / overlay mode) | ⬜ | P2 |
 | 3.4 | Audio on/off | 🟡 | P2 |
 | 3.5 | Transport: go to first, reverse, stop, play, go to last | 🟡 | P1 |
 | 3.6 | Loop | ⬜ | P1 |
-| 3.7 | On-screen controls: window shapes, tracker points, qualifier picks | ⬜ | P1 |
+| 3.7 | On-screen controls: window shapes, tracker points, qualifier picks | 🟡 | P1 |
 | 3.8 | Enhanced viewer (Alt+F) / cinema viewer (⌘F) | ⬜ | P2 |
-| 3.9 | Split screen: selected clips, still, previous/next clip, versions | ⬜ | P1 |
+| 3.9 | Split screen: selected clips, still, previous/next clip, versions | 🟡 | P1 |
 
 ## 4. Palette bar *(screenshot, 17 left + 3 right)*
 
@@ -111,8 +111,8 @@ highlighted with a red underline.
 | 4.7 | 7 | Curves (Custom, Hue vs Hue/Sat/Lum, Lum vs Sat, Sat vs Sat, Sat vs Lum) | 🟡 (Custom YRGB; hue/sat curves next) | P1 |
 | 4.8 | 8 | Color Slice (Resolve 20+; drop icon) — verify name in 21 | ⬜ | P2 |
 | 4.9 | 9 | Color Warper (hue-sat, chroma-luma mesh) | ⬜ | P3 |
-| 4.10 | 10 | Qualifier (HSL, RGB, Luma, 3D) | ⬜ | P1 |
-| 4.11 | 11 | Window (power windows) | ⬜ | P1 |
+| 4.10 | 10 | Qualifier (HSL, RGB, Luma, 3D) | ✅ | – |
+| 4.11 | 11 | Window (power windows) | 🟡 | P1 |
 | 4.12 | 12 | Tracker (window, stabilizer, FX) | ⬜ | P1 |
 | 4.13 | 13 | Magic Mask (AI person/object) | 🟡 | P1 |
 | 4.14 | 14 | Blur (blur, sharpen, mist) | 🟡 | P1 |
@@ -197,7 +197,7 @@ scale 0, 128, 256 … 1023 (10-bit code values), yellow graticule.
 | 6.3 | Vectorscope (with skin-tone indicator, 75 %/100 % targets) | ✅ | P1 |
 | 6.4 | Histogram | ✅ | P1 |
 | 6.5 | CIE chromaticity | ⬜ | P3 |
-| 6.6 | 1-up / 2-up / 4-up layout | ⬜ | P2 |
+| 6.6 | 1-up / 2-up / 4-up layout | 🟡 | P2 |
 | 6.7 | Scale: 10-bit (0–1023), %, HDR nits | 🟡 (10-bit scale) | P1 (10-bit and %) |
 | 6.8 | Scope settings: brightness, graticule, color, low-pass filter, extents | ⬜ | P2 |
 | 6.9 | Expand to a floating window | ⬜ | P2 |
@@ -296,15 +296,15 @@ node info.
 
 | # | Feature | Lectern | P |
 |---|---|---|---|
-| 8.1 | Serial node (Alt+S), node before (Shift+S) | ⬜ | P2 |
+| 8.1 | Serial node (Alt+S), node before (Shift+S) | ✅ | – |
 | 8.2 | Parallel node (Alt+P), layer mixer node (Alt+L) | ⬜ | P2 |
-| 8.3 | Outside node (Alt+O) — the inverse of a selection | ⬜ | P2 |
+| 8.3 | Outside node (Alt+O) — the inverse of a selection | ✅ | – |
 | 8.4 | Splitter / combiner, key mixer | ⬜ | P3 |
-| 8.5 | Node labels, enable/disable (⌘D), reset node | ⬜ | P2 |
+| 8.5 | Node labels, enable/disable (⌘D), reset node | ✅ | – |
 | 8.6 | Node cache, node key input/output | ⬜ | P3 |
 | 8.7 | Compound nodes | ⬜ | P3 |
 | 8.8 | Color space transform / ResolveFX on a node | ⬜ | P2 |
-| 8.9 | Clip / timeline / group pre / group post graphs | ⬜ | P1 (clip + timeline) |
+| 8.9 | Clip / timeline / group pre / group post graphs | 🟡 | P1 (clip + timeline) |
 | 8.10 | Shared nodes (one node used by many clips) | ⬜ | P2 |
 | 8.11 | Versions (local/remote), copy grade (Shift+=, middle-click) | 🟡 | P1 |
 
@@ -312,10 +312,10 @@ node info.
 
 | # | Feature | Lectern | P |
 |---|---|---|---|
-| 9.1 | Grab still (⌥⌘G) | ⬜ | P1 |
-| 9.2 | Apply grade from still (middle-click / right-click) | ⬜ | P1 |
-| 9.3 | Wipe against a still | ⬜ | P1 |
-| 9.4 | PowerGrade albums (shared across projects) | ⬜ | P2 |
+| 9.1 | Grab still (⌥⌘G) | ✅ | – |
+| 9.2 | Apply grade from still (middle-click / right-click) | ✅ | – |
+| 9.3 | Wipe against a still | ✅ | – |
+| 9.4 | PowerGrade albums (shared across projects) | 🟡 | P2 |
 | 9.5 | Memories (Alt+1…8 to save, Ctrl+1…8 to recall) | ⬜ | P2 |
 | 9.6 | Export still as image + .cube / .drx | ⬜ | P2 |
 | 9.7 | Lightbox view of all clips | ⬜ | P3 |
@@ -352,17 +352,17 @@ a field, pick white balance).
 
 | Section | Items | ✅ | 🟡 | ⬜ |
 |---|---|---|---|---|
-| 1 Layout (page bar mapping not counted) | 7 | 3 | 2 | 2 |
-| 2 Top toolbar | 16 | 0 | 1 | 15 |
-| 3 Viewer | 9 | 1 | 2 | 6 |
-| 4 Palette bar | 20 | 2 | 4 | 14 |
+| 1 Layout (page bar mapping not counted) | 7 | 4 | 3 | 0 |
+| 2 Top toolbar | 16 | 3 | 1 | 12 |
+| 3 Viewer | 9 | 1 | 5 | 3 |
+| 4 Palette bar | 20 | 3 | 5 | 12 |
 | 5 Primaries | 24 | 16 | 1 | 7 |
-| 6 Scopes | 10 | 4 | 1 | 5 |
-| 8 Node editor | 11 | 0 | 1 | 10 |
-| 9 Gallery | 7 | 0 | 0 | 7 |
-| **Total** | **104** | **26** | **12** | **66** |
+| 6 Scopes | 10 | 4 | 2 | 4 |
+| 8 Node editor | 11 | 3 | 2 | 6 |
+| 9 Gallery | 7 | 3 | 1 | 3 |
+| **Total** | **104** | **37** | **20** | **47** |
 
-Counts recomputed 2026-10-06. The gap list against all of Resolve's color
+Counts recomputed 2026-10-06 (after the Color page rebuild). The gap list against all of Resolve's color
 features (pipeline, AI tools, film tools, grade management), and the
 comparison with every other grading tool, is in
 [COLOR_GRADING_COMPARISON.md](COLOR_GRADING_COMPARISON.md).

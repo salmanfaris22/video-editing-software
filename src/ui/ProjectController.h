@@ -71,6 +71,7 @@ class ProjectController : public QObject {
     Q_PROPERTY(QVariantList looks READ looks NOTIFY looksChanged)
     /// Film Emulation stocks: [{index, id, name}].
     Q_PROPERTY(QVariantList filmStocks READ filmStocks CONSTANT)
+    Q_PROPERTY(QVariantList stills READ stills NOTIFY projectChanged)
     Q_PROPERTY(int lookPreviewRevision READ lookPreviewRevision NOTIFY lookPreviewsChanged)
     Q_PROPERTY(bool hasCopiedGrade READ hasCopiedGrade NOTIFY copiedGradeChanged)
     /// Background blur can separate people from their background on this system.
@@ -262,6 +263,16 @@ public:
     Q_INVOKABLE void applyGradeToNext(const QString& clipId);
     /// The clip's grade onto every picture clip, as one step.
     Q_INVOKABLE void applyGradeToAll(const QString& clipId);
+    /// Gallery stills: [{id, label, image (file URL), clipName, time}], oldest first.
+    [[nodiscard]] QVariantList stills() const;
+    /// Grabs the frame at `seconds` with the clip's grade into the gallery; returns the still id.
+    Q_INVOKABLE QString grabStill(const QString& clipId, double seconds);
+    /// The still's grade onto the clip (Resolve: middle-click a still).
+    Q_INVOKABLE void applyStill(const QString& stillId, const QString& clipId);
+    Q_INVOKABLE void deleteStill(const QString& stillId);
+    Q_INVOKABLE void renameStill(const QString& stillId, const QString& label);
+    /// Absolute path of a still's image (for wiping against it), or "".
+    Q_INVOKABLE QString stillImagePath(const QString& stillId) const;
     /// Picture clips (video and images on picture tracks) in timeline order:
     /// what "previous", "next" and "all" refer to.
     Q_INVOKABLE QStringList gradableClips() const;

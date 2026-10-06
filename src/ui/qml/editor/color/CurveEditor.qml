@@ -11,6 +11,7 @@ Item {
     property ProjectController project
     property var points: []          // [{x, y}] as stored (empty = no curve)
     property color tint: "#E6E8EE"   // channel color
+    property bool transparent: false // draw over a backdrop (the histogram)
     signal edited(var points)
 
     readonly property var shown: root.points.length >= 2 ? root.points : [{ x: 0, y: 0 }, { x: 1, y: 1 }]
@@ -34,6 +35,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
+        visible: !root.transparent
         color: "#0C0D11"
         border.color: "#262A33"
         radius: 2

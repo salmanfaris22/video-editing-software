@@ -118,7 +118,9 @@ Item {
     Shortcut { sequence: "Shift+4"; context: Qt.WindowShortcut; onActivated: root.page = "edit" }
     Shortcut { sequence: "Shift+6"; context: Qt.WindowShortcut; onActivated: root.page = "color" }
 
+    readonly property alias colorPage: colorPageItem
     ColorPage {
+        id: colorPageItem
         anchors.top: topBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right

@@ -251,10 +251,16 @@ ColorParams gradeAt(const timeline::ColorAdjustments& c, Time local, bool withLo
 }
 
 RenderPlan ungraded(RenderPlan plan) {
-    for (auto& l : plan.layers) {
+    for (auto& l : plan.layers) {  // everything the Color page adds; placement stays
         l.color = ColorParams{};
         l.nodes.clear();
         l.highlightNode = -1;
+        l.grain = 0;
+        l.glow = 0;
+        l.halation = 0;
+        l.vignette = 0;
+        l.blur = 0;
+        l.backgroundBlur = 0;
     }
     return plan;
 }

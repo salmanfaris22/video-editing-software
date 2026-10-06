@@ -142,6 +142,16 @@ timeline clips, with a glowing red record dot. Files in `assets/brand/`;
 macOS `.icns` and Windows `.ico` are wired into the build; the logo is on
 the home screen.
 
-## 7. Next step
+## 7. Where we are and the next step (2026-10-06)
 
-Phase 1.1 — GPU rendering, checked pixel by pixel against today's renderer.
+Done: Phase 1.1 GPU rendering, 1.2 input color (HDR tone mapping), the
+Resolve-style Color page (1.4 primaries, 1.5 scopes, 1.6 custom curves,
+1.7 qualifier, 1.11 looks / LUTs / gallery), nodes that grade part of the
+picture (windows, color key, person / background), film effects (grain,
+halation, glow, print emulation), before / after compare, grade copy, and
+Phase 2.1–2.2 MCP. Lectern now covers about 30 % of Resolve's color
+features fully, 36 % counting partial ones (COLOR_GRADING_COMPARISON.md).
+
+Next, in order: HSL curves; sharpen and noise reduction; tracking for
+windows; grade keyframes; then the float linear pipeline with ACES
+(COLOR_GRADING_COMPARISON.md §5).

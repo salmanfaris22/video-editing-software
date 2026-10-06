@@ -150,8 +150,9 @@ struct RenderPlan {
 
 /// The plan for timeline time `t`.
 [[nodiscard]] RenderPlan buildRenderPlan(const project::Project& project, Time t);
-/// The plan with every grade removed (before/after compare): layers keep
-/// their input color conversion, effects and placement.
+/// The plan without the Color page's work (before/after compare, bypass):
+/// no grades, nodes, looks, film effects, vignette or blurs. Layers keep
+/// their input color conversion and placement.
 [[nodiscard]] RenderPlan ungraded(RenderPlan plan);
 /// Position of node `nodeId` among the clip's enabled nodes (what
 /// VisualLayer::nodes holds), or −1.

@@ -4,8 +4,8 @@ Every open item from the v2 checklists (COLOR_EFFECTS_PARITY,
 PRO_INTERFACE_PARITY, DAVINCI_COLOR_PAGE, FULL_GAP_AUDIT) placed into one
 small phase. Generated 2026-10-05 from those documents by `scripts/` in this folder
 (`python3 scripts/build_master_plan.py`), so
-**each of the 633 open items (⬜ missing or 🟡 partly done) appears exactly
-once**; the 103 done items (✅) are listed in the appendix.
+**each of the 611 open items (⬜ missing or 🟡 partly done) appears exactly
+once**; the 125 done items (✅) are listed in the appendix.
 
 How it is organised:
 - **Stages 0–8** follow the order of work: ship basics in parallel; color
@@ -54,17 +54,17 @@ Model: P0 item ≈ 0.6M, P1 ≈ 0.5M, P2 ≈ 0.4M, P3 ≈ 0.8M (specialist work 
 | Stage | Tokens processed (est.) | Output tokens (≈ 5 %) |
 |---|---|---|
 | Stage 0 — Ship, privacy and recorder (parallel track) | ~16M | ~0.8M |
-| Stage 1 — Color grading like DaVinci (ROADMAP Phase 1) | ~87M | ~4.4M |
+| Stage 1 — Color grading like DaVinci (ROADMAP Phase 1) | ~82M | ~4.1M |
 | Stage 2 — Deep MCP and the pro-editor agent (ROADMAP Phase 2) | ~61M | ~3.1M |
-| Stage 3 — Effects, compositing, animation, text | ~46M | ~2.3M |
+| Stage 3 — Effects, compositing, animation, text | ~45M | ~2.2M |
 | Stage 4 — Editing, audio, captions | ~20M | ~1.0M |
 | Stage 5 — Pro workspace UI | ~56M | ~2.8M |
 | Stage 6 — Delivery and collaboration | ~9.8M | ~0.5M |
 | Stage 7 — Project, performance, platform | ~7.2M | ~0.4M |
 | Stage 8 — Specialist (P3, on demand) | ~105M | ~5.2M |
-| **All stages** | **~409M** (≈ 204M–818M) | **~20M** |
+| **All stages** | **~402M** (≈ 201M–803M) | **~20M** |
 
-Wave 1 only (all **a** phases + new-work phases): ~228M tokens processed.
+Wave 1 only (all **a** phases + new-work phases): ~224M tokens processed.
 
 ## All phases (table of contents)
 
@@ -80,27 +80,27 @@ Wave 1 only (all **a** phases + new-work phases): ~228M tokens processed.
 
 - **1.2a** Float pipeline and color management · must-have (P0/P1) · 6 items · ~5.0M tokens
 - **1.2b** Float pipeline and color management · power users (P2) · 1 item · ~0.4M tokens
-- **1.3a** Corrector layers (format v3) · must-have (P0/P1) · 8 items · ~5.0M tokens
+- **1.3a** Corrector layers (format v3) · must-have (P0/P1) · 7 items · ~5.0M tokens
 - **1.3b** Corrector layers (format v3) · power users (P2) · 2 items · ~0.8M tokens
-- **1.4a** Primaries (Resolve wheels) · must-have (P0/P1) · 8 items · ~5.0M tokens
+- **1.4a** Primaries (Resolve wheels) · must-have (P0/P1) · 9 items · ~5.0M tokens
 - **1.4b** Primaries (Resolve wheels) · power users (P2) · 11 items · ~4.4M tokens
-- **1.5a** Scopes · must-have (P0/P1) · 4 items · ~5.0M tokens
+- **1.5a** Scopes · must-have (P0/P1) · 3 items · ~5.0M tokens
 - **1.5b** Scopes · power users (P2) · 6 items · ~2.4M tokens
 - **1.6a** Curves · must-have (P0/P1) · 4 items · ~2.5M tokens
 - **1.6b** Curves · power users (P2) · 5 items · ~2.0M tokens
-- **1.7a** Qualifier and secondaries · must-have (P0/P1) · 3 items · ~5.0M tokens
-- **1.7b** Qualifier and secondaries · power users (P2) · 5 items · ~2.0M tokens
+- **1.7a** Qualifier and secondaries · must-have (P0/P1) · 1 item · ~5.0M tokens
+- **1.7b** Qualifier and secondaries · power users (P2) · 3 items · ~1.2M tokens
 - **1.8a** Power windows · must-have (P0/P1) · 3 items · ~5.0M tokens
 - **1.9a** Tracking · must-have (P0/P1) · 4 items · ~5.0M tokens
 - **1.9b** Tracking · power users (P2) · 1 item · ~0.4M tokens
 - **1.10a** AI subject mask · must-have (P0/P1) · 7 items · ~5.0M tokens
-- **1.11a** Looks, LUTs and gallery · must-have (P0/P1) · 7 items · ~3.5M tokens
-- **1.11b** Looks, LUTs and gallery · power users (P2) · 6 items · ~2.4M tokens
+- **1.11a** Looks, LUTs and gallery · must-have (P0/P1) · 2 items · ~2.5M tokens
+- **1.11b** Looks, LUTs and gallery · power users (P2) · 5 items · ~2.0M tokens
 - **1.12a** Shot match and auto color · must-have (P0/P1) · 4 items · ~5.0M tokens
 - **1.12b** Shot match and auto color · power users (P2) · 1 item · ~0.4M tokens
-- **1.13b** Nodes · power users (P2) · 7 items · ~2.8M tokens
-- **1.14a** Color workspace · must-have (P0/P1) · 13 items · ~6.6M tokens
-- **1.14b** Color workspace · power users (P2) · 15 items · ~6.0M tokens
+- **1.13b** Nodes · power users (P2) · 4 items · ~1.6M tokens
+- **1.14a** Color workspace · must-have (P0/P1) · 10 items · ~5.1M tokens
+- **1.14b** Color workspace · power users (P2) · 13 items · ~5.2M tokens
 - **1.15a** Image repair · must-have (P0/P1) · 6 items · ~3.0M tokens
 - **1.15b** Image repair · power users (P2) · 7 items · ~2.8M tokens
 
@@ -131,8 +131,8 @@ Wave 1 only (all **a** phases + new-work phases): ~228M tokens processed.
 - **3.2b** Blur, sharpen, redaction effects · power users (P2) · 3 items · ~1.2M tokens
 - **3.3a** Transform and distort · must-have (P0/P1) · 5 items · ~2.5M tokens
 - **3.3b** Transform and distort · power users (P2) · 3 items · ~1.2M tokens
-- **3.4a** Stylize, light and generate · must-have (P0/P1) · 3 items · ~1.5M tokens
-- **3.4b** Stylize, light and generate · power users (P2) · 3 items · ~1.2M tokens
+- **3.4a** Stylize, light and generate · must-have (P0/P1) · 1 item · ~0.5M tokens
+- **3.4b** Stylize, light and generate · power users (P2) · 2 items · ~0.8M tokens
 - **3.5a** Keying · must-have (P0/P1) · 4 items · ~2.0M tokens
 - **3.5b** Keying · power users (P2) · 3 items · ~1.2M tokens
 - **3.6a** Compositing · must-have (P0/P1) · 2 items · ~1.0M tokens
@@ -304,17 +304,16 @@ Items: 1. User-facing features ship with their MCP tool and a test.
 
 Goal: Several grades per clip, timeline grade, keyframed grades.  
 Claude estimate: ~5.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 8. User-facing features ship with their MCP tool and a test.
+Items: 7. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §5.1 | Several correction layers per clip (stacked corrections) | ⬜ | P1 |
 | COLOR §5.6 | Timeline-level grade | ⬜ | P1 |
 | COLOR §5.9 | Keyframing grades (dynamic, static, dissolve) | 🟡 | P1 |
-| COLOR §5.11 | Color Space Transform node / effect | ⬜ | P1 |
+| COLOR §5.11 | Color Space Transform node / effect | 🟡 | P1 |
 | COLOR §5.12 | Tone mapping and gamut mapping | ⬜ | P1 |
 | DAVINCI §4.18 | right 1 | ⬜ | P1 |
-| DAVINCI §8.9 | Clip / timeline / group pre / group post graphs | ⬜ | P1 |
+| DAVINCI §8.9 | Clip / timeline / group pre / group post graphs | 🟡 | P1 |
 | DAVINCI §8.11 | Versions (local/remote), copy grade (Shift+=, middle-click) | 🟡 | P1 |
 
 ### 1.3b — Corrector layers (format v3) · power users (P2)
@@ -332,17 +331,18 @@ Items: 2. User-facing features ship with their MCP tool and a test.
 
 Goal: Lumetri/Resolve primaries: wheels, contrast/pivot, shadows/highlights, auto balance.  
 Claude estimate: ~5.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 8. User-facing features ship with their MCP tool and a test.
+Items: 9. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
 | COLOR §2.4 | Whites / Blacks | ⬜ | P1 |
 | COLOR §2.10 | White-balance picker (eyedropper) | ⬜ | P1 |
 | COLOR §2.19 | Levels (input/output black/white, gamma, per channel) | ⬜ | P1 |
-| COLOR §2.21 | Black & White / Tint / Tritone | ⬜ | P1 |
+| COLOR §2.21 | Black & White / Tint / Tritone | 🟡 | P1 |
 | COLOR §2.26 | Reset per section / per control | 🟡 | P1 |
 | DAVINCI §5.2 | White-balance picker (eyedropper) | ⬜ | P1 |
 | DAVINCI §5.7 | Mid/Detail | ⬜ | P1 |
+| DAVINCI §5.15 | Numeric fields: drag to scrub, double-click to type, double-click label to reset | 🟡 | P0 |
 | UI §13.3 | Lumetri panel sections: Basic, Creative, Curves, Color Wheels & Match, HSL Secondary, Vignette | 🟡 | P1 |
 
 ### 1.4b — Primaries (Resolve wheels) · power users (P2)
@@ -369,11 +369,10 @@ Items: 11. User-facing features ship with their MCP tool and a test.
 
 Goal: Waveform, parade, vectorscope, histogram.  
 Claude estimate: ~5.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 4. User-facing features ship with their MCP tool and a test.
+Items: 3. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §6.8 | Reference wipe / split-screen compare | ⬜ | P1 |
 | DAVINCI §6.7 | Scale: 10-bit (0–1023), %, HDR nits | 🟡 | P1 |
 | DAVINCI §6.10 | Scopes driven by the graded output at full resolution, real time | ⬜ | P1 |
 | UI §9.12 | Lumetri Color and Lumetri Scopes | 🟡 | P1 |
@@ -389,7 +388,7 @@ Items: 6. User-facing features ship with their MCP tool and a test.
 | COLOR §6.6 | False color / exposure warnings / clip indicators | ⬜ | P2 |
 | COLOR §6.7 | Highlight out-of-gamut / broadcast safe | ⬜ | P2 |
 | COLOR §6.9 | Color picker readout (RGB/HSL values under cursor) | ⬜ | P2 |
-| DAVINCI §6.6 | 1-up / 2-up / 4-up layout | ⬜ | P2 |
+| DAVINCI §6.6 | 1-up / 2-up / 4-up layout | 🟡 | P2 |
 | DAVINCI §6.8 | Scope settings: brightness, graticule, color, low-pass filter, extents | ⬜ | P2 |
 | DAVINCI §6.9 | Expand to a floating window | ⬜ | P2 |
 
@@ -424,24 +423,20 @@ Items: 5. User-facing features ship with their MCP tool and a test.
 
 Goal: Select by color, matte view, vector secondaries.  
 Claude estimate: ~5.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 3. User-facing features ship with their MCP tool and a test.
+Items: 1. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §4.1 | HSL qualifier (key by hue/sat/luma, soften, denoise) | ⬜ | P1 |
 | COLOR §4.5 | Highlight / show matte view | ⬜ | P1 |
-| DAVINCI §4.10 | 10 | ⬜ | P1 |
 
 ### 1.7b — Qualifier and secondaries · power users (P2)
 
 Goal: Select by color, matte view, vector secondaries.  
-Claude estimate: ~2.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 5. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~1.2M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 3. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §4.3 | Luma qualifier | ⬜ | P2 |
-| COLOR §4.11 | Combine qualifier + window (intersect, subtract) | ⬜ | P2 |
 | COLOR §4.13 | Vector / hue-range secondary (Hue/Saturation per range) | ⬜ | P2 |
 | COLOR §4.15 | Selective color / change color / change to color | ⬜ | P2 |
 | COLOR §4.16 | Leave Color (everything gray but one color) | ⬜ | P2 |
@@ -454,9 +449,9 @@ Items: 3. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §4.6 | Power windows / masks: circle, linear, polygon, curve (bezier), gradient | ⬜ | P1 |
-| COLOR §4.7 | Mask feather, expansion, invert, opacity | ⬜ | P1 |
-| DAVINCI §4.11 | 11 | ⬜ | P1 |
+| COLOR §4.6 | Power windows / masks: circle, linear, polygon, curve (bezier), gradient | 🟡 | P1 |
+| COLOR §4.7 | Mask feather, expansion, invert, opacity | 🟡 | P1 |
+| DAVINCI §4.11 | 11 | 🟡 | P1 |
 
 ### 1.9a — Tracking · must-have (P0/P1)
 
@@ -500,31 +495,25 @@ Items: 7. User-facing features ship with their MCP tool and a test.
 ### 1.11a — Looks, LUTs and gallery · must-have (P0/P1)
 
 Goal: Looks gallery, stills, LUT handling, film looks.  
-Claude estimate: ~3.5M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 7. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~2.5M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 2. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §2.23 | Grade presets / looks gallery with thumbnails | 🟡 | P1 |
 | COLOR §7.5 | Camera manufacturer conversions | 🟡 | P1 |
-| COLOR §7.6 | Creative looks library (film emulations, teal & orange, etc.) | 🟡 | P1 |
 | COLOR §7.8 | LUT placed before or after the grade | 🟡 | P1 |
-| DAVINCI §9.1 | Grab still (⌥⌘G) | ⬜ | P1 |
-| DAVINCI §9.2 | Apply grade from still (middle-click / right-click) | ⬜ | P1 |
-| DAVINCI §9.3 | Wipe against a still | ⬜ | P1 |
 
 ### 1.11b — Looks, LUTs and gallery · power users (P2)
 
 Goal: Looks gallery, stills, LUT handling, film looks.  
-Claude estimate: ~2.4M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 6. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~2.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 5. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §5.8 | Stills gallery, PowerGrades, grab still, wipe against still | ⬜ | P2 |
-| COLOR §7.7 | Film Look Creator (halation, bloom, grain, gate weave, print density) | ⬜ | P2 |
+| COLOR §7.7 | Film Look Creator (halation, bloom, grain, gate weave, print density) | 🟡 | P2 |
 | COLOR §7.9 | Export grade as .cube | ⬜ | P2 |
-| DAVINCI §9.4 | PowerGrade albums (shared across projects) | ⬜ | P2 |
+| DAVINCI §9.4 | PowerGrade albums (shared across projects) | 🟡 | P2 |
 | DAVINCI §9.5 | Memories (Alt+1…8 to save, Ctrl+1…8 to recall) | ⬜ | P2 |
 | DAVINCI §9.6 | Export still as image + .cube / .drx | ⬜ | P2 |
 
@@ -554,80 +543,55 @@ Items: 1. User-facing features ship with their MCP tool and a test.
 ### 1.13b — Nodes · power users (P2)
 
 Goal: Node graph on top of corrector layers.  
-Claude estimate: ~2.8M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 7. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~1.6M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 4. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §5.2 | Node graph: serial, parallel, layer mixer nodes | ⬜ | P2 |
-| DAVINCI §8.1 | Serial node (Alt+S), node before (Shift+S) | ⬜ | P2 |
+| COLOR §5.2 | Node graph: serial, parallel, layer mixer nodes | 🟡 | P2 |
 | DAVINCI §8.2 | Parallel node (Alt+P), layer mixer node (Alt+L) | ⬜ | P2 |
-| DAVINCI §8.3 | Outside node (Alt+O) — the inverse of a selection | ⬜ | P2 |
-| DAVINCI §8.5 | Node labels, enable/disable (⌘D), reset node | ⬜ | P2 |
 | DAVINCI §8.8 | Color space transform / ResolveFX on a node | ⬜ | P2 |
 | DAVINCI §8.10 | Shared nodes (one node used by many clips) | ⬜ | P2 |
 
 ### 1.14a — Color workspace · must-have (P0/P1)
 
 Goal: Resolve-style Color page layout and palettes.  
-Claude estimate: ~6.6M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 13. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~5.1M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 10. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §2.27 | Bypass / compare (before-after, split screen, wipe) | ⬜ | P1 |
 | DAVINCI §1.2 | Viewer — centre top | 🟡 | P0 |
 | DAVINCI §1.6 | Right palette area (Keyframes, Scopes, Info) | 🟡 | P1 |
 | DAVINCI §2.8 | Zoom "49 %" ▾ | ⬜ | P1 |
-| DAVINCI §2.9 | Split-screen / wipe ▾ | ⬜ | P1 |
 | DAVINCI §2.10 | Clip name / timecode field ▾ | 🟡 | P1 |
-| DAVINCI §2.11 | Highlight toggle (color sparkle icon) | ⬜ | P1 |
 | DAVINCI §2.15 | "Clip" ▾ | ⬜ | P1 |
-| DAVINCI §3.2 | Picker ▾ (qualifier pick / add / subtract / feather) | ⬜ | P1 |
+| DAVINCI §3.2 | Picker ▾ (qualifier pick / add / subtract / feather) | 🟡 | P1 |
 | DAVINCI §3.5 | Transport: go to first, reverse, stop, play, go to last | 🟡 | P1 |
 | DAVINCI §3.6 | Loop | ⬜ | P1 |
-| DAVINCI §3.7 | On-screen controls: window shapes, tracker points, qualifier picks | ⬜ | P1 |
-| DAVINCI §3.9 | Split screen: selected clips, still, previous/next clip, versions | ⬜ | P1 |
+| DAVINCI §3.7 | On-screen controls: window shapes, tracker points, qualifier picks | 🟡 | P1 |
+| DAVINCI §3.9 | Split screen: selected clips, still, previous/next clip, versions | 🟡 | P1 |
 
 ### 1.14b — Color workspace · power users (P2)
 
 Goal: Resolve-style Color page layout and palettes.  
-Claude estimate: ~6.0M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 15. User-facing features ship with their MCP tool and a test.
-
-#### 1.14b.1 — Top toolbar screenshot, image 5 (5)
+Claude estimate: ~5.2M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 13. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| DAVINCI §2.1 | Gallery toggle (sidebar icon) | ⬜ | P2 |
+| DAVINCI §1.3 | Node editor — right top | 🟡 | P2 |
 | DAVINCI §2.2 | Import/download icon | ⬜ | P2 |
 | DAVINCI §2.12 | ··· menu | ⬜ | P2 |
 | DAVINCI §2.13 | Pointer / selection ▾ | ⬜ | P2 |
 | DAVINCI §2.14 | Node layout ▾ | ⬜ | P2 |
-
-#### 1.14b.2 — Viewer screenshot (3)
-
-| Ref | Feature | Now | P |
-|---|---|---|---|
 | DAVINCI §3.3 | Layers icon (matte / overlay mode) | ⬜ | P2 |
 | DAVINCI §3.4 | Audio on/off | 🟡 | P2 |
 | DAVINCI §3.8 | Enhanced viewer (Alt+F) / cinema viewer (⌘F) | ⬜ | P2 |
-
-#### 1.14b.3 — Palette bar screenshot, 17 left + 3 right (4)
-
-| Ref | Feature | Now | P |
-|---|---|---|---|
 | DAVINCI §4.4 | 4 | ⬜ | P2 |
 | DAVINCI §4.5 | 5 | ⬜ | P2 |
 | DAVINCI §4.8 | 8 | ⬜ | P2 |
 | DAVINCI §4.15 | 15 | ⬜ | P2 |
-
-#### 1.14b.4 — Other items (3)
-
-| Ref | Feature | Now | P |
-|---|---|---|---|
-| DAVINCI §1.1 | Gallery (stills, PowerGrades, memories) — left top | ⬜ | P2 |
-| DAVINCI §1.3 | Node editor — right top | ⬜ | P2 |
 | UI §13.2 | Color page: clip thumbnails strip, node editor, gallery, scopes, curves/qualifier/window palettes | ⬜ | P2 |
 
 ### 1.15a — Image repair · must-have (P0/P1)
@@ -842,9 +806,9 @@ Items: 16. User-facing features ship with their MCP tool and a test.
 | COLOR §19.1 | Effects browser with search, categories, favorites | ⬜ | P1 |
 | COLOR §19.2 | Drag an effect onto a clip or adjustment layer | ⬜ | P1 |
 | COLOR §19.3 | Effect controls panel: per-parameter keyframe toggles, reset | 🟡 | P1 |
-| COLOR §19.4 | Copy / paste attributes (choose which) | ⬜ | P1 |
+| COLOR §19.4 | Copy / paste attributes (choose which) | 🟡 | - |
 | COLOR §19.5 | Save presets of effects and grades | 🟡 | P1 |
-| COLOR §19.6 | Viewer overlays for effect controls (zoom center, mask points, crop) | 🟡 | P1 |
+| COLOR §19.6 | Viewer overlays for effect controls (zoom center, mask points, crop) | 🟡 | - |
 
 #### 3.1a.3 — Effect Controls panel (6)
 
@@ -929,24 +893,21 @@ Items: 3. User-facing features ship with their MCP tool and a test.
 ### 3.4a — Stylize, light and generate · must-have (P0/P1)
 
 Goal: Glow, grain, light leaks, gradients, shapes.  
-Claude estimate: ~1.5M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 3. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~0.5M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 1. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §11.2 | Glow / bloom | ⬜ | P1 |
-| COLOR §11.3 | Film grain / add noise | ⬜ | P1 |
 | COLOR §11.11 | Gradient, 4-color gradient, fill, ramp | 🟡 | P1 |
 
 ### 3.4b — Stylize, light and generate · power users (P2)
 
 Goal: Glow, grain, light leaks, gradients, shapes.  
-Claude estimate: ~1.2M tokens processed (range ×0.5–×2; output ≈ 5 %).  
-Items: 3. User-facing features ship with their MCP tool and a test.
+Claude estimate: ~0.8M tokens processed (range ×0.5–×2; output ≈ 5 %).  
+Items: 2. User-facing features ship with their MCP tool and a test.
 
 | Ref | Feature | Now | P |
 |---|---|---|---|
-| COLOR §11.4 | Halation | ⬜ | P2 |
 | COLOR §11.6 | Light leaks / prism / chromatic aberration (stylize) | ⬜ | P2 |
 | COLOR §11.10 | Letterbox / blanking fill / aspect matte | ⬜ | P2 |
 
@@ -1863,14 +1824,14 @@ Items: 29. User-facing features ship with their MCP tool and a test.
 
 ## Appendix — already done (✅)
 
-**COLOR_EFFECTS_PARITY:** §1.1 GPU render pipeline (preview + export), §1.5 Per-clip input color space / gamma tagging, §1.15 Real-time playback at full rate with grades and effects, §2.1 Exposure, §2.2 Contrast with pivot, §2.3 Highlights / Shadows, §2.5 Temperature / Tint, §2.6 Saturation, §2.7 Vibrance, §2.8 Brightness, §2.11 Lift / Gamma / Gain wheels, §2.12 Offset wheel, §2.13 Shadows / Midtones / Highlights wheels (Lumetri style), §2.25 Copy / paste grade, apply to all of a source, §3.1 RGB / Luma custom curves (spline points), §3.2 Per-channel R, G, B curves, §6.1 Waveform (luma, RGB overlay), §6.2 RGB Parade, §6.3 Vectorscope (with skin-tone line, 75%/100% targets), §6.4 Histogram, §7.1 3D LUT import (.cube), §7.2 LUT mix / intensity, §9.1 Gaussian Blur, §9.12 Background blur by person mask, §10.11 Digital zoom / punch-in (Ken Burns), §11.1 Vignette, §13.1 Opacity per layer, keyframable, §13.8 Picture-in-picture layouts, §17.1 Text layers with font, size, weight, color, background, §19.9 Undo per parameter, merge slider drags
+**COLOR_EFFECTS_PARITY:** §1.1 GPU render pipeline (preview + export), §1.5 Per-clip input color space / gamma tagging, §1.15 Real-time playback at full rate with grades and effects, §2.1 Exposure, §2.2 Contrast with pivot, §2.3 Highlights / Shadows, §2.5 Temperature / Tint, §2.6 Saturation, §2.7 Vibrance, §2.8 Brightness, §2.11 Lift / Gamma / Gain wheels, §2.12 Offset wheel, §2.13 Shadows / Midtones / Highlights wheels (Lumetri style), §2.23 Grade presets / looks gallery with thumbnails, §2.25 Copy / paste grade, apply to all of a source, §2.27 Bypass / compare (before-after, split screen, wipe), §3.1 RGB / Luma custom curves (spline points), §3.2 Per-channel R, G, B curves, §4.1 HSL qualifier (key by hue/sat/luma, soften, denoise), §4.3 Luma qualifier, §4.11 Combine qualifier + window (intersect, subtract), §5.1 Several correction layers per clip (stacked corrections), §5.8 Stills gallery, PowerGrades, grab still, wipe against still, §6.1 Waveform (luma, RGB overlay), §6.2 RGB Parade, §6.3 Vectorscope (with skin-tone line, 75%/100% targets), §6.4 Histogram, §6.8 Reference wipe / split-screen compare, §7.1 3D LUT import (.cube), §7.2 LUT mix / intensity, §7.6 Creative looks library (film emulations, teal & orange, etc.), §9.1 Gaussian Blur, §9.12 Background blur by person mask, §10.11 Digital zoom / punch-in (Ken Burns), §11.1 Vignette, §11.2 Glow / bloom, §11.3 Film grain / add noise, §11.4 Halation, §13.1 Opacity per layer, keyframable, §13.8 Picture-in-picture layouts, §17.1 Text layers with font, size, weight, color, background, §19.9 Undo per parameter, merge slider drags
 
 **PRO_INTERFACE_PARITY:** §1.1 ① Menu bar: File, Edit, Composition, Layer, Effect, Animation, View, Window, Help, §1.15 Resize frames by dragging dividers, §2.1 Home (start screen), §2.2 Selection [V], §2.16 Snapping toggle with options (edges, centers, guides), §3.1 Fit to window, §3.16 Bounding box with corner/edge handles, §3.20 Esc cancels a drag, §3.21 Double-click text to edit in place, §3.22 Right-click context menu on layers, §6.5 Time ruler with current-time indicator (drag to scrub), §6.9 Snapping (Shift while dragging in AE), §6.11 Auto-scroll during playback, edge scroll while dragging, §6.12 Video eye (hide), Audio speaker (mute), Solo, Lock, §6.15 Source name / layer name, rename (Enter), §6.28 Layer selection highlight; select layer by clicking the header, §6.30 Add, delete, rename layers / tracks, §6.40 Audio waveform under a layer (LL), §6.41 Drag layer bar to move in time, §6.43 Split layer (Ctrl+Shift+D), §6.44 Move a clip to another layer by dragging vertically, §6.45 Box select, Shift/⌘ add to selection, §8.4 Font size, §8.13 Background box / rounded pill with padding, §9.3 Audio (levels meter, volume), §9.15 Render Queue / Export settings, §12.1 Dark UI, one accent color, compact density, §12.5 Hover, pressed and selected states on every control
 
-**DAVINCI_COLOR_PAGE:** §1.4 Clips strip (thumbnail per clip, version, codec) + mini timeline, §1.5 Left palette area (one palette at a time), §1.7 Page bar along the bottom, §3.1 Picture, scrubber bar under it, §4.3 3 (selected), §4.19 right 2, §5.1 **A** — Auto Balance, §5.3 Temp, §5.4 Tint, §5.5 Contrast, §5.6 Pivot, §5.8 Lift, §5.9 Gamma, §5.10 Gain, §5.11 Offset, §5.12 Master jog wheel under each wheel, §5.14 Per-wheel reset, §5.15 Numeric fields: drag to scrub, double-click to type, double-click label to reset, §5.16 Color Boost, §5.17 Shadows, §5.18 Highlights, §5.19 Saturation, §5.20 Hue, §6.1 Parade (R, G, B side by side), §6.2 Waveform (luma / RGB / YRGB), §6.3 Vectorscope (with skin-tone indicator, 75 %/100 % targets), §6.4 Histogram
+**DAVINCI_COLOR_PAGE:** §1.1 Gallery (stills, PowerGrades, memories) — left top, §1.4 Clips strip (thumbnail per clip, version, codec) + mini timeline, §1.5 Left palette area (one palette at a time), §1.7 Page bar along the bottom, §2.1 Gallery toggle (sidebar icon), §2.9 Split-screen / wipe ▾, §2.11 Highlight toggle (color sparkle icon), §3.1 Picture, scrubber bar under it, §4.3 3 (selected), §4.10 10, §4.19 right 2, §5.1 **A** — Auto Balance, §5.3 Temp, §5.4 Tint, §5.5 Contrast, §5.6 Pivot, §5.8 Lift, §5.9 Gamma, §5.10 Gain, §5.11 Offset, §5.12 Master jog wheel under each wheel, §5.14 Per-wheel reset, §5.16 Color Boost, §5.17 Shadows, §5.18 Highlights, §5.19 Saturation, §5.20 Hue, §6.1 Parade (R, G, B side by side), §6.2 Waveform (luma / RGB / YRGB), §6.3 Vectorscope (with skin-tone indicator, 75 %/100 % targets), §6.4 Histogram, §8.1 Serial node (Alt+S), node before (Shift+S), §8.3 Outside node (Alt+O) — the inverse of a selection, §8.5 Node labels, enable/disable (⌘D), reset node, §9.1 Grab still (⌥⌘G), §9.2 Apply grade from still (middle-click / right-click), §9.3 Wipe against a still
 
 **FULL_GAP_AUDIT:** §2.1 Split, trim, ripple delete, move, gap delete, §2.7 Snapping, magnetic timeline option, §2.14 Audio + video track count unlimited; add/delete tracks, §2.17 Remove silences / pauses, §2.25 Timeline zoom presets, fit, follow playhead, §2.28 Lock/hide/mute tracks, §2.29 Layout regions (screen/camera layouts by section), §3.1 Clip gain, track gain, mute, solo, §5.1 MP4 H.264 + AAC export, §6.1 Subtitle track, add/edit lines, §6.2 SRT / VTT import and export, §6.5 Caption styles: font, size, color, background, position, §9.1 Project manager (list, search, thumbnails, open recent), §9.2 Autosave, backups, crash recovery, §11.1 macOS, §16.2 Separate tracks for screen, camera, mic, system audio, §16.7 Countdown, stop hotkey, recording timer, §16.17 Crash-safe recording, recovery
 
 ---
 
-Totals: 633 open items in 87 phases with items (37 sub-phases) plus 8 new-work phases; 103 items done.
+Totals: 611 open items in 87 phases with items (33 sub-phases) plus 8 new-work phases; 125 items done.

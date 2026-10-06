@@ -160,6 +160,18 @@ struct ExportSettings {
 
 /// The authoritative editor document (docs/PROJECT_FORMAT.md). Owned by C++;
 /// the UI only observes it.
+/// A gallery still (Color page): a frame grabbed with its grade, to compare
+/// against and to copy the grade from (Resolve's Gallery).
+struct Still {
+    std::string id;
+    std::string label;     ///< "Still 1" or the user's name
+    std::string image;     ///< PNG, relative to the project folder (stills/…)
+    std::string clipName;
+    double time = 0;       ///< timeline seconds where it was grabbed
+    timeline::ColorAdjustments grade;
+    friend bool operator==(const Still&, const Still&) = default;
+};
+
 struct Project {
     /// 2: clip transforms are adjustments relative to the layout slot (v1
     /// stored an absolute camera placement), plus `style` and track gain.
@@ -176,6 +188,7 @@ struct Project {
     timeline::Timeline timeline;
     std::vector<RecordingEntry> recordings;
     ExportSettings exportSettings;
+    std::vector<Still> gallery;  ///< Color page stills, oldest first
 
     [[nodiscard]] static Project createEmpty(std::string title);
     [[nodiscard]] const MediaSource* findMedia(const MediaId& mediaId) const;

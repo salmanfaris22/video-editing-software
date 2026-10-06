@@ -9,6 +9,8 @@
 #include "core/Log.h"
 #include "core/Uuid.h"
 #include "editor/ColorGrading.h"
+#include "editor/FrameProvider.h"
+#include "editor/FrameRenderer.h"
 #include "editor/Looks.h"
 #include "editor/RenderPlan.h"
 #include "timeline/TimelineJson.h"
@@ -18,6 +20,7 @@
 #include <QCoreApplication>
 #include <QPointer>
 #include <QThreadPool>
+#include <QUrl>
 
 #include <algorithm>
 #include <map>
@@ -327,6 +330,112 @@ void ProjectController::refreshLookPreviews(const QString& clipId, double second
                 emit self->lookPreviewsChanged();
             },
             Qt::QueuedConnection);
+    });
+}
+
+// ---- Gallery stills ----------------------------------------------------------------
+
+QVariantList ProjectController::stills() const {
+    QVariantList out;
+    if (!project_) return out;
+    for (const auto& st : project_->gallery) {
+        out.append(QVariantMap{{"id", qs(st.id)},
+                               {"label", qs(st.label)},
+                               {"image", QUrl::fromLocalFile(qs((dir_ / st.image).string())).toString()},
+                               {"clipName", qs(st.clipName)},
+                               {"time", st.time}});
+    }
+    return out;
+}
+
+QString ProjectController::stillImagePath(const QString& stillId) const {
+    if (!project_) return {};
+    for (const auto& st : project_->gallery) {
+        if (st.id == stillId.toStdString()) return qs((dir_ / st.image).string());
+    }
+    return {};
+}
+
+QString ProjectController::grabStill(const QString& clipId, double seconds) {
+    const auto id = clipIdFrom(clipId);
+    if (!id || !project_ || dir_.empty()) return {};
+    const timeline::Clip* clip = clipById(*project_, *id);
+    if (!clip) return {};
+    // The frame as the viewer shows it, small: the gallery's thumbnail and the wipe reference.
+    const QSize size = project_->canvas.width >= project_->canvas.height
+                           ? QSize(640, std::max(2, 640 * project_->canvas.height / std::max(1, project_->canvas.width)))
+                           : QSize(std::max(2, 640 * project_->canvas.width / std::max(1, project_->canvas.height)), 640);
+    QImage image(size, QImage::Format_RGB32);
+    {
+        editor::FrameProvider frames(dir_, false);
+        frames.setProject(std::make_shared<const project::Project>(*project_));
+        const auto renderer = editor::makeCpuRenderer();
+        renderer->setProjectDirectory(dir_);
+        renderer->render(editor::buildRenderPlan(*project_, Time::fromSecondsF(seconds)), image,
+                         [&frames](const editor::VisualLayer& l, QSizeF box) { return frames.image(l, box); });
+    }
+    const std::string stillId = Uuid::generateV4().toString().substr(0, 8);
+    const std::string relative = "stills/" + stillId + ".png";
+    std::error_code ec;
+    std::filesystem::create_directories(dir_ / "stills", ec);
+    if (ec || !image.save(qs((dir_ / relative).string()), "PNG")) {
+        showMessage(QStringLiteral("Could not save the still"));
+        return {};
+    }
+    // "Still N": one more than the highest number so far (deleting keeps numbers unique).
+    int number = static_cast<int>(project_->gallery.size()) + 1;
+    for (const auto& st : project_->gallery) {
+        if (st.label.starts_with("Still ")) number = std::max(number, std::atoi(st.label.c_str() + 6) + 1);
+    }
+    project::Still still;
+    still.id = stillId;
+    still.label = "Still " + std::to_string(number);
+    still.image = relative;
+    still.clipName = clip->name;
+    still.time = seconds;
+    still.grade = clip->color;
+    if (!mutate(QStringLiteral("Grab still"), [&](project::Project& p) -> Status {
+            p.gallery.push_back(still);
+            return ok();
+        })) {
+        return {};
+    }
+    LEC_INFO("color", "grabbed {} at {:.2f} s", still.label, seconds);
+    return qs(stillId);
+}
+
+void ProjectController::applyStill(const QString& stillId, const QString& clipId) {
+    const auto id = clipIdFrom(clipId);
+    if (!id || !project_) return;
+    mutate(QStringLiteral("Apply grade from still"), [&](project::Project& p) -> Status {
+        const auto it = std::find_if(p.gallery.begin(), p.gallery.end(), [&](const project::Still& st) { return st.id == stillId.toStdString(); });
+        if (it == p.gallery.end()) return fail(ErrorCode::NotFound, "still not found");
+        timeline::Clip* c = clipById(p, *id);
+        if (!c) return fail(ErrorCode::NotFound, "clip not found");
+        takeGrade(c->color, it->grade);
+        return ok();
+    });
+}
+
+void ProjectController::deleteStill(const QString& stillId) {
+    mutate(QStringLiteral("Delete still"), [&](project::Project& p) -> Status {
+        const auto before = p.gallery.size();
+        std::erase_if(p.gallery, [&](const project::Still& st) { return st.id == stillId.toStdString(); });
+        return p.gallery.size() == before ? fail(ErrorCode::NotFound, "still not found") : ok();
+    });  // the image file stays, so undo brings the still back
+}
+
+void ProjectController::renameStill(const QString& stillId, const QString& label) {
+    const QString text = label.trimmed().left(40);
+    if (text.isEmpty()) return;
+    mutate(QStringLiteral("Rename still"), [&](project::Project& p) -> Status {
+        for (auto& st : p.gallery) {
+            if (st.id == stillId.toStdString()) {
+                st.label = text.toStdString();
+                return ok();
+            }
+        }
+        return fail(ErrorCode::NotFound, "still not found");
     });
 }
 
