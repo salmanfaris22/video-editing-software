@@ -46,6 +46,17 @@ struct AudioProperties {
     friend bool operator==(const AudioProperties&, const AudioProperties&) = default;
 };
 
+/// The HSL curves of a grade (index into ColorAdjustments::hslCurves):
+/// x axis → what the curve changes.
+enum HslCurve : int {
+    kHueVsHue = 0,  ///< hue → hue shift (y 0…1 = −180°…+180°)
+    kHueVsSat = 1,  ///< hue → saturation (y 0…1 = ×0…×2)
+    kHueVsLum = 2,  ///< hue → luminance (y 0…1 = −0.5…+0.5, weighted by saturation)
+    kLumVsSat = 3,  ///< luminance → saturation
+    kSatVsSat = 4,  ///< saturation → saturation
+    kSatVsLum = 5,  ///< saturation → luminance
+};
+
 struct ColorAdjustments {
     Animated<double> exposure{0.0};
     Animated<double> brightness{0.0};
@@ -76,6 +87,10 @@ struct ColorAdjustments {
     /// 0…1 for luma (applied to all channels first) and R, G, B. Fewer than
     /// two points, or exactly the diagonal, means no curve.
     std::array<std::vector<Vec2>, 4> curves;  ///< Y, R, G, B
+    /// Resolve's HSL curves, in kHslCurve order: points (x, y) in 0…1, 0.5 =
+    /// no change. Hue curves wrap around (x = hue, 0 = red); fewer than two
+    /// points or a flat line at 0.5 means no curve.
+    std::array<std::vector<Vec2>, 6> hslCurves;
     /// A 3D LUT: a .cube file (path relative to the project folder) or a
     /// built-in camera log conversion ("builtin:apple-log", …); empty = none.
     std::string lut;
@@ -101,6 +116,7 @@ struct ColorAdjustments {
         Wheel gain;
         Wheel offset;
         std::array<std::vector<Vec2>, 4> curves;  ///< Y, R, G, B
+        std::array<std::vector<Vec2>, 6> hslCurves;  ///< see ColorAdjustments::hslCurves
         friend bool operator==(const Grade&, const Grade&) = default;
     };
     /// A creative look on top of the correction above (Lumetri's "Creative"

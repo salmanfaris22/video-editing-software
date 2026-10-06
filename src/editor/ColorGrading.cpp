@@ -579,9 +579,61 @@ ColorCurves colorCurves(const ColorParams& c) {
     return curve;
 }
 
+double evaluateHslCurve(const std::vector<timeline::Vec2>& pts, double x, bool periodic) {
+    if (pts.size() < 2) return 0.5;
+    if (!periodic) return evaluateCurve(pts, x);
+    // Wrap: the last point also sits just before 0 and the first just after 1.
+    std::vector<timeline::Vec2> ring;
+    ring.reserve(pts.size() + 2);
+    ring.push_back({pts.back().x - 1.0, pts.back().y});
+    ring.insert(ring.end(), pts.begin(), pts.end());
+    ring.push_back({pts.front().x + 1.0, pts.front().y});
+    return evaluateCurve(ring, x - std::floor(x));
+}
+
+HslTables hslTables(const ColorParams& c) {
+    HslTables t{};
+    for (std::size_t k = 0; k < 6; ++k) {
+        const bool periodic = k <= timeline::kHueVsLum;
+        for (int i = 0; i < 256; ++i) {
+            const double v = c.hsl[k].empty() ? 0.5 : evaluateHslCurve(c.hsl[k], i / 255.0, periodic);
+            t[k][static_cast<std::size_t>(i)] = static_cast<std::uint8_t>(std::clamp(std::lround(v * 255.0), 0L, 255L));
+        }
+    }
+    return t;
+}
+
+std::array<double, 3> applyHsl(const HslTables& t, double r, double g, double b) {
+    const auto [h, s, y] = qualifierAxes(r, g, b);
+    const auto at = [](const std::array<std::uint8_t, 256>& table, double v) {
+        return table[static_cast<std::size_t>(std::clamp(static_cast<int>(std::lround(v * 255.0)), 0, 255))] / 255.0;
+    };
+    const double shift = at(t[timeline::kHueVsHue], h) - 128.0 / 255.0;  // turns; the table's neutral is 128
+    const double gain = (at(t[timeline::kHueVsSat], h) * 255.0 / 128.0) * (at(t[timeline::kLumVsSat], y) * 255.0 / 128.0) *
+                        (at(t[timeline::kSatVsSat], s) * 255.0 / 128.0);
+    const double lift = (at(t[timeline::kHueVsLum], h) - 128.0 / 255.0) * s + (at(t[timeline::kSatVsLum], s) - 128.0 / 255.0);
+    double cb = (b - y) / 1.8556;
+    double cr = (r - y) / 1.5748;
+    if (shift != 0.0) {  // rotate in the Cb/Cr plane: + is red → yellow → green
+        const double a = shift * 2.0 * 3.14159265358979323846;
+        const double ca = std::cos(a);
+        const double sa = std::sin(a);
+        const double ncb = cb * ca - cr * sa;
+        cr = cb * sa + cr * ca;
+        cb = ncb;
+    }
+    cb *= gain;
+    cr *= gain;
+    const double y2 = y + lift;
+    const double r2 = y2 + 1.5748 * cr;
+    const double b2 = y2 + 1.8556 * cb;
+    const double g2 = (y2 - 0.2126 * r2 - 0.0722 * b2) / 0.7152;  // the exact inverse of the luma weights
+    return {std::clamp(r2, 0.0, 1.0), std::clamp(g2, 0.0, 1.0), std::clamp(b2, 0.0, 1.0)};
+}
+
 void applyColor(QImage& img, const ColorParams& c, const Lut3D* lut) {
     const bool useLut = lut && lut->size >= 2 && c.lutAmount > 0.0;
-    if (img.isNull() || (!useLut && c.curvesAreIdentity())) return;
+    if (img.isNull() || (!useLut && c.curvesAreIdentity() && c.hslIsIdentity())) return;
     if (img.format() != QImage::Format_RGB32 && img.format() != QImage::Format_ARGB32_Premultiplied) {
         img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
@@ -590,6 +642,8 @@ void applyColor(QImage& img, const ColorParams& c, const Lut3D* lut) {
     const ColorCurves curve = colorCurves(c);
     const double sat = 1.0 + c.saturation;
     const bool pixelOps = c.colorBoost != 0 || c.hue != 0;
+    const bool hsl = !c.hslIsIdentity();
+    const HslTables hslTable = hsl ? hslTables(c) : HslTables{};
     const float mix = static_cast<float>(std::clamp(c.lutAmount, 0.0, 1.0));
 
     for (int y = 0; y < img.height(); ++y) {
@@ -627,6 +681,12 @@ void applyColor(QImage& img, const ColorParams& c, const Lut3D* lut) {
                 r = static_cast<int>(std::clamp(l + (r - l) * sat, 0.0, 255.0));
                 g = static_cast<int>(std::clamp(l + (g - l) * sat, 0.0, 255.0));
                 b = static_cast<int>(std::clamp(l + (b - l) * sat, 0.0, 255.0));
+            }
+            if (hsl) {
+                const auto o = applyHsl(hslTable, r / 255.0, g / 255.0, b / 255.0);
+                r = static_cast<int>(std::lround(o[0] * 255.0));
+                g = static_cast<int>(std::lround(o[1] * 255.0));
+                b = static_cast<int>(std::lround(o[2] * 255.0));
             }
             if (pixelOps) {
                 const auto o = boostAndHue(c, r / 255.0, g / 255.0, b / 255.0);
@@ -748,13 +808,18 @@ void applyNodes(QImage& img, const std::vector<NodeParams>& nodes, const SourceM
         double sat = 1;
         bool pixelOps = false;
         const NodeParams* node = nullptr;
+        bool hsl = false;
+        HslTables hslTable{};
     };
     const std::size_t count = highlight >= 0 ? std::min(nodes.size(), static_cast<std::size_t>(highlight) + 1) : nodes.size();
     std::vector<Prepared> prepared;
     prepared.reserve(count);
     for (std::size_t i = 0; i < count; ++i) {
         const ColorParams& c = nodes[i].grade;
-        prepared.push_back({colorCurves(c), 1.0 + c.saturation, c.colorBoost != 0 || c.hue != 0, &nodes[i]});
+        Prepared p{colorCurves(c), 1.0 + c.saturation, c.colorBoost != 0 || c.hue != 0, &nodes[i]};
+        p.hsl = !c.hslIsIdentity();
+        if (p.hsl) p.hslTable = hslTables(c);
+        prepared.push_back(p);
     }
     const bool hasMask = person && !person->isNull() && person->size() == img.size() && person->format() == QImage::Format_Grayscale8;
     const int w = img.width();
@@ -789,6 +854,12 @@ void applyNodes(QImage& img, const std::vector<NodeParams>& nodes, const SourceM
                     gr = static_cast<int>(std::clamp(l + (gr - l) * n.sat, 0.0, 255.0));
                     gg = static_cast<int>(std::clamp(l + (gg - l) * n.sat, 0.0, 255.0));
                     gb = static_cast<int>(std::clamp(l + (gb - l) * n.sat, 0.0, 255.0));
+                }
+                if (n.hsl) {
+                    const auto o = applyHsl(n.hslTable, gr / 255.0, gg / 255.0, gb / 255.0);
+                    gr = static_cast<int>(std::lround(o[0] * 255.0));
+                    gg = static_cast<int>(std::lround(o[1] * 255.0));
+                    gb = static_cast<int>(std::lround(o[2] * 255.0));
                 }
                 if (n.pixelOps) {
                     const auto o = boostAndHue(n.node->grade, gr / 255.0, gg / 255.0, gb / 255.0);

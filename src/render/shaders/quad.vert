@@ -20,7 +20,7 @@ layout(std140, binding = 0) uniform Params {
     vec4 gamut0;     // source gamut -> Rec.709 (linear light), rows
     vec4 gamut1;
     vec4 gamut2;
-    vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians)
+    vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians), z: HSL curves (0/1)
     vec4 fx;         // x: grain amount, y: grain size (px), z: grain seed; threshold/add modes: x threshold
     vec4 nodeInfo;   // x: node count, y: source aspect (w/h), z: person mask bound (0/1), w: highlighted node (-1 none)
     vec4 nodes[70];  // 7 per node (up to 10): grade, window0, window1, qual0, qual1, qual2, misc (see layer.frag)

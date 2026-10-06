@@ -166,6 +166,30 @@ ColorAdjustments::Wheel wheelFrom(const Json& j) {
 
 constexpr const char* kCurveKeys[4] = {"curveY", "curveR", "curveG", "curveB"};
 
+constexpr const char* kHslKeys[6] = {"hueVsHue", "hueVsSat", "hueVsLum", "lumVsSat", "satVsSat", "satVsLum"};
+
+/// HSL curves as "hueVsSat": [[x, y], …] (absent = no curve).
+void writeHslCurves(Json& j, const std::array<std::vector<Vec2>, 6>& curves) {
+    for (std::size_t i = 0; i < 6; ++i) {
+        if (curves[i].empty()) continue;
+        Json pts = Json::array();
+        for (const Vec2& p : curves[i]) pts.push_back(Json::array({p.x, p.y}));
+        j[kHslKeys[i]] = pts;
+    }
+}
+
+void readHslCurves(const Json& j, std::array<std::vector<Vec2>, 6>& curves) {
+    for (std::size_t i = 0; i < 6; ++i) {
+        const auto it = j.find(kHslKeys[i]);
+        if (it == j.end() || !it->is_array()) continue;
+        for (const Json& p : *it) {
+            if (p.is_array() && p.size() == 2 && p[0].is_number() && p[1].is_number())
+                curves[i].push_back({std::clamp(p[0].get<double>(), 0.0, 1.0), std::clamp(p[1].get<double>(), 0.0, 1.0)});
+        }
+        std::sort(curves[i].begin(), curves[i].end(), [](const Vec2& a, const Vec2& b) { return a.x < b.x; });
+    }
+}
+
 /// Custom curves as "curveY": [[in, out], …] (absent = no curve).
 void writeCurves(Json& j, const std::array<std::vector<Vec2>, 4>& curves) {
     for (std::size_t i = 0; i < 4; ++i) {
@@ -224,6 +248,7 @@ void writeGrade(Json& j, const ColorAdjustments::Grade& g) {
     if (!g.gain.isIdentity()) j["gain"] = wheelJson(g.gain);
     if (!g.offset.isIdentity()) j["offset"] = wheelJson(g.offset);
     writeCurves(j, g.curves);
+    writeHslCurves(j, g.hslCurves);
 }
 
 /// Lenient: unknown or out-of-range values fall back to neutral.
@@ -246,6 +271,7 @@ ColorAdjustments::Grade readGrade(const Json& j) {
     if (const auto it = j.find("gain"); it != j.end()) g.gain = wheelFrom(*it);
     if (const auto it = j.find("offset"); it != j.end()) g.offset = wheelFrom(*it);
     readCurves(j, g.curves);
+    readHslCurves(j, g.hslCurves);
     return g;
 }
 
@@ -335,6 +361,7 @@ Json colorJson(const ColorAdjustments& c) {
     if (c.colorBoost.value != 0.0 || !c.colorBoost.keys.empty()) j["colorBoost"] = animatedJson(c.colorBoost);
     if (c.hue.value != 0.0 || !c.hue.keys.empty()) j["hue"] = animatedJson(c.hue);
     writeCurves(j, c.curves);
+    writeHslCurves(j, c.hslCurves);
     if (!c.lut.empty()) {
         j["lut"] = c.lut;
         j["lutAmount"] = c.lutAmount;
@@ -370,6 +397,7 @@ Result<ColorAdjustments> colorFrom(const Json& j, const std::string& path) {
     if (j.contains("colorBoost")) { LEC_READ_ANIM(double, c.colorBoost, j, "colorBoost", path) }
     if (j.contains("hue")) { LEC_READ_ANIM(double, c.hue, j, "hue", path) }
     readCurves(j, c.curves);
+    readHslCurves(j, c.hslCurves);
     c.lut = j.value("lut", "");
     c.lutAmount = std::clamp(j.value("lutAmount", 1.0), 0.0, 1.0);
     c.inputColorSpace = j.value("inputColorSpace", "auto");

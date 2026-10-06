@@ -224,6 +224,27 @@ Curve compose(const Curve& first, const Curve& then) {
     return out;
 }
 
+bool isFlat(const Curve& c) {
+    return c.size() < 2 || std::all_of(c.begin(), c.end(), [](const timeline::Vec2& p) { return std::abs(p.y - 0.5) < 1e-6; });
+}
+
+/// Two HSL curves of the same kind in sequence, resampled: shifts add, gains multiply.
+Curve combineHsl(const Curve& first, const Curve& then, int kind) {
+    if (isFlat(then)) return first;
+    if (isFlat(first)) return then;
+    const bool periodic = kind <= timeline::kHueVsLum;
+    const bool gain = kind == timeline::kHueVsSat || kind == timeline::kLumVsSat || kind == timeline::kSatVsSat;
+    constexpr int kSamples = 37;
+    Curve out;
+    for (int i = 0; i < kSamples; ++i) {
+        const double x = static_cast<double>(i) / (kSamples - 1);
+        const double a = evaluateHslCurve(first, x, periodic);
+        const double b = evaluateHslCurve(then, x, periodic);
+        out.push_back({x, std::clamp(gain ? 2.0 * a * b : a + b - 0.5, 0.0, 1.0)});
+    }
+    return out;
+}
+
 }  // namespace
 
 const std::vector<FilmStock>& filmStocks() {
@@ -288,6 +309,9 @@ LookSettings scaleLook(const LookSettings& look, double amount) {
     for (auto& c : s.curves) {
         for (auto& p : c) p.y = p.x + (p.y - p.x) * a;
     }
+    for (auto& c : s.hslCurves) {  // toward the neutral line
+        for (auto& p : c) p.y = 0.5 + (p.y - 0.5) * a;
+    }
     return s;
 }
 
@@ -332,6 +356,7 @@ ColorParams combineGrades(const ColorParams& base, const timeline::ColorAdjustme
     out.gain = added(base.gain, l.gain);
     out.offset = added(base.offset, l.offset);
     for (std::size_t i = 0; i < 4; ++i) out.curves[i] = compose(base.curves[i], l.curves[i]);
+    for (std::size_t i = 0; i < 6; ++i) out.hsl[i] = combineHsl(base.hsl[i], l.hslCurves[i], static_cast<int>(i));
     return out;
 }
 
@@ -353,6 +378,7 @@ LookSettings lookFromGrade(const ColorParams& g) {
     l.gain = g.gain;
     l.offset = g.offset;
     l.curves = g.curves;
+    l.hslCurves = g.hsl;
     return l;
 }
 

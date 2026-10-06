@@ -261,3 +261,114 @@ TEST(Looks, GradeAtAppliesTheClipLook) {
     EXPECT_NEAR(with.temperature, c.look.temperature * 0.5, 1e-12);
     EXPECT_NEAR(with.exposure, 0.2 + c.look.exposure * 0.5, 1e-12);
 }
+
+// ---- HSL curves (Resolve's Hue vs Hue / Sat / Lum, Lum vs Sat, Sat vs Sat, Sat vs Lum)
+
+namespace {
+ColorParams hslGrade(int kind, std::vector<timeline::Vec2> pts) {
+    ColorParams c;
+    c.hsl[static_cast<std::size_t>(kind)] = std::move(pts);
+    return c;
+}
+QColor graded(const ColorParams& c, QColor in) {
+    QImage img(1, 1, QImage::Format_RGB32);
+    img.setPixelColor(0, 0, in);
+    applyColor(img, c);
+    return img.pixelColor(0, 0);
+}
+double saturationOf(QColor c) {
+    const double mx = std::max({c.redF(), c.greenF(), c.blueF()});
+    const double mn = std::min({c.redF(), c.greenF(), c.blueF()});
+    return mx > 0 ? (mx - mn) / mx : 0;
+}
+}  // namespace
+
+TEST(HslCurves, NeutralTablesChangeNothing) {
+    const HslTables t = hslTables(ColorParams{});
+    for (const auto& table : t)
+        for (auto v : table) EXPECT_EQ(v, 128);
+    for (double r : {0.0, 0.3, 0.8})
+        for (double g : {0.1, 0.5, 1.0}) {
+            const auto o = applyHsl(t, r, g, 0.4);
+            EXPECT_NEAR(o[0], r, 1e-9);
+            EXPECT_NEAR(o[1], g, 1e-9);
+            EXPECT_NEAR(o[2], 0.4, 1e-9);
+        }
+    EXPECT_TRUE(ColorParams{}.hslIsIdentity());
+}
+
+TEST(HslCurves, HueCurvesWrapAroundRed) {
+    // A point at red pulled up, the rest neutral: red's neighbours on both
+    // sides of 0 / 1 rise smoothly.
+    const std::vector<timeline::Vec2> pts{{0.0, 0.8}, {0.25, 0.5}, {0.75, 0.5}};
+    EXPECT_NEAR(evaluateHslCurve(pts, 0.0, true), 0.8, 1e-9);
+    EXPECT_NEAR(evaluateHslCurve(pts, 0.5, true), 0.5, 1e-9);
+    EXPECT_GT(evaluateHslCurve(pts, 0.95, true), 0.55);  // just below 1 = just left of red
+    EXPECT_GT(evaluateHslCurve(pts, 0.05, true), 0.55);
+    EXPECT_NEAR(evaluateHslCurve(pts, 1.0, true), 0.8, 1e-9);
+    EXPECT_NEAR(evaluateHslCurve({}, 0.3, true), 0.5, 1e-12);
+}
+
+TEST(HslCurves, HueVsSatDesaturatesOnlyTheChosenHue) {
+    // Greens to gray, everything else untouched (a classic "kill the green cast" move).
+    const ColorParams c = hslGrade(timeline::kHueVsSat, {{0.0, 0.5}, {0.2, 0.5}, {0.333, 0.0}, {0.46, 0.5}, {1.0, 0.5}});
+    const QColor green = graded(c, QColor(60, 170, 70));
+    const QColor red = graded(c, QColor(200, 50, 40));
+    const QColor blue = graded(c, QColor(40, 70, 200));
+    EXPECT_LT(saturationOf(green), 0.05);
+    EXPECT_NEAR(saturationOf(red), saturationOf(QColor(200, 50, 40)), 0.02);
+    EXPECT_NEAR(saturationOf(blue), saturationOf(QColor(40, 70, 200)), 0.02);
+    EXPECT_EQ(graded(c, QColor(128, 128, 128)), QColor(128, 128, 128));  // grays stay gray
+}
+
+TEST(HslCurves, HueVsHueShiftsRedTowardOrange) {
+    const ColorParams c = hslGrade(timeline::kHueVsHue, {{0.0, 0.55}, {0.15, 0.5}, {0.85, 0.5}});
+    const QColor in(200, 40, 40);
+    const QColor out = graded(c, in);
+    // +0.047 turn (17°) at red: the hue moves toward orange by about that much.
+    EXPECT_NEAR(qualifierAxes(out.redF(), out.greenF(), out.blueF())[0], 0.045, 0.012);
+    EXPECT_LT(out.blue(), in.blue() - 20);
+    EXPECT_GT(out.green(), in.green());
+    EXPECT_EQ(graded(c, QColor(40, 60, 200)), QColor(40, 60, 200));  // blue is far from red
+}
+
+TEST(HslCurves, LumVsSatAndSatVsLum) {
+    // Desaturate the shadows only.
+    const ColorParams shadows = hslGrade(timeline::kLumVsSat, {{0.0, 0.0}, {0.25, 0.0}, {0.5, 0.5}, {1.0, 0.5}});
+    EXPECT_LT(saturationOf(graded(shadows, QColor(60, 20, 20))), 0.1);
+    EXPECT_NEAR(saturationOf(graded(shadows, QColor(250, 180, 170))), saturationOf(QColor(250, 180, 170)), 0.03);
+    // Darken saturated colors only.
+    const ColorParams darken = hslGrade(timeline::kSatVsLum, {{0.0, 0.5}, {0.5, 0.5}, {1.0, 0.2}});
+    const QColor vivid = graded(darken, QColor(220, 30, 30));
+    EXPECT_LT(vivid.red(), 200);
+    EXPECT_EQ(graded(darken, QColor(150, 150, 150)), QColor(150, 150, 150));
+}
+
+TEST(HslCurves, LooksScaleTowardNeutralAndCurvesCombine) {
+    LookSettings l;
+    l.id = "h";
+    l.hslCurves[timeline::kHueVsSat] = {{0.0, 0.5}, {0.33, 0.1}, {0.66, 0.5}};
+    const LookSettings half = scaleLook(l, 0.5);
+    EXPECT_NEAR(half.hslCurves[timeline::kHueVsSat][1].y, 0.3, 1e-12);
+    ColorParams base;
+    base.hsl[timeline::kHueVsSat] = {{0.0, 0.5}, {0.33, 0.25}, {0.66, 0.5}};  // ×0.5 at green
+    const ColorParams both = applyLook(base, l);                              // then ×0.2
+    EXPECT_NEAR(evaluateHslCurve(both.hsl[timeline::kHueVsSat], 0.33, true), 2 * 0.25 * 0.1, 0.02);
+}
+
+TEST(HslCurves, JsonRoundTrip) {
+    timeline::Clip clip;
+    clip.color.hslCurves[timeline::kHueVsHue] = {{0.1, 0.6}, {0.5, 0.5}};
+    clip.color.hslCurves[timeline::kSatVsLum] = {{0.0, 0.5}, {1.0, 0.3}};
+    timeline::ColorAdjustments::Node n;
+    n.id = "n2";
+    n.grade.hslCurves[timeline::kHueVsSat] = {{0.0, 0.5}, {0.3, 0.9}};
+    clip.color.nodes.push_back(n);
+    const auto back = timeline::clipFromJson(timeline::toJson(clip), "clip");
+    ASSERT_TRUE(back.has_value()) << back.error().message();
+    EXPECT_EQ(back->color.hslCurves, clip.color.hslCurves);
+    EXPECT_EQ(back->color.nodes[0].grade.hslCurves, n.grade.hslCurves);
+    const ColorParams p = gradeAt(clip.color, Time::zero());
+    EXPECT_FALSE(p.hsl[timeline::kHueVsHue].empty());
+    EXPECT_TRUE(p.hsl[timeline::kLumVsSat].empty());
+}

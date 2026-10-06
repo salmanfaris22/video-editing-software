@@ -22,7 +22,7 @@ layout(std140, binding = 0) uniform Params {
     vec4 gamut0;     // source gamut -> Rec.709 (linear light), rows
     vec4 gamut1;
     vec4 gamut2;
-    vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians)
+    vec4 grade2;     // x: color boost (vibrance), y: hue rotation (radians), z: HSL curves (0/1)
     vec4 fx;         // x: grain amount, y: grain size (px), z: grain seed; threshold/add modes: x threshold
     vec4 nodeInfo;   // x: node count, y: source aspect (w/h), z: person mask bound (0/1), w: highlighted node (-1 none)
     vec4 nodes[70];  // 7 per node (up to 10): grade, window0, window1, qual0, qual1, qual2, misc (see layer.frag)
@@ -177,13 +177,66 @@ vec3 curvesRow(vec3 rgb, int row)
                 texelFetch(curves, ivec2(i.b, row), 0).b);
 }
 
-// Saturation, color boost and hue rotation (mirrors editor::applyColor / boostAndHue).
-vec3 finishGrade(vec3 rgb, float saturation, float boost, float hueAngle)
+// HSL curves (mirrors editor::applyHsl). The curves texture holds, for grade
+// row n (0 = the layer's grade, k + 1 = node k): row HSL_A + n = hue vs hue,
+// hue vs sat, hue vs lum, lum vs sat; row HSL_B + n = sat vs sat, sat vs lum.
+const int HSL_A = 11;
+const int HSL_B = 22;
+vec3 applyHsl(vec3 rgb, int n)
+{
+    float mx = max(rgb.r, max(rgb.g, rgb.b));
+    float mn = min(rgb.r, min(rgb.g, rgb.b));
+    float chroma = mx - mn;
+    float h = 0.0;
+    if (chroma > 1e-6) {
+        if (mx == rgb.r)
+            h = (rgb.g - rgb.b) / chroma;
+        else if (mx == rgb.g)
+            h = 2.0 + (rgb.b - rgb.r) / chroma;
+        else
+            h = 4.0 + (rgb.r - rgb.g) / chroma;
+        h /= 6.0;
+        if (h < 0.0)
+            h += 1.0;
+    }
+    float s = mx > 1e-6 ? chroma / mx : 0.0;
+    float y = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+    ivec3 i = ivec3(floor(clamp(vec3(h, s, y), 0.0, 1.0) * 255.0 + 0.5));
+    vec4 byHue = texelFetch(curves, ivec2(i.x, HSL_A + n), 0);
+    float lumSat = texelFetch(curves, ivec2(i.z, HSL_A + n), 0).a;
+    vec4 bySat = texelFetch(curves, ivec2(i.y, HSL_B + n), 0);
+    const float neutral = 128.0 / 255.0;
+    float shift = byHue.r - neutral;
+    float gain = (byHue.g / neutral) * (lumSat / neutral) * (bySat.r / neutral);
+    float lift = (byHue.b - neutral) * s + (bySat.g - neutral);
+    float cb = (rgb.b - y) / 1.8556;
+    float cr = (rgb.r - y) / 1.5748;
+    if (shift != 0.0) {
+        float a = shift * 6.283185307179586;
+        float ca = cos(a);
+        float sa = sin(a);
+        float ncb = cb * ca - cr * sa;
+        cr = cb * sa + cr * ca;
+        cb = ncb;
+    }
+    cb *= gain;
+    cr *= gain;
+    float y2 = y + lift;
+    float r2 = y2 + 1.5748 * cr;
+    float b2 = y2 + 1.8556 * cb;
+    return clamp(vec3(r2, (y2 - 0.2126 * r2 - 0.0722 * b2) / 0.7152, b2), 0.0, 1.0);
+}
+
+// Saturation, HSL curves (row n, or none when n < 0), color boost and hue
+// rotation (mirrors editor::applyColor / boostAndHue).
+vec3 finishGrade(vec3 rgb, float saturation, float boost, float hueAngle, int hslRow)
 {
     if (saturation != 1.0) {
         float l = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
         rgb = clamp(vec3(l) + (rgb - vec3(l)) * saturation, 0.0, 1.0);
     }
+    if (hslRow >= 0)
+        rgb = applyHsl(rgb, hslRow);
     if (boost != 0.0) {  // color boost: muted colors gain more
         float l = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
         float chroma = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
@@ -208,12 +261,12 @@ vec3 applyGrade(vec3 rgb)
     }
     if (grade.y > 0.5)
         rgb = curvesRow(rgb, 0);
-    return finishGrade(rgb, grade.x, grade2.x, grade2.y);
+    return finishGrade(rgb, grade.x, grade2.x, grade2.y, grade2.z > 0.5 ? 0 : -1);
 }
 
 // ---- Nodes (mirror editor::windowMatte / qualifierMatte / nodeMatte / applyNodes)
 // Per node n, nodes[7n + k]:
-//   0 grade:   saturation multiplier, color boost, hue rotation (radians), -
+//   0 grade:   saturation multiplier, color boost, hue rotation (radians), HSL curves (0/1)
 //   1 window0: shape (0 none, 1 circle, 2 rectangle, 3 gradient), center x, center y, rotation (radians)
 //   2 window1: width, height, softness, invert
 //   3 qual0:   enabled, hue, hue width, hue softness
@@ -302,7 +355,7 @@ vec3 applyNodes(vec3 rgb, vec2 uv)
         if (m <= 0.0 && !show)
             continue;
         vec4 g = nodes[n * 7];
-        vec3 graded = finishGrade(curvesRow(rgb, n + 1), g.x, g.y, g.z);
+        vec3 graded = finishGrade(curvesRow(rgb, n + 1), g.x, g.y, g.z, g.w > 0.5 ? n + 1 : -1);
         if (show)  // the selection in color, everything else mid gray
             return mix(vec3(128.0 / 255.0), graded, m);
         rgb = mix(rgb, graded, m);

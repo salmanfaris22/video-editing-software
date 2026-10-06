@@ -596,3 +596,25 @@ TEST_F(GpuRenderer, FilmGrainGlowHalationAndPrintMatchTheCpu) {
     // Blurs differ slightly (three box passes vs a Gaussian), as for the blur effect.
     EXPECT_CLOSE(d, 2.0, 0.01);
 }
+
+TEST_F(GpuRenderer, HslCurvesMatchTheCpu) {
+    test::EditorFixture f;
+    useDetailImage(f);
+    Both r(f);
+    r.at(f.project, 0.5);
+    const QImage plain = r.cpuImage;
+    timeline::ColorAdjustments& c = clipOf(f, "Camera").color;
+    c.hslCurves[timeline::kHueVsSat] = {{0.0, 0.5}, {0.25, 0.5}, {0.36, 0.05}, {0.48, 0.5}};  // greens to gray
+    c.hslCurves[timeline::kHueVsHue] = {{0.0, 0.58}, {0.12, 0.5}, {0.9, 0.5}};                // reds toward orange
+    c.hslCurves[timeline::kLumVsSat] = {{0.0, 0.2}, {0.3, 0.5}, {1.0, 0.5}};
+    timeline::ColorAdjustments::Node node;  // and a node with its own HSL curve
+    node.id = "n2";
+    node.window.shape = "circle";
+    node.window.width = 0.5;
+    node.window.height = 0.8;
+    node.grade.hslCurves[timeline::kSatVsLum] = {{0.0, 0.5}, {1.0, 0.25}};
+    c.nodes = {node};
+    const Difference d = r.at(f.project, 0.5);
+    EXPECT_GT(compare(plain, r.cpuImage).mean, 2.0);
+    EXPECT_CLOSE(d, 1.0, 0.003);
+}

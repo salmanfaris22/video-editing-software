@@ -97,6 +97,17 @@ using ColorCurves = std::array<std::array<std::uint8_t, 256>, 3>;
 
 /// A custom curve through control points (monotone cubic; clamped ends).
 [[nodiscard]] double evaluateCurve(const std::vector<timeline::Vec2>& points, double x);
+/// An HSL curve at x (0.5 = neutral when it has fewer than two points);
+/// `periodic` (hue curves) wraps around from x = 1 back to 0.
+[[nodiscard]] double evaluateHslCurve(const std::vector<timeline::Vec2>& points, double x, bool periodic);
+
+/// The six HSL curves of a grade as 8-bit tables (timeline::HslCurve order),
+/// 128 = neutral. Shared by the CPU and GPU renderers.
+using HslTables = std::array<std::array<std::uint8_t, 256>, 6>;
+[[nodiscard]] HslTables hslTables(const ColorParams& color);
+/// One pixel (0…1) through the HSL curves: hue shift and saturation gain in
+/// the Cb/Cr plane, luminance shift (hue-based shifts weighted by saturation).
+[[nodiscard]] std::array<double, 3> applyHsl(const HslTables& tables, double r, double g, double b);
 
 /// Color Boost (vibrance) and Hue rotation on one pixel (0…1), after saturation.
 /// The GPU shader mirrors it.

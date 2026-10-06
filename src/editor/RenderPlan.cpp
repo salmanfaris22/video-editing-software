@@ -245,6 +245,13 @@ ColorParams gradeAt(const timeline::ColorAdjustments& c, Time local, bool withLo
                               });
         if (!identity) p.curves[i] = pts;
     }
+    for (std::size_t i = 0; i < 6; ++i) {  // HSL curves: a flat line at 0.5 changes nothing
+        const auto& pts = c.hslCurves[i];
+        const bool flat = pts.size() < 2 || std::all_of(pts.begin(), pts.end(), [](const timeline::Vec2& v) {
+                              return std::abs(v.y - 0.5) < 1e-6;
+                          });
+        if (!flat) p.hsl[i] = pts;
+    }
     p.lut = c.lut;
     p.lutAmount = std::clamp(c.lutAmount, 0.0, 1.0);
     return withLook ? applyLook(p, c.look) : p;
