@@ -26,7 +26,9 @@ without re-recording anything.
 | 1G | MP4 export (H.264 + AAC, hardware encoder), `lectern-export` CLI | ✅ Done |
 | 1H | Profiling and GPU compositor | In progress ([PERFORMANCE.md](docs/PERFORMANCE.md)) |
 
-Start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The recording engine is
+Start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). **System requirements**
+(macOS / Windows / Linux, RAM, permissions): [docs/SYSTEM_REQUIREMENTS.md](docs/SYSTEM_REQUIREMENTS.md).
+The recording engine is
 specified in [docs/RECORDING_ENGINE.md](docs/RECORDING_ENGINE.md), the editor in
 [docs/TIMELINE_ENGINE.md](docs/TIMELINE_ENGINE.md) and
 [docs/RENDERING_PIPELINE.md](docs/RENDERING_PIPELINE.md); each lists how it was verified.
